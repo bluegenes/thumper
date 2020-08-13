@@ -1,8 +1,10 @@
-name: thumper
+name: thumper-env
 channels:
     - conda-forge
     - bioconda
     - defaults
 dependencies:
+    - mamba
+    - pandas>=1.03
     - python>=3.8
     - snakemake-minimal=5.21

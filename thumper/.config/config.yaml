@@ -1,5 +1,6 @@
 thumper_dir_suffix: .thumper
 thumper_dir: PLACEHOLDER.thumper
+experiment_suffix: ".test"
 logs_dir: logs
 
 out_dir: "thumper-classify" 
@@ -26,12 +27,20 @@ alphabet_defaults:
     scaled: [100]
 
 ## rule targets ##
-sourmash_sketch:
+
+## could make a pipelines.yml file that sets which rules happen based on type of input data!
+sourmash_sketch_nucleotide_input:
   output_suffix: 
-    - .sig
+    - .protein.sig
+    - .nucleotide.sig
   params:
-    sketch_type:
-      - protein
+    scaled: [100]
+    # ksize --> don't set here. instead, get this from alpha defaults + user input!?
+
+sourmash_sketch_protein_input:
+  output_suffix: 
+    - .protein.sig
+  params:
     scaled: [100]
     # ksize --> don't set here. instead, get this from alpha defaults + user input!?
 
@@ -42,7 +51,7 @@ sourmash_gather:
     - .x.__database__.unmatched
   params:
     gather_scaled: 1000
-    extra: ""
+    #extra: ""
 
 thumper_classify:
   output_suffix:
@@ -51,4 +60,4 @@ thumper_classify:
     threshold: .5 # potentially: the threshold for a gather tophit to be used for classification?
     tophit: True
     lca: True
-    extra: ""
+    #extra: ""

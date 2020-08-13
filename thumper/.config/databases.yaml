@@ -1,9 +1,9 @@
 ### default db info
 
-databases_dir = "databases"
+database_dir: databases
 
-sbt_suffix = ".sbt.zip"
-lca_suffix = ".lca.json.gz"
+sbt_suffix: .sbt.zip
+lca_suffix: .lca.json.gz
 
 ## to do: enable default db naming
 
