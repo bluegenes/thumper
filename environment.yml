@@ -1,0 +1,8 @@
+name: thumper
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+dependencies:
+    - python>=3.8
+    - snakemake-minimal=5.21

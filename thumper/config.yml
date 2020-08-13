@@ -1,0 +1,54 @@
+thumper_dir_suffix: .thumper
+thumper_dir: PLACEHOLDER.thumper
+logs_dir: logs
+
+out_dir: "thumper-classify" 
+sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir.
+
+
+### default settings 
+input_type: protein
+alphabet: protein
+
+# defaults for each alphabet 
+alphabet_defaults:
+  nucleotide: 
+    ksizes: [21,31,51]
+    scaled: [1000]
+  protein:
+    ksizes: [11]
+    scaled: [100]
+  dayhoff:
+    ksizes: [19]
+    scaled: [100]
+  hp:
+    ksizes: [33, 42]
+    scaled: [100]
+
+## rule targets ##
+sourmash_sketch:
+  output_suffix: 
+    - .sig
+  params:
+    sketch_type:
+      - protein
+    scaled: [100]
+    # ksize --> don't set here. instead, get this from alpha defaults + user input!?
+
+sourmash_gather:
+  output_suffix: 
+    - .x.__database__.gather.csv
+    - .x.__database__.matches
+    - .x.__database__.unmatched
+  params:
+    gather_scaled: 1000
+    extra: ""
+
+thumper_classify:
+  output_suffix:
+    - .x.__database__.classified.csv
+  params:
+    threshold: .5 # potentially: the threshold for a gather tophit to be used for classification?
+    tophit: True
+    lca: True
+    extra: ""

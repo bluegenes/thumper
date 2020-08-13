@@ -1,0 +1,10 @@
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - rust
+  - pip
+  - pip:
+    - git+https://github.com/dib-lab/sourmash@latest
