@@ -67,10 +67,10 @@ onstart:
     print("Perform taxonomic classification using protein k-mers")
     print("------------------------------")
 
-#thumper = srcdir("utils/animals/thumper")
+thumper = srcdir("utils/animals/thumper")
 onsuccess:
     print("\n--- Workflow executed successfully! ---\n")
-    shell('cat {srcdir("utils/animals/thumper")}')
+    shell('cat {thumper}')
 
 onerror:
     print("Alas!\n")

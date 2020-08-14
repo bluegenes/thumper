@@ -1,0 +1,10 @@
+# location for all generated files
+basename: demo
+
+output_dir: output.demo
+
+# list of genome filenames to decontaminate
+sample_list: demo/demo-sample-list.txt 
+
+# directory in which genome filenames live
+data_dir: demo/genomes 
