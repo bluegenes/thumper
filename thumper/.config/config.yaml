@@ -1,12 +1,10 @@
-thumper_dir_suffix: .thumper
-thumper_dir: PLACEHOLDER.thumper
+output_dir: output.thumper
 experiment_suffix: ".test"
 logs_dir: logs
 
 pipeline: taxonomic_classification_gtdb
 
-out_dir: "thumper-classify" 
-sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir.
+#sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir?
 
 
 ### default settings 

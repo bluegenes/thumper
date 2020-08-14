@@ -3,15 +3,28 @@ import pandas as pd
 import glob
 
 from snakemake.workflow import srcdir
+import thumper.utils as tp
 
 out_dir = config["output_dir"]
 logs_dir = os.path.join(out_dir, "logs")
 benchmarks_dir = os.path.join(out_dir, "benchmarks")
 database_dir = config['database_dir']
 data_dir = config['data_dir'].rstrip('/')
-#genome_dir = config['genome_dir'].rstrip('/')
-#output_dir = config['output_dir'].rstrip('/')
 
+
+strict_val = config.get('strict', '1')
+strict_mode = int(strict_val)
+if not strict_mode:
+    print('** WARNING: strict mode is OFF. Config errors will not force exit.')
+
+force = config.get('force', '0')
+force = int(force)
+force_param = ''
+if force:
+    force_param = '--force'
+
+
+# snakemake workflow
 
 #wildcard_constraints:
     #size="\d+"
@@ -19,67 +32,25 @@ data_dir = config['data_dir'].rstrip('/')
     #database = "(?!x\.).+"
 
 
-def read_samples(samples_file):
-    sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
-    sample_list = [ line for line in sample_list if line ]   # remove empty lines
-    return sample_list
-
-
-# read in the samples txt (csv?), generate targets for rule all
-
-## to do: add out_dir targeting
-def generate_targets(config, samples):
-    # get pipeline we're using (default = taxonomic_classification_gtdb)
-    pipeline = config["pipeline"]
-    # find required db's for this pipeline
-    databases = config["pipelines"][pipeline].get("databases", [])
-    
-    # Databases:: generate targets for each database 
-    database_dir = config["database_dir"] # to do: make/use a sanitize path function to remove `~` and get abspath here
-    database_targets=[]
-    for db in databases:
-        ## to do  -- cleaner/clearer/better db specification in yaml file! Not so much nesting?
-        database_targets+= [os.path.join(database_dir, config["databases"][db]["protein"]["k11"]["sbt"])]
-    
-    # Pipeline:: find steps in this pipeline
-    steps = config["pipelines"][pipeline]["steps"]
-    
-    # generate targets for each step
-    pipeline_targets=[]
-    for step in steps:
-        step_outdir = config[step]["output_dir"]
-        step_files = config[step]["output_files"]
-        step_databases = config[step].get("databases", [])
-        
-        # fill variables in the output filenames
-        for stepF in step_files:
-            pipeline_targets += expand(os.path.join(out_dir, step_outdir, stepF), sample=samples, database=step_databases)
-
-    # optionally only return databases or pipeline to enable running these as separate bits of the workflow
-    targets = database_targets + pipeline_targets
-    return targets
-
-
-# snakemake workflow
-
-sample_list = read_samples(config["sample_list"])
+sample_list = tp.read_samples(config["sample_list"], data_dir)
 
 onstart:
     print("------------------------------")
     print("Perform taxonomic classification using protein k-mers")
     print("------------------------------")
 
-thumper = srcdir("utils/animals/thumper")
+ascii_thumper = srcdir("utils/animals/thumper")
+failwhale = srcdir("utils/animals/failwhale")
 onsuccess:
     print("\n--- Workflow executed successfully! ---\n")
-    shell('cat {thumper}')
+    shell('cat {ascii_thumper}')
 
 onerror:
     print("Alas!\n")
+    shell('cat {failwhale}')
 
 rule all:
-    input: generate_targets(config, sample_list)
-
+    input: tp.generate_targets(config, sample_list, out_dir)
 
 # include the databases snake
 include: "download_databases.snakefile"
