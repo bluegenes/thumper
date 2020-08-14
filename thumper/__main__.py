@@ -115,8 +115,8 @@ def info():
 This is thumper version v{version}
 
 Package install path: {os.path.dirname(__file__)}
-Install-wide config file: {get_package_configfile('system.conf')}
-snakemake Snakefile: {get_snakefile_path('Snakefile')}
+Install-wide config file: {get_package_configfile('config.yaml')}
+snakemake Snakefile: {get_snakefile_path('classify.snakefile')}
 """)
 
 # 'init' command
