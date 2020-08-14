@@ -125,7 +125,7 @@ snakemake Snakefile: {get_snakefile_path('classify.snakefile')}
 @click.option('--data-dir', nargs=1)
 #@click.option('--lineages', nargs=1, default="")
 @click.option('-f', '--force', is_flag=True)
-def init(configfile, data_dir, lineages, force):
+def init(configfile, data_dir, force):
     "create a new, empty config file."
     stubname = os.path.basename(configfile)
     if configfile.endswith('.yaml'):
@@ -173,10 +173,6 @@ sample_list: {stubname}.sample-list.txt
 
 # directory in which sample filenames live
 data_dir: {data_dir}
-
-# (optional) list of lineages for input samples. comment out or leave
-# blank if none.
-provided_lineages: {lineages}
 
 # match_rank is the rank _above_ which cross-lineage matches are considered
 # contamination. e.g. if set to 'superkingdom', then Archaeal matches in
