@@ -4,7 +4,7 @@ import glob
 
 from snakemake.workflow import srcdir
 
-out_dir = config["thumper_dir"]
+out_dir = config["output_dir"]
 logs_dir = os.path.join(out_dir, "logs")
 benchmarks_dir = os.path.join(out_dir, "benchmarks")
 database_dir = config['database_dir']
@@ -25,7 +25,9 @@ def read_samples(samples_file):
     return sample_list
 
 
-# read in the samples csv, generate targets for rule all
+# read in the samples txt (csv?), generate targets for rule all
+
+## to do: add out_dir targeting
 def generate_targets(config, samples):
     # get pipeline we're using (default = taxonomic_classification_gtdb)
     pipeline = config["pipeline"]
@@ -51,7 +53,7 @@ def generate_targets(config, samples):
         
         # fill variables in the output filenames
         for stepF in step_files:
-            pipeline_targets += expand(os.path.join(step_outdir, stepF), sample=samples, database=step_databases)
+            pipeline_targets += expand(os.path.join(out_dir, step_outdir, stepF), sample=samples, database=step_databases)
 
     # optionally only return databases or pipeline to enable running these as separate bits of the workflow
     targets = database_targets + pipeline_targets
@@ -114,7 +116,7 @@ def get_sketch_params(input_type):
 rule sourmash_sketch_nucleotide:
     input: os.path.join(data_dir, "{sample}.fa")
     output: 
-        "signatures/{sample}.nucleotide.sig",
+        os.path.join(out_dir, "signatures", "{sample}.nucleotide.sig"),
     #params:
         #nucl_sketch_params = get_sketch_params("nucleotide"),
         #signame = lambda w: accession2signame[w.accession], # default use filename. If provided, use csv with names!
@@ -134,7 +136,8 @@ rule sourmash_sketch_nucleotide:
 
 rule sourmash_sketch_protein:
     input: os.path.join(data_dir, "{filename}")
-    output: "signatures/{filename}.protein.sig"
+    output:
+        os.path.join(out_dir, "signatures", "{filename}.protein.sig"),
     params:
         sketch_params = "protein", #get_sketch_params("protein")
         #signame = lambda w: accession2signame[w.accession],
