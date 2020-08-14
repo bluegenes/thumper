@@ -9,7 +9,7 @@ To test and develop, first install Miniconda and clone this repo to your system.
 
 ```
 cd thumper
-conda env create -f environment.yaml
+conda env create -f environment.yml
 conda activate thumper-env
 pip install -e "."
 ```
