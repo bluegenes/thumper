@@ -3,7 +3,7 @@
 ## database download stuff
 ##
 
-rule all:
+rule download:
     input:
         database = 'db/gtdb-release89-k31.sbt.zip',
         lineages = 'db/gtdb-release89-lineages.csv'

@@ -3,6 +3,8 @@ thumper_dir: PLACEHOLDER.thumper
 experiment_suffix: ".test"
 logs_dir: logs
 
+pipeline: taxonomic_classification_gtdb
+
 out_dir: "thumper-classify" 
 sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir.
 
@@ -29,33 +31,36 @@ alphabet_defaults:
 ## rule targets ##
 
 ## could make a pipelines.yml file that sets which rules happen based on type of input data!
-sourmash_sketch_nucleotide_input:
-  output_suffix: 
-    - .protein.sig
-    - .nucleotide.sig
+sourmash_sketch_nucleotide:
+  output_dir: signatures
+  output_files:
+    - "{sample}.nucleotide.sig"
   params:
     scaled: [100]
     # ksize --> don't set here. instead, get this from alpha defaults + user input!?
 
-sourmash_sketch_protein_input:
-  output_suffix: 
-    - .protein.sig
+sourmash_sketch_protein:
+  output_dir: signatures
+  output_files:
+    - "{sample}.protein.sig"
   params:
     scaled: [100]
     # ksize --> don't set here. instead, get this from alpha defaults + user input!?
 
 sourmash_gather:
-  output_suffix: 
-    - .x.__database__.gather.csv
-    - .x.__database__.matches
-    - .x.__database__.unmatched
+  output_dir: gather
+  output_files:
+    - "{sample}.x.{database}.gather.csv"
+    - "{sample}.x.{database}.matches"
+    - "{sample}.x.{database}.unmatched"
   params:
     gather_scaled: 1000
     #extra: ""
 
 thumper_classify:
-  output_suffix:
-    - .x.__database__.classified.csv
+  output_dir: classify
+  output_files:
+    - "{basename}.x.{database}.classified.csv"
   params:
     threshold: .5 # potentially: the threshold for a gather tophit to be used for classification?
     tophit: True

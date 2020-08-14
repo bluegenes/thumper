@@ -1,9 +1,10 @@
-## borrow heavily from charcoal, dammit, sgc cli
+## borrows heavily from charcoal, dammit, sgc cli infra
 "Enable python -m thumper"
-import sys
 import os
-import subprocess
+import sys
+import yaml
 import glob
+import subprocess
 
 import click
 
@@ -44,13 +45,16 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False, verbose=Fa
     if configfile:
         # add defaults and system config files, in that order
         configfiles = [get_package_configfile("config.yaml"),
-                       #get_package_configfile("system.conf"),
                        get_package_configfile("databases.yaml"),
+                       get_package_configfile("pipelines.yaml"),
                        configfile]
+
+
         cmd += ["--configfile"] + configfiles
 
     if verbose:
         print('final command:', cmd)
+
 
     # runme
     try:
@@ -85,7 +89,6 @@ def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose):
 @click.command()
 def download_db():
     "download the necessary databases"
-    #run_snakemake(None, snakefile_name='Snakefile.download_db',
     run_snakemake(None, snakefile_name='download_databases.snakefile',
                   no_use_conda=True)
 
@@ -119,40 +122,44 @@ snakemake Snakefile: {get_snakefile_path('Snakefile')}
 # 'init' command
 @click.command()
 @click.argument('configfile')
-@click.option('--genome-dir', nargs=1)
-@click.option('--lineages', nargs=1, default="")
+@click.option('--data-dir', nargs=1)
+#@click.option('--lineages', nargs=1, default="")
 @click.option('-f', '--force', is_flag=True)
-def init(configfile, genome_dir, lineages, force):
+def init(configfile, data_dir, lineages, force):
     "create a new, empty config file."
     stubname = os.path.basename(configfile)
-    if configfile.endswith('.conf'):
+    if configfile.endswith('.yaml'):
         stubname = stubname[:-5]
     else:
-        configfile += '.conf'
+        configfile += '.yaml'
 
     if os.path.exists(configfile) and not force:
         print(f"** ERROR: configfile '{configfile}' already exists.")
         return -1
 
-    genome_list = f'{stubname}.genome-list.txt'
-    if genome_dir:
-        if os.path.exists(genome_list) and not force:
-            print(f"** ERROR: genome list file '{genome_list}' already exists.")
+    sample_list = f'{stubname}.sample-list.txt'
+    if data_dir:
+        if os.path.exists(sample_list) and not force:
+            print(f"** ERROR: sample list file '{sample_list}' already exists.")
             return -1
-        genomes = glob.glob(f'{genome_dir}/*.fa')
-        genomes += glob.glob(f'{genome_dir}/*.fna')
-        genomes += glob.glob(f'{genome_dir}/*.fa.gz')
-        genomes += glob.glob(f'{genome_dir}/*.fna.gz')
-        print(f'found {len(genomes)} genomes in {genome_dir}/*.{{fa,fna}}{{,.gz}}')
-        genomes = [ os.path.basename(g) for g in genomes ]
-        with open(genome_list, 'wt') as fp:
-            fp.write("\n".join(genomes))
-        print(f"created '{genome_list}' with {len(genomes)} genomes in it.")
+        samples = glob.glob(f'{data_dir}/*.fa')
+        samples += glob.glob(f'{data_dir}/*.fna')
+        samples += glob.glob(f'{data_dir}/*.faa')
+        samples += glob.glob(f'{data_dir}/*.pep')
+        samples += glob.glob(f'{data_dir}/*.fa.gz')
+        samples += glob.glob(f'{data_dir}/*.fna.gz')
+        samples += glob.glob(f'{data_dir}/*.faa.gz')
+        samples += glob.glob(f'{data_dir}/*.pep.gz')
+        print(f'found {len(samples)} samples in {data_dir}/*.{{fa,fna,faa,pep}}{{,.gz}}')
+        samples = [ os.path.basename(g) for g in samples ]
+        with open(sample_list, 'wt') as fp:
+            fp.write("\n".join(samples))
+        print(f"created '{sample_list}' with {len(samples)} samples in it.")
 
-    if lineages:
-        print(f"Using provided lineages from '{lineages}'")
-    else:
-        print("(No provided lineages file given.)")
+    #if lineages:
+    #    print(f"Using provided lineages from '{lineages}'")
+    #else:
+    #    print("(No provided lineages file given.)")
 
     print(f"creating configfile '{configfile}' for project '{stubname}'")
     with open(configfile, 'wt') as fp:
@@ -161,19 +168,19 @@ f"""\
 # location for all generated files
 output_dir: output.{stubname}/
 
-# list of genome filenames to classify
-genome_list: {stubname}.genome-list.txt
+# list of sample filenames to classify
+sample_list: {stubname}.sample-list.txt
 
-# directory in which genome filenames live
-genome_dir: {genome_dir}
+# directory in which sample filenames live
+data_dir: {data_dir}
 
-# (optional) list of lineages for input genomes. comment out or leave
+# (optional) list of lineages for input samples. comment out or leave
 # blank if none.
 provided_lineages: {lineages}
 
 # match_rank is the rank _above_ which cross-lineage matches are considered
 # contamination. e.g. if set to 'superkingdom', then Archaeal matches in
-# Bacterial genomes will be contamination, but nothing else.
+# Bacterial samples will be contamination, but nothing else.
 #
 # values can be superkingdom, phylum, class, order, family, or genus.
 match_rank: order

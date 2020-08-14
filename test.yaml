@@ -1,8 +1,10 @@
 # location for all generated files
+basename: tryme
+
 output_dir: output.test
 
 # list of genome filenames to decontaminate
-genome_list: ten_euks_ten_other.genomes.txt
+sample_list: ten_euks_ten_other.genomes.txt
 
 # directory in which genome filenames live
 data_dir: /home/ntpierce/2020-function-smash/orthodb/species_genomes

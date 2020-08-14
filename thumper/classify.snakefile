@@ -9,6 +9,8 @@ logs_dir = os.path.join(out_dir, "logs")
 benchmarks_dir = os.path.join(out_dir, "benchmarks")
 database_dir = config['database_dir']
 data_dir = config['data_dir'].rstrip('/')
+#genome_dir = config['genome_dir'].rstrip('/')
+#output_dir = config['output_dir'].rstrip('/')
 
 
 #wildcard_constraints:
@@ -16,7 +18,50 @@ data_dir = config['data_dir'].rstrip('/')
     #transcriptome = config['transcriptome_name'],
     #database = "(?!x\.).+"
 
+
+def read_samples(samples_file):
+    sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
+    sample_list = [ line for line in sample_list if line ]   # remove empty lines
+    return sample_list
+
+
+# read in the samples csv, generate targets for rule all
+def generate_targets(config, samples):
+    # get pipeline we're using (default = taxonomic_classification_gtdb)
+    pipeline = config["pipeline"]
+    # find required db's for this pipeline
+    databases = config["pipelines"][pipeline].get("databases", [])
+    
+    # Databases:: generate targets for each database 
+    database_dir = config["database_dir"] # to do: make/use a sanitize path function to remove `~` and get abspath here
+    database_targets=[]
+    for db in databases:
+        ## to do  -- cleaner/clearer/better db specification in yaml file! Not so much nesting?
+        database_targets+= [os.path.join(database_dir, config["databases"][db]["protein"]["k11"]["sbt"])]
+    
+    # Pipeline:: find steps in this pipeline
+    steps = config["pipelines"][pipeline]["steps"]
+    
+    # generate targets for each step
+    pipeline_targets=[]
+    for step in steps:
+        step_outdir = config[step]["output_dir"]
+        step_files = config[step]["output_files"]
+        step_databases = config[step].get("databases", [])
+        
+        # fill variables in the output filenames
+        for stepF in step_files:
+            pipeline_targets += expand(os.path.join(step_outdir, stepF), sample=samples, database=step_databases)
+
+    # optionally only return databases or pipeline to enable running these as separate bits of the workflow
+    targets = database_targets + pipeline_targets
+    return targets
+
+
 # snakemake workflow
+
+sample_list = read_samples(config["sample_list"])
+
 onstart:
     print("------------------------------")
     print("Perform taxonomic classification using protein k-mers")
@@ -30,10 +75,16 @@ onsuccess:
 onerror:
     print("Alas!\n")
 
+rule all:
+    input: generate_targets(config, sample_list)
+
+
 # include the databases snake
 include: "download_databases.snakefile"
+include: "common.snakefile"
 
 def get_sketch_params(input_type):
+    sketch_cmd = ""
     if input_type == 'nucleotide':
         sketch_type = "translate"
         #abund = config["sourmash_sketch"]["abundance"]
@@ -60,47 +111,44 @@ def get_sketch_params(input_type):
 ## default build protein, dayhoff, hp sigs at the default ksizes from config
 ## turn this off with config
 
-rule sourmash_sketch_nucleotide_input:
-    input: os.path.join(data_dir, "{sample}.sig")
+rule sourmash_sketch_nucleotide:
+    input: os.path.join(data_dir, "{sample}.fa")
     output: 
-        nucl=os.path.join(out_dir, "signatures", "{sample}.nucleotide.sig"),
-        prot=os.path.join(out_dir, "signatures", "{sample}.protein.sig")
-    params:
-        nucl_sketch_params = get_sketch_params("nucleotide"),
-        prot_sketch_params = get_sketch_params("protein")
+        "signatures/{sample}.nucleotide.sig",
+    #params:
+        #nucl_sketch_params = get_sketch_params("nucleotide"),
         #signame = lambda w: accession2signame[w.accession], # default use filename. If provided, use csv with names!
         #abund_cmd = "--track-abundance",
     threads: 1
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=1200,
-    log: os.path.join(logs_dir, "sourmash_sketch", "{sample}.nucl-input.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch", "{sample}.nucl-input.benchmark")
+    log: os.path.join(logs_dir, "sourmash_sketch_nucl", "{sample}.nucl.log")
+    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_nucl", "{sample}.nucl.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell:
         """
-        sourmash sketch {params.nucl_sketch_params} {input} -o {output.nucl}  2> {log}
-        sourmash sketch {params.prot_sketch_params} {input} -o {output.prot}  2>> {log}
+        sourmash sketch dna {input} -o {output}  2> {log}
         """
         #--merge={params.signame:q} 2> {log}
 
-rule sourmash_sketch_protein_input:
-    input: os.path.join(data_dir, "{sample}.sig")
-    output: os.path.join(out_dir, "signatures", "{sample}.protein.sig")
+rule sourmash_sketch_protein:
+    input: os.path.join(data_dir, "{filename}")
+    output: "signatures/{filename}.protein.sig"
     params:
-        prot_sketch_params = get_sketch_params("protein")
+        sketch_params = "protein", #get_sketch_params("protein")
         #signame = lambda w: accession2signame[w.accession],
         #abund_cmd = "--track-abundance",
     threads: 1
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=1200,
-    log: os.path.join(logs_dir, "sourmash_sketch", "{sample}.prot-input.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch", "{sample}.prot-input.benchmark")
+    log: os.path.join(logs_dir, "sourmash_sketch_prot", "{filename}.prot-input.log")
+    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_prot", "{filename}.prot-input.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell:
         """
-        sourmash sketch {params.prot_sketch_params} {input} -o {output.prot}  2>> {log}
+        sourmash sketch {params.sketch_params} {input} -o {output}  2> {log}
         """
 
 # gather each sig

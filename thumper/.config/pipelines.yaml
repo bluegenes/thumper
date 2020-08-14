@@ -1,0 +1,13 @@
+## use this to set workflows with default steps and databases
+
+pipelines:
+  taxonomic_classification_gtdb:
+    steps:
+      - sourmash_sketch_protein
+      #- sourmash_gather_protein
+      # search_containment
+    databases:
+      - gtdb.rep_genus
+  #    - gtdb_r89
+  #taxonomic_classification_genbank:
+  #protein_annotation_PFAM:
