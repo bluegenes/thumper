@@ -3,11 +3,15 @@
 pipelines:
   taxonomic_classification_gtdb:
     steps:
-      - sourmash_sketch_protein
+      nucleotide:
+        - sourmash_sketch_nucleotide
+      protein:
+        - sourmash_sketch_protein
       #- sourmash_gather_protein
       # search_containment
     databases:
+      #protein:
       - gtdb.rep_genus
-  #    - gtdb_r89
+  #     - gtdb_r89
   #taxonomic_classification_genbank:
   #protein_annotation_PFAM:

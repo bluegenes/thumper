@@ -28,9 +28,7 @@ if force:
 
 #wildcard_constraints:
     #size="\d+"
-    #transcriptome = config['transcriptome_name'],
     #database = "(?!x\.).+"
-
 
 sample_list = tp.read_samples(config["sample_list"], data_dir)
 
@@ -52,73 +50,75 @@ onerror:
 rule all:
     input: tp.generate_targets(config, sample_list, out_dir)
 
-# include the databases snake
+# include the databases, common utility snakefiles
 include: "download_databases.snakefile"
 include: "common.snakefile"
 
-def get_sketch_params(input_type):
+## TODO - sketch params are built differently!
+# k=31,scaled=1000,abund
+#-p k=20,num=500,protein -p k=19,num=400,dayhoff,abund
+def build_sketch_params(output_type):
+    ### if input is dna, build dna, translate sketches
+    #### if input is protein, just build protein sketches
+    ## default build protein, dayhoff, hp sigs at the default ksizes from config
+    # always track abund when sketching
+    ## turn this off with config
+    # todo: name alphabet_defaults better to enable user config override (or addition??) 
     sketch_cmd = ""
-    if input_type == 'nucleotide':
-        sketch_type = "translate"
-        #abund = config["sourmash_sketch"]["abundance"]
-        abund_cmd = " --track-abundance "
-        ksizes = config["alphabet_defaults"]["nucleotide"]["ksizes"]
-        scaled = config["alphabet_defaults"]["nucleotide"]["scaled"]
-        sketch_cmd += "-k ".join(ksizes) + f"--scaled {scaled}" + abund_cmd
-        # now get abundance, default ksizes, etc
+    # build sketch cmd
+    input_type = config["input_type"]
+    if input_type == "nucleotide":
+        if output_type == "nucleotide":
+            ksizes = config["alphabet_defaults"]["nucleotide"]["ksizes"]
+            scaled = config["alphabet_defaults"]["nucleotide"]["scaled"]
+            sketch_cmd = "-p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
+            print(sketch_cmd)
+            return sketch_cmd
+        else:
+            sketch_cmd = "translate "
     else:
-        ## get the desired ksize, scaled values from the config else:
-        sketch_cmd = "protein"
-        abund = config["sourmash_sketch"]["abundance"]
-        for alpha in ["protein", "dayhoff", "hp"]:
-            ksizes = config["alphabet_defaults"][alpha]["ksizes"]
-            scaled = config["alphabet_defaults"][alpha]["scaled"]
-            sketch_cmd += "-k ".join(ksizes) + f"--scaled {scaled}" + abund_cmd
-        # now get abundance, default ksizes, etc
-    #ksize = config["alphabet"][input_type]
+        sketch_cmd = "protein "
+    for alpha in ["protein", "dayhoff", "hp"]:
+        ksizes = config["alphabet_defaults"][alpha]["ksizes"]
+        scaled = config["alphabet_defaults"][alpha]["scaled"]
+        sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
+    print(sketch_cmd)
     return sketch_cmd
 
-### if input is dna, build dna, translate sketches
-#### if input is protein, just build protein sketches
 
-## default build protein, dayhoff, hp sigs at the default ksizes from config
-## turn this off with config
 
 rule sourmash_sketch_nucleotide:
-    input: os.path.join(data_dir, "{sample}.fa")
-    output: 
-        os.path.join(out_dir, "signatures", "{sample}.nucleotide.sig"),
-    #params:
-        #nucl_sketch_params = get_sketch_params("nucleotide"),
-        #signame = lambda w: accession2signame[w.accession], # default use filename. If provided, use csv with names!
-        #abund_cmd = "--track-abundance",
+    input: os.path.join(data_dir, "{filename}")
+    output:
+        os.path.join(out_dir, "signatures", "{filename}.nucleotide.sig"),
+    params:
+        sketch_params = build_sketch_params("nucleotide"),
+        #signame = lambda w: accession2signame[w.accession],
     threads: 1
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=1200,
-    log: os.path.join(logs_dir, "sourmash_sketch_nucl", "{sample}.nucl.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_nucl", "{sample}.nucl.benchmark")
+    log: os.path.join(logs_dir, "sourmash_sketch_nucl", "{filename}.nucl.log")
+    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_nucl", "{filename}.nucl.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell:
         """
-        sourmash sketch dna {input} -o {output}  2> {log}
+        sourmash sketch dna {params.sketch_params} -o {output} {input}  2> {log}
         """
-        #--merge={params.signame:q} 2> {log}
 
 rule sourmash_sketch_protein:
     input: os.path.join(data_dir, "{filename}")
     output:
         os.path.join(out_dir, "signatures", "{filename}.protein.sig"),
     params:
-        sketch_params = "protein", #get_sketch_params("protein")
+        sketch_params = build_sketch_params("protein")
         #signame = lambda w: accession2signame[w.accession],
-        #abund_cmd = "--track-abundance",
     threads: 1
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=1200,
-    log: os.path.join(logs_dir, "sourmash_sketch_prot", "{filename}.prot-input.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_prot", "{filename}.prot-input.benchmark")
+    log: os.path.join(logs_dir, "sourmash_sketch_prot", "{filename}.protein.log")
+    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_prot", "{filename}.protein.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell:
         """

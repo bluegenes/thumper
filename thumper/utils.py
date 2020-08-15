@@ -40,10 +40,22 @@ def generate_targets(config, samples, output_dir=""):
     database_targets=[]
     for db in databases:
         ## to do  -- cleaner/clearer/better db specification in yaml file! Not so much nesting?
+        ## instead of nesting protein - name them uniquely? handier for matching exact db in config.yaml
         database_targets+= [os.path.join(database_dir, config["databases"][db]["protein"]["k11"]["sbt"])]
 
     # Pipeline:: find steps in this pipeline
-    steps = config["pipelines"][pipeline]["steps"]
+    input_type = config["input_type"]
+    steps = []
+    # if nucleotide input, run both protein and nucl steps, else just run protein steps
+    if input_type in ["protein", "nucleotide"]:
+        if input_type == "nucleotide":
+            steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
+        steps += config["pipelines"][pipeline]["steps"]["protein"]
+    else:
+        print(f'** ERROR: input type {input_type} must be either "protein" or "nucleotide"')
+        if strict_mode:
+            print('** exiting.')
+            sys.exit(-1)
 
     # generate targets for each step
     pipeline_targets=[]
@@ -59,3 +71,6 @@ def generate_targets(config, samples, output_dir=""):
     # optionally only return databases or pipeline to enable running these as separate bits of the workflow
     targets = database_targets + pipeline_targets
     return targets
+
+
+# for nucleotide vs protein: could specify steps as nucleotide or protein, choose steps based on config["input_type"]

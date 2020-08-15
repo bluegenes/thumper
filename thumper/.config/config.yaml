@@ -1,10 +1,9 @@
 output_dir: output.thumper
-experiment_suffix: ".test"
+experiment_suffix: ""
 logs_dir: logs
+#sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir?
 
 pipeline: taxonomic_classification_gtdb
-
-#sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir?
 
 
 ### default settings 
@@ -15,20 +14,18 @@ alphabet: protein
 alphabet_defaults:
   nucleotide: 
     ksizes: [21,31,51]
-    scaled: [1000]
+    scaled: 1000
   protein:
     ksizes: [11]
-    scaled: [100]
+    scaled: 100
   dayhoff:
     ksizes: [19]
-    scaled: [100]
+    scaled: 100
   hp:
     ksizes: [33, 42]
-    scaled: [100]
+    scaled: 100
 
-## rule targets ##
-
-## could make a pipelines.yml file that sets which rules happen based on type of input data!
+## program params ##
 sourmash_sketch_nucleotide:
   output_dir: signatures
   output_files:
@@ -42,8 +39,10 @@ sourmash_sketch_protein:
   output_files:
     - "{sample}.protein.sig"
   params:
+    # hmm. better to set universal defaults for all downstream steps.
+    # --> don't set here. instead, get this from alpha defaults + user input!?
     scaled: [100]
-    # ksize --> don't set here. instead, get this from alpha defaults + user input!?
+    ksize: [11]
 
 sourmash_gather:
   output_dir: gather

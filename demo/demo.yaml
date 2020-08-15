@@ -3,6 +3,9 @@ basename: demo
 
 output_dir: output.demo
 
+# type of input data (protein or nucleotide)
+input_type: nucleotide
+
 # list of genome filenames to decontaminate
 sample_list: demo/demo-sample-list.txt 
 
