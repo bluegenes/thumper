@@ -29,19 +29,55 @@ def check_params(config):
     #        sys.exit(-1)
 
 
-def generate_targets(config, samples, output_dir=""):
-    # get pipeline we're using (default = taxonomic_classification_gtdb)
-    pipeline = config["pipeline"]
-    # find required db's for this pipeline
-    databases = config["pipelines"][pipeline].get("databases", [])
-
-    # Databases:: generate targets for each database
-    database_dir = config["database_dir"] # to do: make/use a sanitize path function to remove `~` and get abspath here
+def generate_database_targets(config):
     database_targets=[]
-    for db in databases:
+    # only download db's needed for the desired pipeline
+    pipeline = config["pipeline"]
+    pipeline_databases = config["pipelines"][pipeline].get("databases", [])
+    # set this differently?
+    download_alphas = ["protein", "dayhoff", "hp"]
+    input_type = config["input_type"]
+    if input_type in ["protein", "nucleotide"]:
+        if input_type == "nucleotide":
+            download_alphas.append("nucleotide")
+    else:
+        print(f'** ERROR: input type {input_type} must be either "protein" or "nucleotide"')
+        if strict_mode:
+            print('** exiting.')
+            sys.exit(-1)
+
+    database_dir = config["database_dir"] # to do: make/use a sanitize path function to handle `~` and get abspath here
+    # Databases:: generate targets for each database
+    all_databases = config["databases"]
+
+    for db_name, db_info in all_databases.items():
         ## to do  -- cleaner/clearer/better db specification in yaml file! Not so much nesting?
         ## instead of nesting protein - name them uniquely? handier for matching exact db in config.yaml
-        database_targets+= [os.path.join(database_dir, config["databases"][db]["protein"]["k11"]["sbt"])]
+        if db_name in pipeline_databases:
+            csv = f"{db_name}.info.csv"
+            for alphabet, alpha_info in db_info["alphabets"].items():
+                if alphabet in download_alphas:
+                    for ksize, dbs in alpha_info.items():
+                        for db_type in dbs.keys():
+                            #import pdb;pdb.set_trace()
+                            suffix = config["database_suffixes"][db_type]
+                            filename = f"{db_name}.{alphabet}.{ksize}.{db_type}.{suffix}"
+                            #print(filename)
+                            database_targets.append(os.path.join(database_dir, filename))
+
+        #database_targets= [os.path.join(database_dir, db_targ) for db_targ in db_targets]
+        #database_targets+= [os.path.join(database_dir, config["databases"][db]["protein"]["k11"]["sbt"])]
+
+    return database_targets
+
+
+def generate_targets(config, samples, output_dir="", generate_db_targets=False):
+    # get pipeline we're using (default = taxonomic_classification_gtdb)
+    pipeline = config["pipeline"]
+    database_targets, pipeline_targets=[],[]
+
+    if generate_db_targets:
+        database_targets = generate_database_targets(config)
 
     # Pipeline:: find steps in this pipeline
     input_type = config["input_type"]
@@ -58,7 +94,6 @@ def generate_targets(config, samples, output_dir=""):
             sys.exit(-1)
 
     # generate targets for each step
-    pipeline_targets=[]
     for step in steps:
         step_outdir = config[step]["output_dir"]
         step_files = config[step]["output_files"]
@@ -68,9 +103,6 @@ def generate_targets(config, samples, output_dir=""):
         for stepF in step_files:
             pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=step_databases)
 
-    # optionally only return databases or pipeline to enable running these as separate bits of the workflow
     targets = database_targets + pipeline_targets
     return targets
 
-
-# for nucleotide vs protein: could specify steps as nucleotide or protein, choose steps based on config["input_type"]

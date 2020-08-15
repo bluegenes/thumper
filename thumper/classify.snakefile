@@ -48,44 +48,37 @@ onerror:
     shell('cat {failwhale}')
 
 rule all:
-    input: tp.generate_targets(config, sample_list, out_dir)
+    input: tp.generate_targets(config, sample_list, out_dir, generate_db_targets=False)
 
 # include the databases, common utility snakefiles
 include: "download_databases.snakefile"
 include: "common.snakefile"
 
-## TODO - sketch params are built differently!
-# k=31,scaled=1000,abund
-#-p k=20,num=500,protein -p k=19,num=400,dayhoff,abund
 def build_sketch_params(output_type):
-    ### if input is dna, build dna, translate sketches
-    #### if input is protein, just build protein sketches
-    ## default build protein, dayhoff, hp sigs at the default ksizes from config
-    # always track abund when sketching
-    ## turn this off with config
     # todo: name alphabet_defaults better to enable user config override (or addition??) 
     sketch_cmd = ""
-    # build sketch cmd
     input_type = config["input_type"]
+    # if input is dna, build dna, translate sketches
     if input_type == "nucleotide":
         if output_type == "nucleotide":
             ksizes = config["alphabet_defaults"]["nucleotide"]["ksizes"]
             scaled = config["alphabet_defaults"]["nucleotide"]["scaled"]
+            # always track abund when sketching
             sketch_cmd = "-p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
             print(sketch_cmd)
             return sketch_cmd
         else:
             sketch_cmd = "translate "
     else:
+        # if input is protein, just build protein sketches
         sketch_cmd = "protein "
     for alpha in ["protein", "dayhoff", "hp"]:
+        ## default build protein, dayhoff, hp sigs at the default ksizes from config
         ksizes = config["alphabet_defaults"][alpha]["ksizes"]
         scaled = config["alphabet_defaults"][alpha]["scaled"]
         sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
     print(sketch_cmd)
     return sketch_cmd
-
-
 
 rule sourmash_sketch_nucleotide:
     input: os.path.join(data_dir, "{filename}")

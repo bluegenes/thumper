@@ -20,7 +20,8 @@ def get_package_configfile(filename):
     return configfile
 
 
-def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False, verbose=False,
+def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
+                  verbose=False,
                   snakefile_name='classify.snakefile', extra_args=[]):
     # find the Snakefile relative to package path
     snakefile = get_snakefile_path(snakefile_name)
@@ -42,19 +43,19 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False, verbose=Fa
     # add rest of snakemake arguments
     cmd += list(extra_args)
 
-    if configfile:
         # add defaults and system config files, in that order
-        configfiles = [get_package_configfile("config.yaml"),
-                       get_package_configfile("databases.yaml"),
-                       get_package_configfile("pipelines.yaml"),
-                       configfile]
+    configfiles = [get_package_configfile("config.yaml"),
+                   get_package_configfile("databases.yaml"),
+                   get_package_configfile("pipelines.yaml")]
+
+    if configfile:
+        configfiles+= [configfile]
 
 
-        cmd += ["--configfile"] + configfiles
+    cmd += ["--configfile"] + configfiles
 
     if verbose:
         print('final command:', cmd)
-
 
     # runme
     try:
@@ -74,7 +75,7 @@ def cli():
 # create a run subcommand that by default passes all of its arguments
 # on to snakemake (after setting Snakefile and config)
 @click.command(context_settings={"ignore_unknown_options": True})
-@click.argument('configfile')
+@click.argument('configfile', type=click.Path(exists=True))
 @click.option('--no-use-conda', is_flag=True, default=False)
 @click.option('--no-use-mamba', is_flag=True, default=False)
 @click.option('--verbose', is_flag=True)
@@ -82,26 +83,30 @@ def cli():
 def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose):
     "execute thumper workflow (using snakemake underneath)"
     run_snakemake(configfile, snakefile_name='classify.snakefile',
-                  no_use_conda=no_use_conda, no_use_mamba=no_use_mamba, verbose=verbose,
+                  no_use_conda=no_use_conda, no_use_mamba=no_use_mamba,
+                  verbose=verbose,
                   extra_args=snakemake_args)
 
 # download databases using a special Snakefile
 @click.command()
-def download_db():
+@click.option('--configfile', type=click.Path(exists=True), default=None)
+@click.option('--verbose', is_flag=True)
+def download_db(configfile, verbose):
     "download the necessary databases"
-    run_snakemake(None, snakefile_name='download_databases.snakefile',
+    run_snakemake(configfile, snakefile_name='download_databases.snakefile',
+                  verbose=verbose,
                   no_use_conda=True)
 
 # 'check' command
 @click.command()
-@click.argument('configfile')
+@click.argument('configfile', type=click.Path(exists=True))
 def check(configfile):
     "check configuration"
     run_snakemake(configfile, extra_args=['check'])
 
 # 'showconf' command
 @click.command()
-@click.argument('configfile')
+@click.argument('configfile', type=click.Path(exists=True))
 def showconf(configfile):
     "show full configuration across default, system and project config files"
     run_snakemake(configfile, extra_args=['showconf'])
@@ -121,7 +126,7 @@ snakemake Snakefile: {get_snakefile_path('classify.snakefile')}
 
 # 'init' command
 @click.command()
-@click.argument('configfile')
+@click.argument('configfile', type=click.Path(exists=False))
 @click.option('--data-dir', nargs=1)
 #@click.option('--lineages', nargs=1, default="")
 @click.option('-f', '--force', is_flag=True)
