@@ -1,5 +1,5 @@
 output_dir: output.thumper
-experiment_suffix: ""
+#experiment_suffix: ""
 logs_dir: logs
 #sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir?
 
