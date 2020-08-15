@@ -13,7 +13,7 @@ site_dir: site
 theme:
   name: material
   icon:
-    logo: material/handyman
+    logo: material/pets
   #  logo: "img/handyman-24px.svg"
 
   # pretty colors! see https://squidfunk.github.io/mkdocs-material/getting-started/#primary-colors
