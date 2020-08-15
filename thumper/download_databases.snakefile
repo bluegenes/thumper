@@ -34,11 +34,11 @@ rule get_dbinfo:
 
 rule get_sbt:
     output:
-        os.path.join(database_dir, "{db_name}.{alphabet}.k{ksize}.sbt.zip")
+        os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}.sbt.zip")
     params:
         #sbt_info = lambda w: database_links[w.db_name]["sbt"]
         sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + w.ksize]["sbt"]
-    log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}.k{ksize}.sbt.zip.get")
+    log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.sbt.zip.get")
     run:
         if params.sbt_info.startswith(tuple(urls_begin)):
             shell("curl -L {params.sbt_info}  > {output}")
@@ -52,7 +52,7 @@ rule get_lca:
         os.path.join(database_dir, "{db_name}.{alphabet}.k{ksize}.lca.json.gz")
     params:
         lca_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + w.ksize]["lca"]
-    log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}.k{ksize}.lca.json.gz.get")
+    log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.lca.json.gz.get")
     run:
         if params.lca_info.startswith(tuple(urls_begin)):
             shell("curl -L {params.lca_info}  > {output}")

@@ -23,10 +23,11 @@ force_param = ''
 if force:
     force_param = '--force'
 
-
 # snakemake workflow
 
-#wildcard_constraints:
+wildcard_constraints:
+    prot_alphabet="protein|dayhoff|hp",
+    nucl_alphabet="nucleotide|dna|rna"
     #size="\d+"
     #database = "(?!x\.).+"
 
@@ -65,7 +66,7 @@ def build_sketch_params(output_type):
             scaled = config["alphabet_defaults"]["nucleotide"]["scaled"]
             # always track abund when sketching
             sketch_cmd = "-p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
-            print(sketch_cmd)
+            #print(sketch_cmd)
             return sketch_cmd
         else:
             sketch_cmd = "translate "
@@ -77,7 +78,7 @@ def build_sketch_params(output_type):
         ksizes = config["alphabet_defaults"][alpha]["ksizes"]
         scaled = config["alphabet_defaults"][alpha]["scaled"]
         sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
-    print(sketch_cmd)
+    #print(sketch_cmd)
     return sketch_cmd
 
 rule sourmash_sketch_nucleotide:
@@ -120,35 +121,70 @@ rule sourmash_sketch_protein:
 
 # gather each sig
 
-## enable multiple databases ---> impacts naming (cant just do x.__database__.)
-#rule sourmash_gather:
-#    input:
-#        query= rules.sourmash_sketch.output
-#        databases=config["gather_database"] 
-#    output:
-#        csv = os.path.join(out_dir, "gather", "{sample}.gather-matches.csv"),
-#        matches = os.path.join(out_dir, "gather", "{sample}.gather-matches.sig"),
-#        txt = os.path.join(out_dir, "gather", "{sample}.gather-matches.txt"),
-#        unassigned = os.path.join(out_dir, "gather", "{sample}.gather-unassigned.sig"),
-#    params:
-#        alpha_cmd = lambda w: "--" + config["alphabet"], # this just enables one ... if we want nucl + prot, change here
-#        scaled = config["gather_scaled"],
-#    resources:
-#        mem_mb=lambda wildcards, attempt: attempt *10000,
-#        runtime=600,
-#    log: os.path.join(logs_dir, "gather", "{sample}.gather.log")
-#    benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.gather.benchmark")
-#    conda: "envs/sourmash-dev.yml"
-#    shell:
-#        # --ignore-abundance to turn abund off
-#        """
-#        sourmash gather {input.query} {input.databases} -o {output.csv} \
-#        {params.alpha_cmd} --scaled {params.scaled} \
-#        --save-matches {output.matches} --threshold-bp=0  \
-#        --output-unassigned {output.unassigned} \
-#        >& {output.txt} 2> {log}
-##        touch {output.csv} {output.matches}
-#        """
+## if want to enable multiple databases in same cmd, will need to change naming /targeting scheme
+rule sourmash_gather_protein:
+    input:
+        #nucl_query=rules.sourmash_sketch_nucleotide.output,
+        prot_query=rules.sourmash_sketch_protein.output,
+        database=os.path.join(database_dir, "{db_name}.{prot_alphabet}-k{ksize}.sbt.zip")
+    output:
+        csv = os.path.join(out_dir, "gather", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.gather-matches.csv"),
+        matches = os.path.join(out_dir, "gather", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.gather-matches.sig"),
+        txt = os.path.join(out_dir, "gather", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.gather-matches.txt"),
+        unassigned = os.path.join(out_dir, "gather", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.gather-unassigned.sig"),
+    params:
+        alpha_cmd = "", #"--protein", #lambda w: "--" + config["alphabet"], # one alpha at at time
+        scaled = config["gather_scaled"],
+        ksize = lambda w: int(w.ksize)*3
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *10000,
+        runtime=6000,
+    log: os.path.join(logs_dir, "gather", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.gather.log")
+    benchmark: os.path.join(benchmarks_dir, "gather", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.gather.benchmark")
+    conda: "envs/sourmash-dev.yml"
+    shell:
+        # --ignore-abundance to turn abund off --> enable this in params?
+        #sourmash gather {input.nucl_query} {input.prot_query} {input.database} -o {output.csv} \
+        """
+        sourmash gather {input.prot_query} {input.database} -o {output.csv} \
+        {params.alpha_cmd} --scaled {params.scaled} \
+        -k {params.ksize}  \
+        --save-matches {output.matches} --threshold-bp=0  \
+        --output-unassigned {output.unassigned} \
+        >& {output.txt} 2> {log}
+        touch {output.csv} {output.matches}
+        """
+
+rule sourmash_gather_nucleotide:
+    input:
+        nucl_query=rules.sourmash_sketch_nucleotide.output,
+        database=os.path.join(database_dir, "{db_name}.{nucl_alphabet}-k{ksize}.sbt.zip")
+    output:
+        csv = os.path.join(out_dir, "gather", "{filename}.x.{db_name}.{nucl_alphabet}-k{ksize}.gather-matches.csv"),
+        matches = os.path.join(out_dir, "gather", "{filename}.x.{db_name}.{nucl_alphabet}-k{ksize}.gather-matches.sig"),
+        txt = os.path.join(out_dir, "gather", "{filename}.x.{db_name}.{nucl_alphabet}-k{ksize}.gather-matches.txt"),
+        unassigned = os.path.join(out_dir, "gather", "{filename}.x.{db_name}.{nucl_alphabet}-k{ksize}.gather-unassigned.sig"),
+    params:
+        alpha_cmd = "", #"--protein", #lambda w: "--" + config["alphabet"], # one alpha at at time
+        scaled = config["gather_scaled"],
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *10000,
+        runtime=6000,
+    log: os.path.join(logs_dir, "gather", "{filename}.x.{db_name}.{nucl_alphabet}-k{ksize}.gather.log")
+    benchmark: os.path.join(benchmarks_dir, "gather", "{filename}.x.{db_name}.{nucl_alphabet}-k{ksize}.gather.benchmark")
+    conda: "envs/sourmash-dev.yml"
+    shell:
+        # --ignore-abundance to turn abund off --> enable this in params?
+        """
+        sourmash gather {input.nucl_query} {input.database} -o {output.csv} \
+        {params.alpha_cmd} --scaled {params.scaled} \
+        -k {wildcards.ksize}  \
+        --save-matches {output.matches} --threshold-bp=0  \
+        --output-unassigned {output.unassigned} \
+        >& {output.txt} 2> {log}
+        touch {output.csv} {output.matches}
+        """
+
 ## touch empty output file to enable rna ones to fail (to do: handle failures properly downstream)
 
 

@@ -7,10 +7,10 @@ pipelines:
         - sourmash_sketch_nucleotide
       protein:
         - sourmash_sketch_protein
-      #- sourmash_gather_protein
+        - sourmash_gather_protein
       # search_containment
     databases:
       - gtdb.rep_genus
-      - gtdb-r89
+      #- gtdb-r89
   #taxonomic_classification_genbank:
   #protein_annotation_PFAM:

@@ -61,8 +61,8 @@ def generate_database_targets(config):
                         for db_type in dbs.keys():
                             #import pdb;pdb.set_trace()
                             suffix = config["database_suffixes"][db_type]
-                            filename = f"{db_name}.{alphabet}.{ksize}.{db_type}.{suffix}"
-                            #print(filename)
+                            filename = f"{db_name}.{alphabet}-{ksize}.{db_type}.{suffix}"
+                            print(filename)
                             database_targets.append(os.path.join(database_dir, filename))
 
         #database_targets= [os.path.join(database_dir, db_targ) for db_targ in db_targets]
@@ -75,6 +75,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     # get pipeline we're using (default = taxonomic_classification_gtdb)
     pipeline = config["pipeline"]
     database_targets, pipeline_targets=[],[]
+    alphas_in_use = ["protein", "dayhoff", "hp"]
 
     if generate_db_targets:
         database_targets = generate_database_targets(config)
@@ -86,6 +87,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     if input_type in ["protein", "nucleotide"]:
         if input_type == "nucleotide":
             steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
+            alphas_in_use.append("nucleotide")
         steps += config["pipelines"][pipeline]["steps"]["protein"]
     else:
         print(f'** ERROR: input type {input_type} must be either "protein" or "nucleotide"')
@@ -93,11 +95,21 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
             print('** exiting.')
             sys.exit(-1)
 
+
     # generate targets for each step
     for step in steps:
         step_outdir = config[step]["output_dir"]
         step_files = config[step]["output_files"]
-        step_databases = config[step].get("databases", [])
+        step_dbs = config[step].get("databases", [])
+
+        # build full names for these db's
+        step_databases=[]
+        for db_base in step_dbs:
+            db_info = config["databases"][db_base]["alphabets"]
+            for alpha, alpha_info in db_info.items():
+                if alpha in alphas_in_use:
+                   for ksize, dbs in alpha_info.items():
+                       step_databases.append(f"{db_base}.{alpha}-{ksize}")
 
         # fill variables in the output filenames
         for stepF in step_files:

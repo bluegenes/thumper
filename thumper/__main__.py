@@ -40,6 +40,9 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
     # can overridden later on command line.
     cmd += ["-j", "1"]
 
+    # print shell commands
+    cmd += ["--printshellcmds"]
+
     # add rest of snakemake arguments
     cmd += list(extra_args)
 

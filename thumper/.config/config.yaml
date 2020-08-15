@@ -10,6 +10,8 @@ pipeline: taxonomic_classification_gtdb
 input_type: protein
 alphabet: protein
 
+gather_scaled: 1000
+
 # defaults for each alphabet 
 alphabet_defaults:
   nucleotide: 
@@ -44,14 +46,17 @@ sourmash_sketch_protein:
     scaled: [100]
     ksize: [11]
 
-sourmash_gather:
+sourmash_gather_protein:
   output_dir: gather
   output_files:
-    - "{sample}.x.{database}.gather.csv"
-    - "{sample}.x.{database}.matches"
-    - "{sample}.x.{database}.unmatched"
-  params:
-    gather_scaled: 1000
+    - "{sample}.x.{database}.gather-matches.csv"
+    - "{sample}.x.{database}.gather-matches.sig"
+    - "{sample}.x.{database}.gather-matches.txt"
+    - "{sample}.x.{database}.gather-unassigned.sig"
+  databases:
+   - gtdb.rep_genus
+  #params:
+    #gather_scaled: 1000
     #extra: ""
 
 thumper_classify:
