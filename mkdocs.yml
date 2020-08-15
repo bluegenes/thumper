@@ -19,9 +19,9 @@ theme:
     accent: 'black'
   
   # fun logos! see https://material.io/icons/
-  icon:
+  #icon:
     #logo: 'material/school'
-    logo: "img/handyman-24px.svg"
+  #  logo: "img/handyman-24px.svg"
 
   font:
     text: 'Roboto'
