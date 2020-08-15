@@ -12,6 +12,9 @@ site_dir: site
 
 theme:
   name: material
+  icon:
+    logo: material/handyman
+  #  logo: "img/handyman-24px.svg"
 
   # pretty colors! see https://squidfunk.github.io/mkdocs-material/getting-started/#primary-colors
   palette:
@@ -19,9 +22,6 @@ theme:
     accent: 'black'
   
   # fun logos! see https://material.io/icons/
-  #icon:
-    #logo: 'material/school'
-  #  logo: "img/handyman-24px.svg"
 
   font:
     text: 'Roboto'
