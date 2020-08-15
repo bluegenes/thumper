@@ -1,0 +1,31 @@
+site_name: thumper
+site_url: http://bluegenes.github.io/thumper
+repo_name: thumper
+repo_url: https://github.com/bluegenes/thumper
+edit_uri: ""
+
+copyright: 'Copyright &copy; 2020 <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology</a> at UC Davis'
+
+# change directory names here
+docs_dir: doc
+site_dir: site
+
+theme:
+  name: material
+
+  # pretty colors! see https://squidfunk.github.io/mkdocs-material/getting-started/#primary-colors
+  palette:
+    primary: 'blue'
+    accent: 'black'
+  
+  # fun logos! see https://material.io/icons/
+  icon:
+    logo: material/school
+
+  font:
+    text: 'Roboto'
+    code: 'Roboto Mono'
+  
+# optionally give a title for each page or section
+nav:
+  - 'Home': 'index.md'
