@@ -175,7 +175,7 @@ rule sourmash_search_containment_protein:
         sourmash search --containment {input.prot_query} {input.database} \
         -o {output.csv} \
         {params.alpha_cmd} --scaled {params.scaled} \
-        -k {params.ksize}  \
+        -k {params.ksize}  --threshold=0.001 \
         --save-matches {output.matches}  \
         >& {output.txt} 2> {log}
         touch {output.csv} {output.matches}
@@ -234,7 +234,7 @@ rule sourmash_search_containment_nucleotide:
         # --ignore-abundance to turn abund off --> enable this in params?
         """
         sourmash search --containment {input.nucl_query} {input.database} \
-        -o {output.csv} \
+        -o {output.csv} --threshold=0.001 \
         {params.alpha_cmd} --scaled {params.scaled} \
         -k {wildcards.ksize}  \
         --save-matches {output.matches}  \
