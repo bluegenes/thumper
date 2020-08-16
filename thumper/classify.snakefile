@@ -148,7 +148,7 @@ rule sourmash_gather_protein:
         --save-matches {output.matches} --threshold-bp=0  \
         --output-unassigned {output.unassigned} \
         >& {output.txt} 2> {log}
-        touch {output.csv} {output.matches}
+        touch {output.csv} {output.matches} {output.unassigned}
         """
 
 rule sourmash_search_containment_protein:

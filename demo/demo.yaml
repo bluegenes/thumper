@@ -1,3 +1,9 @@
+# check and validate config settings & filenames strictly.
+strict: 1
+
+# continue past survivable errors in classification
+force: 0
+
 # location for all generated files
 basename: demo
 

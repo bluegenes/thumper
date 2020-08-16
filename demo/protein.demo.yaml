@@ -1,0 +1,13 @@
+# location for all generated files
+basename: protein-demo
+
+output_dir: output.protein-demo
+
+# type of input data (protein or nucleotide)
+input_type: protein
+
+# list of genome filenames to decontaminate
+sample_list: demo/gtdb-protein-test-set.txt
+
+# directory in which genome filenames live
+data_dir: demo/genomes 
