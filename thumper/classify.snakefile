@@ -242,6 +242,43 @@ rule sourmash_search_containment_nucleotide:
         touch {output.csv} {output.matches}
         """
 
+#rule contigs_clean_just_taxonomy:
+rule contig_classify:
+    input: 
+        sample_file=os.path.join(data_dir, "{filename}"),
+        #matches=rules.sourmash_search_containment_protein.output.matches,
+        matches=os.path.join(out_dir, "search-containment", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.search-contain-matches.sig"),
+        db_info=lambda w: config["databases"][w.db_name]["info_csv"],
+#        script = srcdir('just_taxonomy.py'),
+#        genome = genome_dir + '/{f}',
+#        matches = output_dir + '/{f}.gather-matches.sig',
+#        lineages = config['lineages_csv']
+    output: 
+        clean=os.path.join(out_dir,"classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.clean.fa.gz"),
+        dirty=os.path.join(out_dir,"classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.dirty.fa.gz"),
+        report=os.path.join(out_dir,"classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.report.txt"),
+        contig_report=os.path.join(out_dir, "classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.contigs.csv"),
+        csv=os.path.join(out_dir, "classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.summary.csv")
+    params:
+        lineage = "", #get_provided_lineage,
+        force = "", #force_param,
+        match_rank = "genus", #match_rank,
+        #moltype = config['moltype']
+        moltype = lambda w: w.prot_alphabet,
+    conda: "envs/sourmash-dev.yml"
+    shell: """
+        python -m thumper.charcoal_just_taxonomy \
+            --genome {input.sample_file} --lineages_csv {input.db_info} \
+            --matches_sig {input.matches} \
+            --clean {output.clean} --dirty {output.dirty} \
+            --report {output.report} --summary {output.csv} \
+            --match-rank {params.match_rank} \
+            --contig-report {output.contig_report}
+    """
+
+
+
+
 
 ## touch empty output file to enable rna ones to fail (to do: handle failures properly downstream)
 

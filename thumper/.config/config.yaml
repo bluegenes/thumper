@@ -10,7 +10,7 @@ pipeline: taxonomic_classification_gtdb
 input_type: protein
 alphabet: protein
 
-gather_scaled: 1000
+gather_scaled: 100 #1000
 
 # defaults for each alphabet 
 alphabet_defaults:
@@ -24,7 +24,7 @@ alphabet_defaults:
     ksizes: [19]
     scaled: 100
   hp:
-    ksizes: [33, 42]
+    ksizes: [33] #, 42]
     scaled: 100
 
 ## program params ##
@@ -90,12 +90,25 @@ sourmash_search_containment_nucleotide:
   databases:
    - gtdb.rep_genus
 
-thumper_classify:
+contig_classify:
   output_dir: classify
   output_files:
-    - "{basename}.x.{database}.classified.csv"
-  params:
-    threshold: .5 # potentially: the threshold for a gather tophit to be used for classification?
-    tophit: True
-    lca: True
+    - "{sample}.x.{database}.clean.fa.gz" 
+    - "{sample}.x.{database}.dirty.fa.gz" 
+    - "{sample}.x.{database}.report.txt" 
+    - "{sample}.x.{database}.contigs.csv" 
+    - "{sample}.x.{database}.summary.csv"
+  databases:
+   - gtdb.rep_genus
+
+  #params:
+  #  threshold: .5 # potentially: the threshold for a gather tophit to be used for classification?
+  #  tophit: True
+  #  lca: True
     #extra: ""
+
+
+#thumper_classify:
+  # output_files:
+    #- "{basename}.x.{database}.classified.csv" --> final classification summary
+
