@@ -17,13 +17,15 @@ database_suffixes:
 # change path to download link for each + add md5 for each?
 databases:
   gtdb.rep_genus:
-    info_csv: /home/ntpierce/2020-gtdb-smash/gtdb-lineages.protein-filenames.n0th-representative-at-genus.csv
+    #info_csv: /home/ntpierce/2020-gtdb-smash/gtdb-lineages.protein-filenames.n0th-representative-at-genus.csv
+    info_csv: /home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
     alphabets:
       nucleotide:
         k21:
           sbt: https://osf.io/s7ryx/download
       protein:
         k11:
+          #sbt: https://osf.io/3w5xr/download
           sbt: https://osf.io/3w5xr/download
       dayhoff:
         k19:
@@ -32,7 +34,7 @@ databases:
         k33:
           sbt: https://osf.io/6zqu9/download
   gtdb-r89:
-    info_csv: gtdb-lineages.rna-filenames.with-signames.csv
+    info_csv: /home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
     alphabets:
       nucleotide:
         k21:

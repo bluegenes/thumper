@@ -20,7 +20,7 @@ import sourmash
 from sourmash import lca
 from sourmash.logging import notify, error, debug
 from sourmash.lca.lca_utils import LCA_Database, LineagePair
-#from sourmash.lca import LineagePair
+from sourmash.lca import LineagePair
 
 
 def cached_property(fun):

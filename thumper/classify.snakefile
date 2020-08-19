@@ -265,9 +265,14 @@ rule contig_classify:
         match_rank = "genus", #match_rank,
         #moltype = config['moltype']
         moltype = lambda w: w.prot_alphabet,
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *10000,
+        runtime=6000,
+    log: os.path.join(logs_dir, "classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.guess-tax.log")
+    benchmark: os.path.join(benchmarks_dir, "classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.guess-tax.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell: """
-        python -m thumper.charcoal_just_taxonomy \
+        python -m thumper.guess_taxonomy \
             --genome {input.sample_file} --lineages_csv {input.db_info} \
             --matches_sig {input.matches} \
             --clean {output.clean} --dirty {output.dirty} \

@@ -75,7 +75,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     # get pipeline we're using (default = taxonomic_classification_gtdb)
     pipeline = config["pipeline"]
     database_targets, pipeline_targets=[],[]
-    alphas_in_use = ["protein", "dayhoff", "hp"]
+    alphas_in_use = ["protein"] #, "dayhoff", "hp"]
 
     if generate_db_targets:
         database_targets = generate_database_targets(config)
@@ -94,7 +94,6 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
         if strict_mode:
             print('** exiting.')
             sys.exit(-1)
-
 
     # generate targets for each step
     for step in steps:
