@@ -49,6 +49,7 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
         # add defaults and system config files, in that order
     configfiles = [get_package_configfile("config.yaml"),
                    get_package_configfile("databases.yaml"),
+                   get_package_configfile("test-databases.yaml"),
                    get_package_configfile("pipelines.yaml")]
 
     if configfile:

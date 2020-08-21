@@ -1,0 +1,28 @@
+# check and validate config settings & filenames strictly.
+strict: 1
+
+# continue past survivable errors in classification
+force: 0
+
+# basename (currently not being used)
+basename: test_prot
+
+# location for all generated files
+output_dir: output.test-prot
+
+# type of input data (protein or nucleotide)
+input_type: protein
+
+# Database info
+database_dir: tests/test-data/databases
+
+turn_off_default_databases: True
+
+search_databases:
+  - gtdb-five
+
+# list of genome filenames to decontaminate
+sample_list: tests/config/prot-samplelist.txt 
+
+# directory in which genome filenames live
+data_dir: tests/test-data/proteomes

@@ -1,0 +1,2 @@
+GB_GCA_002691795.1_protein.faa.gz
+RS_GCF_003143755.1_protein.faa.gz
