@@ -2,10 +2,35 @@ import os
 import sys
 from snakemake.io import expand
 
+
+def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml', '.yml'], verbose = False):
+    # for any file specified via command line, check if it exists at the current path, if not, try some other paths before returning  a helpful error
+    found_file = None
+    filename = sanitize_path(filename) # handle ~!
+    paths_to_try = ['', os.getcwd(), os.path.dirname(os.path.abspath(__file__)), os.path.dirname(os.path.dirname(os.path.abspath(__file__)))] + add_paths
+    suffixes_to_try = [''] + add_suffixes
+
+    if os.path.exists(filename) and not os.path.isdir(filename):
+        found_file = os.path.realpath(filename)
+    else:
+        for p in paths_to_try:
+            for s in suffixes_to_try:
+                tryfile = os.path.join(p, filename+ s)
+                if os.path.exists(tryfile) and not os.path.isdir(tryfile):
+                    found_file = os.path.realpath(tryfile)
+                    break
+    assert found_file, f'Error, cannot find specified {name} file {filename}\n\n\n'
+    if verbose:
+        sys.stderr.write(f'\tFound {name} at {found_file}\n')
+    return found_file
+
+
 def read_samples(samples_file, data_dir, strict_mode=False):
+    samples_file = find_input_file(samples_file)
     sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
     sample_list = [ line for line in sample_list if line ]   # remove empty lines
     # verify that all genome files exist -
+    data_dir = sanitize_path(data_dir)
     for filename in sample_list:
         fullpath = os.path.join(data_dir, filename)
         if not os.path.exists(fullpath):
@@ -90,7 +115,9 @@ def check_and_set_alphabets(config, strict_mode=False):
 
 
 def sanitize_path(path):
-    # to do: remove `~`, etc
+    # expand `~`, get absolute path
+    path = os.path.expanduser(path)
+    path = os.path.abspath(path)
     return path
 
 

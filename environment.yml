@@ -5,6 +5,7 @@ channels:
     - defaults
 dependencies:
     - mamba
+    - pytest
     - pandas>=1.03
     - python>=3.8
     - snakemake-minimal=5.21

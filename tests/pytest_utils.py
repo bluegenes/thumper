@@ -6,7 +6,7 @@ import tempfile
 class TempDirectory(object):
     "Set up a temp directory; optionally change into it. Context manager."
     def __init__(self, chdir=False):
-        self.tempdir = tempfile.mkdtemp(prefix='sgc_test')
+        self.tempdir = tempfile.mkdtemp(prefix='thumper_test')
         self.start_directory = None
         self.do_chdir = chdir
 
@@ -32,13 +32,21 @@ class TempDirectory(object):
 def relative_file(filename):
     "Return the filename relative to the top level directory of this repo."
     thisdir = os.path.dirname(__file__)
-    pkgdir = os.path.join(thisdir, '../..')
+    pkgdir = os.path.join(thisdir, "..")
     newpath = os.path.join(pkgdir, filename)
     return os.path.abspath(newpath)
 
 
+def test_file(filename):
+    "Return the filename relative to the top level directory of this repo."
+    thisdir = os.path.dirname(__file__)
+    pkgdir = os.path.join(thisdir, "..")
+    newpath = os.path.join(pkgdir, "tests", filename)
+    return os.path.abspath(newpath)
+
+
 def pkg_file(filename):
-    "Return the filename relative to the spacegraphcats/ package."
+    "Return the filename relative to the thumper/ package."
     thisdir = os.path.dirname(__file__)
     pkgdir = os.path.join(thisdir, '..')
     newpath = os.path.join(pkgdir, filename)

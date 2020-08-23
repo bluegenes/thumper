@@ -21,8 +21,8 @@ def get_package_configfile(filename):
 
 
 def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
-                  verbose=False,
-                  snakefile_name='classify.snakefile', extra_args=[]):
+                  snakefile_name='classify.snakefile',
+                  outdir=None, verbose=False, extra_args=[]):
     # find the Snakefile relative to package path
     snakefile = get_snakefile_path(snakefile_name)
 
@@ -35,6 +35,10 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
             cmd += ["--use-conda", "--conda-frontend", "mamba"]
         else:
             cmd += ["--use-conda"]
+
+    # add outdir override?
+    if outdir:
+        cmd += ["--config", f"output_dir={outdir}"]
 
     # snakemake sometimes seems to want a default -j; set it to 1 for now.
     # can overridden later on command line.
@@ -49,7 +53,6 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
         # add defaults and system config files, in that order
     configfiles = [get_package_configfile("config.yaml"),
                    get_package_configfile("databases.yaml"),
-                   get_package_configfile("test-databases.yaml"),
                    get_package_configfile("pipelines.yaml")]
 
     if configfile:
@@ -68,6 +71,8 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
         print(f'Error in snakemake invocation: {e}', file=sys.stderr)
         return e.returncode
 
+    return 0
+
 #
 # actual command line functions
 #
@@ -82,23 +87,27 @@ def cli():
 @click.argument('configfile', type=click.Path(exists=True))
 @click.option('--no-use-conda', is_flag=True, default=False)
 @click.option('--no-use-mamba', is_flag=True, default=False)
+# does this outdir need to exist?
+@click.option('--outdir', nargs=1, type=click.Path(exists=True))
 @click.option('--verbose', is_flag=True)
 @click.argument('snakemake_args', nargs=-1)
-def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose):
+def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose, outdir):
     "execute thumper workflow (using snakemake underneath)"
     run_snakemake(configfile, snakefile_name='classify.snakefile',
                   no_use_conda=no_use_conda, no_use_mamba=no_use_mamba,
-                  verbose=verbose,
+                  verbose=verbose,outdir=outdir,
                   extra_args=snakemake_args)
 
 # download databases using a special Snakefile
 @click.command()
 @click.option('--configfile', type=click.Path(exists=True), default=None)
 @click.option('--verbose', is_flag=True)
+# does this outdir need to exist?
+@click.option('--outdir', nargs=1, type=click.Path(exists=True))
 def download_db(configfile, verbose):
     "download the necessary databases"
     run_snakemake(configfile, snakefile_name='download_databases.snakefile',
-                  verbose=verbose,
+                  verbose=verbose, outdir=outdir,
                   no_use_conda=True)
 
 # 'check' command
