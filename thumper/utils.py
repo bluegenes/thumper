@@ -1,10 +1,36 @@
 import os
+import sys
 from snakemake.io import expand
 
-def read_samples(samples_file, data_dir):
+
+def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml', '.yml'], verbose = False):
+    # for any file specified via command line, check if it exists at the current path, if not, try some other paths before returning  a helpful error
+    found_file = None
+    filename = sanitize_path(filename) # handle ~!
+    paths_to_try = ['', os.getcwd(), os.path.dirname(os.path.abspath(__file__)), os.path.dirname(os.path.dirname(os.path.abspath(__file__)))] + add_paths
+    suffixes_to_try = [''] + add_suffixes
+
+    if os.path.exists(filename) and not os.path.isdir(filename):
+        found_file = os.path.realpath(filename)
+    else:
+        for p in paths_to_try:
+            for s in suffixes_to_try:
+                tryfile = os.path.join(p, filename+ s)
+                if os.path.exists(tryfile) and not os.path.isdir(tryfile):
+                    found_file = os.path.realpath(tryfile)
+                    break
+    assert found_file, f'Error, cannot find specified {name} file {filename}\n\n\n'
+    if verbose:
+        sys.stderr.write(f'\tFound {name} at {found_file}\n')
+    return found_file
+
+
+def read_samples(samples_file, data_dir, strict_mode=False):
+    samples_file = find_input_file(samples_file)
     sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
     sample_list = [ line for line in sample_list if line ]   # remove empty lines
     # verify that all genome files exist -
+    data_dir = sanitize_path(data_dir)
     for filename in sample_list:
         fullpath = os.path.join(data_dir, filename)
         if not os.path.exists(fullpath):
@@ -29,92 +55,219 @@ def check_params(config):
     #        sys.exit(-1)
 
 
-def generate_database_targets(config):
-    database_targets=[]
-    # only download db's needed for the desired pipeline
-    pipeline = config["pipeline"]
-    pipeline_databases = config["pipelines"][pipeline].get("databases", [])
-    # set this differently?
-    download_alphas = ["protein", "dayhoff", "hp"]
-    input_type = config["input_type"]
-    if input_type in ["protein", "nucleotide"]:
-        if input_type == "nucleotide":
-            download_alphas.append("nucleotide")
+def check_input_type(config, strict_mode=False):
+    """
+    Check the input type provided in the configfile
+    """
+    alphabet_info = config["alphabet_info"]
+    input_type = config.get("input_type")
+    if input_type:
+        if input_type in ["protein", "nucleotide"]:
+            if input_type == "protein" and "nucleotide" in alphabet_info.keys():
+                print(f'** input type is protein. Turning off nucleotide searching.')
+                del alphabet_info["nucleotide"]
+                config["alphabet_info"] = alphabet_info
+        else:
+            print(f'** ERROR: input type {input_type} must be either "protein" or "nucleotide"')
+            if strict_mode:
+                print('** exiting.')
+                sys.exit(-1)
     else:
-        print(f'** ERROR: input type {input_type} must be either "protein" or "nucleotide"')
+        print(f'** ERROR: "input_type: protein" or "input_type: nucleotide" must be specified in the config file')
+        #if strict_mode:
+        print('** exiting.')
+        sys.exit(-1)
+        #else:
+            #input_type = config["default_input_type"]
+    return config
+
+def check_and_set_alphabets(config, strict_mode=False):
+    """
+    Choose the alphabets for sketching and search
+    """
+    alphaInfo={}
+
+    default_alphabets = config["alphabet_defaults"]
+    alphabets = config.get("alphabets", default_alphabets)
+    # check each alphabet
+    for alpha in alphabets:
+        if alpha not in default_alphabets.keys():
+            print(f'** ERROR: alphabet {alpha} is invalid. Valid alphabets are: {", ".join(default_alphabets)}')
+            if strict_mode:
+                print('** exiting.')
+                sys.exit(-1)
+            else:
+                print(f'Strict mode is off: attempting to continue. Removing {alpha} from alphabet list.')
+                alphabets.remove(alpha)
+        else:
+            #for now, just transfer over defaults. later, enable ksize, scaled param setting?
+            alphaInfo[alpha] = default_alphabets[alpha]
+    if alphaInfo:
+        config["alphabet_info"] = alphaInfo
+        alphabets = check_input_type(config)
+    else:
+        print(f'** ERROR: no valid alphabets remain')
+        print('** exiting.')
+        sys.exit(-1)
+
+    return config
+
+
+
+def sanitize_path(path):
+    # expand `~`, get absolute path
+    path = os.path.expanduser(path)
+    path = os.path.abspath(path)
+    return path
+
+
+
+def check_dbinfo_exists(db_name, all_dbinfo, strict_mode=False):
+    dbinfo_exists = False
+    available_databases = all_dbinfo.keys()
+    if db_name in available_databases:
+        # maybe check alphas and ksizes here?
+        dbinfo_exists=True
+    else:
+        print(f'** ERROR: database {db_name} does not have any associated info. Available databases are: {", ".join(available_databases)}')
         if strict_mode:
             print('** exiting.')
             sys.exit(-1)
+        else:
+            print('Strict mode is off: attempting to continue. Removing {db_name} from search databases list.')
+    return dbinfo_exists
 
-    database_dir = config["database_dir"] # to do: make/use a sanitize path function to handle `~` and get abspath here
-    # Databases:: generate targets for each database
-    all_databases = config["databases"]
 
-    for db_name, db_info in all_databases.items():
-        ## to do  -- cleaner/clearer/better db specification in yaml file! Not so much nesting?
-        ## instead of nesting protein - name them uniquely? handier for matching exact db in config.yaml
-        if db_name in pipeline_databases:
-            csv = f"{db_name}.info.csv"
-            for alphabet, alpha_info in db_info["alphabets"].items():
-                if alphabet in download_alphas:
-                    for ksize, dbs in alpha_info.items():
+def check_user_databases_and_set_info(config, strict_mode=False):
+    databases=[]
+
+    # get information for available databases (ksizes, file dl info, etc)
+    db_info = config["database_info"]
+
+    # find the default databases for this pipeline
+    pipeline = config["pipeline"]
+    default_databases = config["pipelines"][pipeline].get("databases", [])
+
+    # use pipeline dbs unless user turns them off
+    no_use_defaults = config.get("turn_off_default_databases", False)
+    if not no_use_defaults:
+        # check that we have the info for these default databases
+        for db in default_databases:
+            if check_dbinfo_exists(db, db_info):
+                databases.append(db)
+
+    ## add user databases if info is available
+    user_dbs = config.get("search_databases", [])
+
+    for db in user_dbs:
+        if check_dbinfo_exists(db, db_info):
+            # add database to list of databases to search
+            databases.append(db)
+
+    if not databases:
+        print(f'** ERROR: no valid databases selected. Please choose from the available databases or do not disable default databases.')
+        print('** exiting.')
+        sys.exit(-1)
+
+    config["databases"] = databases
+
+    # sanitize database directory path
+    config["database_dir"] = sanitize_path(config["database_dir"])
+
+    return config
+
+
+def integrate_user_config(config):
+    config = check_and_set_alphabets(config)
+    config = check_user_databases_and_set_info(config)
+    return config
+
+
+
+def generate_database_targets(config, also_return_database_names=False):
+    database_targets, database_names=[],[]
+    ## integrate user settings and inputs
+    config = integrate_user_config(config)
+    ## What alphabets are we using? ##
+    alphabet_info = config["alphabet_info"]
+    ## What databases are we using? ##
+    databases = config["databases"]
+    # get all database details
+    database_info = config["database_info"]
+
+    # default filenaming for each database
+    # variables: db_name, alphabet, ksize, db_type, suffix
+    db_target_templates= config["database_target_template"]
+    info_templates = db_target_templates["info_csv"]
+    db_templates = db_target_templates["database"]
+
+    # iterate through dbinfo and build targets for the alphabet's we're using
+    # later, could enable ksize choice here too.
+    ## OR, maybe figure out cleaner/clearer/better db specification in yaml file! Not so much nesting?
+    ## instead of nesting protein - name them uniquely? handier for matching exact db in config.yaml
+    for db in databases:
+        db_targs,db_names=[],[]
+        db_info = config["database_info"][db]
+        for db_alphabet, db_alpha_info in db_info["alphabets"].items():
+            if db_alphabet in alphabet_info.keys():
+                for db_ksize, dbs in db_alpha_info.items():
+                    ksize_int = int(db_ksize[1:]) # db_ksize is string w/format: k{ksize}
+                    if ksize_int in alphabet_info[db_alphabet]["ksizes"]:
                         for db_type in dbs.keys():
-                            #import pdb;pdb.set_trace()
                             suffix = config["database_suffixes"][db_type]
-                            filename = f"{db_name}.{alphabet}-{ksize}.{db_type}.{suffix}"
-                            print(filename)
-                            database_targets.append(os.path.join(database_dir, filename))
+                            db_filenames = expand(db_templates, db_name=db,alphabet=db_alphabet, ksize=db_ksize, db_type=db_type, suffix=suffix)
+                            # generate db_name, needed for workflow targets. sigh, don't like this - do it better.
+                            end = f".{db_type}.{suffix}"
+                            names = [fn.rsplit(end)[0] for fn in db_filenames]
+                            db_targs+=db_filenames
+                            db_names+=names
+        # if we have any targets for this database name, also grab the info csv target
+        if db_targs:
+            # also get the db info csv
+            db_info = expand(info_templates, db_name=db)
+            db_targs+=db_info
+        # add targets for this database
+        database_targets+=db_targs
+        database_names+=db_names
 
-        #database_targets= [os.path.join(database_dir, db_targ) for db_targ in db_targets]
-        #database_targets+= [os.path.join(database_dir, config["databases"][db]["protein"]["k11"]["sbt"])]
+    database_dir=config["database_dir"]
+    final_db_targs = [os.path.join(database_dir, x) for x in database_targets]
+    if also_return_database_names:
+        return final_db_targs, database_names
 
-    return database_targets
+    return final_db_targs
 
 
 def generate_targets(config, samples, output_dir="", generate_db_targets=False):
-    # get pipeline we're using (default = taxonomic_classification_gtdb)
-    pipeline = config["pipeline"]
-    database_targets, pipeline_targets=[],[]
-    alphas_in_use = ["protein", "dayhoff", "hp"]
+    pipeline_targets=[]
+    ## integrate user settings and inputs
+    config = integrate_user_config(config)
+    ## What alphabets are we using? ##
+    alphabet_info = config["alphabet_info"]
 
-    if generate_db_targets:
-        database_targets = generate_database_targets(config)
-
+    ## What databases are we using? ##
+    database_targets, database_names = generate_database_targets(config, also_return_database_names=True)
     # Pipeline:: find steps in this pipeline
-    input_type = config["input_type"]
+    pipeline= config["pipeline"]
     steps = []
     # if nucleotide input, run both protein and nucl steps, else just run protein steps
-    if input_type in ["protein", "nucleotide"]:
-        if input_type == "nucleotide":
-            steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
-            alphas_in_use.append("nucleotide")
-        steps += config["pipelines"][pipeline]["steps"]["protein"]
-    else:
-        print(f'** ERROR: input type {input_type} must be either "protein" or "nucleotide"')
-        if strict_mode:
-            print('** exiting.')
-            sys.exit(-1)
-
+    if "nucleotide" in alphabet_info.keys():
+        steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
+    # assume we always want to run protein steps
+    steps += config["pipelines"][pipeline]["steps"]["protein"]
 
     # generate targets for each step
     for step in steps:
         step_outdir = config[step]["output_dir"]
         step_files = config[step]["output_files"]
-        step_dbs = config[step].get("databases", [])
-
-        # build full names for these db's
-        step_databases=[]
-        for db_base in step_dbs:
-            db_info = config["databases"][db_base]["alphabets"]
-            for alpha, alpha_info in db_info.items():
-                if alpha in alphas_in_use:
-                   for ksize, dbs in alpha_info.items():
-                       step_databases.append(f"{db_base}.{alpha}-{ksize}")
 
         # fill variables in the output filenames
         for stepF in step_files:
-            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=step_databases)
+            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names)
 
-    targets = database_targets + pipeline_targets
-    return targets
+    if generate_db_targets:
+        targets = database_targets + pipeline_targets
+        return targets
+
+    return pipeline_targets
 

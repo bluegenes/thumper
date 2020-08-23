@@ -7,6 +7,12 @@ database_suffixes:
   sbt: zip
   lca: json.gz
 
+database_target_template:
+  info_csv:
+    - "{db_name}.info.csv"
+  database:
+    - "{db_name}.{alphabet}-{ksize}.{db_type}.{suffix}"
+
 ## to do: enable default db naming
 ## download only db's for correct alpha's (check input_type!)
 ## enable download OR link
@@ -15,7 +21,7 @@ database_suffixes:
 
 ## to do: upload to OSF and enable automatic download of db's
 # change path to download link for each + add md5 for each?
-databases:
+database_info:
   gtdb.rep_genus:
     info_csv: /home/ntpierce/2020-gtdb-smash/gtdb-lineages.protein-filenames.n0th-representative-at-genus.csv
     alphabets:
@@ -56,3 +62,27 @@ databases:
         k35:
           sbt: /home/ntpierce/2020-gtdb-smash/index-gtdb/sbt/gtdb_pep.hp_scaled100_k35.index.sbt.zip
           lca: /home/ntpierce/2020-gtdb-smash/index-gtdb/lca/gtdb_pep.hp_scaled100_k35.index.lca.json.gz
+# tiny test databases
+  gtdb-five:
+    info_csv: test-data/databases/gtdb-five.lineages.csv
+    alphabets:
+      nucleotide:
+        k21:
+          sbt: test-data/databases/gtdb-five.nucleotide-k21.sbt.zip
+        k31:
+          sbt: test-data/databases/gtdb-five.nucleotide-k31.sbt.zip
+        k51:
+          sbt: test-data/databases/gtdb-five.nucleotide-k51.sbt.zip
+      protein:
+        k11:
+          sbt: test-data/databases/gtdb-five.protein-k11.sbt.zip
+      dayhoff:
+        k19:
+          sbt: test-data/databases/gtdb-five.dayhoff-k19.sbt.zip
+      hp:
+        k33:
+          sbt: test-data/databases/gtdb-five.hp-k33.sbt.zip
+#        k35:
+#          sbt: test-data/databases/gtdb-five.hp-k35.sbt.zip
+        k42:
+          sbt: test-data/databases/gtdb-five.hp-k42.sbt.zip

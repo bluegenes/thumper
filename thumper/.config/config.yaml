@@ -7,8 +7,7 @@ pipeline: taxonomic_classification_gtdb
 
 
 ### default settings 
-input_type: protein
-alphabet: protein
+default_input_type: protein
 
 gather_scaled: 1000
 
