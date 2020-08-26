@@ -106,7 +106,7 @@ rule sourmash_sketch_nucleotide:
     conda: "envs/sourmash-dev.yml"
     shell:
         """
-        sourmash sketch dna {params.sketch_params} -o {output} --merge {wildcards.sample} {input}  2> {log}
+        sourmash sketch dna {params.sketch_params} -o {output} --name {wildcards.sample} {input}  2> {log}
         """
 
 rule sourmash_sketch_protein:
@@ -126,7 +126,7 @@ rule sourmash_sketch_protein:
     conda: "envs/sourmash-dev.yml"
     shell:
         """
-        sourmash sketch {params.sketch_params} -o {output} --merge {wildcards.sample} {input} 2> {log}
+        sourmash sketch {params.sketch_params} -o {output} --name {wildcards.sample} {input} 2> {log}
         """
 
 rule sourmash_search_containment_protein:
