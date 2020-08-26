@@ -1,5 +1,6 @@
 import os
 import sys
+import pandas as pd
 from snakemake.io import expand
 
 
@@ -25,12 +26,49 @@ def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml
     return found_file
 
 
+#def read_samples(samples_file, data_dir, strict_mode=False):
+#    samples_file = find_input_file(samples_file)
+#    sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
+#    sample_list = [ line for line in sample_list if line ]   # remove empty lines
+#    # verify that all genome files exist -
+#    data_dir = sanitize_path(data_dir)
+#    for filename in sample_list:
+#        fullpath = os.path.join(data_dir, filename)
+#        if not os.path.exists(fullpath):
+#            print(f'** ERROR: genome file {filename} does not exist in {data_dir}')
+#            if strict_mode:
+#                print('** exiting.')
+#                sys.exit(-1)
+#    return sample_list
+
 def read_samples(samples_file, data_dir, strict_mode=False):
     samples_file = find_input_file(samples_file)
-    sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
-    sample_list = [ line for line in sample_list if line ]   # remove empty lines
-    # verify that all genome files exist -
+    if '.tsv' in samples_file or '.csv' in samples_file:
+        separator = '\t'
+        if '.csv' in samples_file:
+            separator = ','
+        try:
+            samples = pd.read_csv(samples_file, dtype=str, sep=separator, names = ["sample", "filename"])
+        except Exception as e:
+            sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
+            print(e)
+    elif '.xls' in samples_file:
+        try:
+            samples = pd.read_excel(samples_file, dtype=str, names = ["sample", "filename"])
+        except Exception as e:
+            sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
+            print(e)
+    else:
+        sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
+        sample_list = [ line for line in sample_list if line ]   # remove empty lines
+        samplesD = {"sample":sample_list,"filename":sample_list} # maybe later try removing *fa.gz or the like
+        samples = pd.DataFrame(samplesD)
+
+    samples.set_index("sample", inplace=True)
+
+    # Now, verify that all genome files exist
     data_dir = sanitize_path(data_dir)
+    sample_list = samples["filename"].tolist()
     for filename in sample_list:
         fullpath = os.path.join(data_dir, filename)
         if not os.path.exists(fullpath):
@@ -38,7 +76,9 @@ def read_samples(samples_file, data_dir, strict_mode=False):
             if strict_mode:
                 print('** exiting.')
                 sys.exit(-1)
-    return sample_list
+
+    return samples
+
 
 def check_params(config):
     pass
