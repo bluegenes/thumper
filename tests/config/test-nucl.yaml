@@ -1,0 +1,27 @@
+# check and validate config settings & filenames strictly.
+strict: 1
+
+# continue past survivable errors in classification
+force: 0
+
+basename: test_nucl
+
+# location for all generated files
+output_dir: output.test-nucl
+
+# type of input data (protein or nucleotide)
+input_type: nucleotide
+
+# Database info
+database_dir: tests/test-data/databases
+
+turn_off_default_databases: True
+
+search_databases:
+  - gtdb-nine
+
+# list of genome filenames to decontaminate
+sample_list: tests/config/nucl-samplelist.txt
+
+# directory in which genome filenames live
+data_dir: tests/test-data/genomes

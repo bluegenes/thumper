@@ -1,0 +1,26 @@
+# specify tiny test databases
+
+database_info:
+  gtdb-five:
+    info_csv: test-data/databases/gtdb-five.lineages.csv
+    alphabets:
+      nucleotide:
+        k21:
+          sbt: test-data/databases/gtdb-five.nucleotide-k21.sbt.zip
+        k31:
+          sbt: test-data/databases/gtdb-five.nucleotide-k31.sbt.zip
+        k51:
+          sbt: test-data/databases/gtdb-five.nucleotide-k51.sbt.zip
+      protein:
+        k11:
+          sbt: test-data/databases/gtdb-five.protein-k11.sbt.zip
+      dayhoff:
+        k19:
+          sbt: test-data/databases/gtdb-five.dayhoff-k19.sbt.zip
+      hp:
+        k33:
+          sbt: test-data/databases/gtdb-five.hp-k33.sbt.zip
+        k35:
+          sbt: test-data/databases/gtdb-five.hp-k35.sbt.zip
+        k42:
+          sbt: test-data/databases/gtdb-five.hp-k42.sbt.zip

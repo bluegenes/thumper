@@ -7,8 +7,7 @@ pipeline: taxonomic_classification_gtdb
 
 
 ### default settings 
-input_type: protein
-alphabet: protein
+default_input_type: protein
 
 gather_scaled: 100 #1000
 
@@ -89,6 +88,28 @@ sourmash_search_containment_nucleotide:
     - "{sample}.x.{database}.search-contain-matches.txt"
   databases:
    - gtdb.rep_genus
+
+protein_signames_to_file:
+  output_dir: index
+  output_files:
+    - "{basename}.protein-signatures.txt"
+
+nucleotide_signames_to_file:
+  output_dir: index
+  output_files:
+    - "{basename}.nucleotide-signatures.txt"
+
+# "index name" needs to include alphabet, ksize
+sourmash_index_sbt_protein:
+  output_dir: index
+  output_files:
+    - "{basename}.{index-name}.sbt.zip"
+
+sourmash_index_sbt_nucleotide:
+  output_dir: index
+  output_files:
+    - "{basename}.{index-name}.sbt.zip"
+
 
 contig_classify:
   output_dir: classify
