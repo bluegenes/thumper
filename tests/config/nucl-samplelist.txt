@@ -1,2 +1,2 @@
-2.fa.gz
-63.fa.gz
+GCA_002691795.1_genomic.fna.gz
+GCF_003143755.1_genomic.fna.gz

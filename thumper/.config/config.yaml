@@ -89,6 +89,28 @@ sourmash_search_containment_nucleotide:
   databases:
    - gtdb.rep_genus
 
+protein_signames_to_file:
+  output_dir: index
+  output_files:
+    - "{basename}.protein-signatures.txt"
+
+nucleotide_signames_to_file:
+  output_dir: index
+  output_files:
+    - "{basename}.nucleotide-signatures.txt"
+
+# "index name" needs to include alphabet, ksize
+sourmash_index_sbt_protein:
+  output_dir: index
+  output_files:
+    - "{basename}.{index-name}.sbt.zip"
+
+sourmash_index_sbt_nucleotide:
+  output_dir: index
+  output_files:
+    - "{basename}.{index-name}.sbt.zip"
+
+
 thumper_classify:
   output_dir: classify
   output_files:

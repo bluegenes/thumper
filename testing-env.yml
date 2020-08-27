@@ -1,0 +1,17 @@
+name: thumper-testing
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+  - defaults
+dependencies:
+  - mamba
+  - pytest
+  - rust
+  - pandas>=1.1
+  - python>=3.8
+  - snakemake-minimal=5.23
+  - pip
+  - pip:
+    - pytest_dependency
+    - git+https://github.com/dib-lab/sourmash@latest

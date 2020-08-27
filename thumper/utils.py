@@ -1,5 +1,6 @@
 import os
 import sys
+import pandas as pd
 from snakemake.io import expand
 
 
@@ -25,12 +26,49 @@ def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml
     return found_file
 
 
+#def read_samples(samples_file, data_dir, strict_mode=False):
+#    samples_file = find_input_file(samples_file)
+#    sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
+#    sample_list = [ line for line in sample_list if line ]   # remove empty lines
+#    # verify that all genome files exist -
+#    data_dir = sanitize_path(data_dir)
+#    for filename in sample_list:
+#        fullpath = os.path.join(data_dir, filename)
+#        if not os.path.exists(fullpath):
+#            print(f'** ERROR: genome file {filename} does not exist in {data_dir}')
+#            if strict_mode:
+#                print('** exiting.')
+#                sys.exit(-1)
+#    return sample_list
+
 def read_samples(samples_file, data_dir, strict_mode=False):
     samples_file = find_input_file(samples_file)
-    sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
-    sample_list = [ line for line in sample_list if line ]   # remove empty lines
-    # verify that all genome files exist -
+    if '.tsv' in samples_file or '.csv' in samples_file:
+        separator = '\t'
+        if '.csv' in samples_file:
+            separator = ','
+        try:
+            samples = pd.read_csv(samples_file, dtype=str, sep=separator, names = ["sample", "filename"])
+        except Exception as e:
+            sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
+            print(e)
+    elif '.xls' in samples_file:
+        try:
+            samples = pd.read_excel(samples_file, dtype=str, names = ["sample", "filename"])
+        except Exception as e:
+            sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
+            print(e)
+    else:
+        sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
+        sample_list = [ line for line in sample_list if line ]   # remove empty lines
+        samplesD = {"sample":sample_list,"filename":sample_list} # maybe later try removing *fa.gz or the like
+        samples = pd.DataFrame(samplesD)
+
+    samples.set_index("sample", inplace=True)
+
+    # Now, verify that all genome files exist
     data_dir = sanitize_path(data_dir)
+    sample_list = samples["filename"].tolist()
     for filename in sample_list:
         fullpath = os.path.join(data_dir, filename)
         if not os.path.exists(fullpath):
@@ -38,7 +76,9 @@ def read_samples(samples_file, data_dir, strict_mode=False):
             if strict_mode:
                 print('** exiting.')
                 sys.exit(-1)
-    return sample_list
+
+    return samples
+
 
 def check_params(config):
     pass
@@ -179,7 +219,12 @@ def check_user_databases_and_set_info(config, strict_mode=False):
 
 def integrate_user_config(config):
     config = check_and_set_alphabets(config)
-    config = check_user_databases_and_set_info(config)
+    pipeline = config["pipeline"]
+    if config["pipelines"][pipeline]["databases_required"]:
+        config["get_databases"] = True
+        config = check_user_databases_and_set_info(config)
+    else:
+        config["get_databases"] = False
     return config
 
 
@@ -244,17 +289,25 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     config = integrate_user_config(config)
     ## What alphabets are we using? ##
     alphabet_info = config["alphabet_info"]
+    ## set run basename
+    basename = config.get("basename", "thumper-output")
 
     ## What databases are we using? ##
-    database_targets, database_names = generate_database_targets(config, also_return_database_names=True)
     # Pipeline:: find steps in this pipeline
     pipeline= config["pipeline"]
+    db_required = config["pipelines"][pipeline]["databases_required"]
+    if db_required:
+        database_targets, database_names = generate_database_targets(config, also_return_database_names=True)
+    else:
+        generate_db_targets=False
+        database_targets,database_names=[],[]
     steps = []
     # if nucleotide input, run both protein and nucl steps, else just run protein steps
     if "nucleotide" in alphabet_info.keys():
         steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
-    # assume we always want to run protein steps
-    steps += config["pipelines"][pipeline]["steps"]["protein"]
+    protein_alphas = ["protein", "dayhoff", "hp"]
+    # assume we always want to run protein steps (if there are any in the pipeline)
+    steps += config["pipelines"][pipeline]["steps"].get("protein", [])
 
     # generate targets for each step
     for step in steps:
@@ -263,7 +316,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
 
         # fill variables in the output filenames
         for stepF in step_files:
-            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names)
+            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename)
 
     if generate_db_targets:
         targets = database_targets + pipeline_targets
