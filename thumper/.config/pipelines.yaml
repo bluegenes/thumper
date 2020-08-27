@@ -3,6 +3,7 @@
 
 pipelines:
   taxonomic_classification_gtdb:
+    databases_required: True
     steps:
       nucleotide:
         - sourmash_sketch_nucleotide
@@ -15,3 +16,16 @@ pipelines:
       #- gtdb-r89
   #taxonomic_classification_genbank:
   #protein_annotation_PFAM:
+  generate_protein_index:
+    databases_required: False
+    steps:
+      protein:
+        - sourmash_sketch_protein
+        - protein_signames_to_file
+  generate_nucleotide_index:
+    databases_required: False
+    steps:
+      nucleotide:
+        - sourmash_sketch_nucleotide
+        - nucleotide_signames_to_file
+    

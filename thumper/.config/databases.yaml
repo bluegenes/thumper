@@ -63,26 +63,24 @@ database_info:
           sbt: /home/ntpierce/2020-gtdb-smash/index-gtdb/sbt/gtdb_pep.hp_scaled100_k35.index.sbt.zip
           lca: /home/ntpierce/2020-gtdb-smash/index-gtdb/lca/gtdb_pep.hp_scaled100_k35.index.lca.json.gz
 # tiny test databases
-  gtdb-five:
-    info_csv: test-data/databases/gtdb-five.lineages.csv
+  gtdb-nine:
+    info_csv: test-data/databases/gtdb-nine.lineages.csv
     alphabets:
       nucleotide:
         k21:
-          sbt: test-data/databases/gtdb-five.nucleotide-k21.sbt.zip
+          sbt: test-data/databases/gtdb-nine.nucleotide-k21.sbt.zip
         k31:
-          sbt: test-data/databases/gtdb-five.nucleotide-k31.sbt.zip
+          sbt: test-data/databases/gtdb-nine.nucleotide-k31.sbt.zip
         k51:
-          sbt: test-data/databases/gtdb-five.nucleotide-k51.sbt.zip
+          sbt: test-data/databases/gtdb-nine.nucleotide-k51.sbt.zip
       protein:
         k11:
-          sbt: test-data/databases/gtdb-five.protein-k11.sbt.zip
+          sbt: test-data/databases/gtdb-nine.protein-k11.sbt.zip
       dayhoff:
         k19:
-          sbt: test-data/databases/gtdb-five.dayhoff-k19.sbt.zip
+          sbt: test-data/databases/gtdb-nine.dayhoff-k19.sbt.zip
       hp:
         k33:
-          sbt: test-data/databases/gtdb-five.hp-k33.sbt.zip
-#        k35:
-#          sbt: test-data/databases/gtdb-five.hp-k35.sbt.zip
+          sbt: test-data/databases/gtdb-nine.hp-k33.sbt.zip
         k42:
-          sbt: test-data/databases/gtdb-five.hp-k42.sbt.zip
+          sbt: test-data/databases/gtdb-nine.hp-k42.sbt.zip

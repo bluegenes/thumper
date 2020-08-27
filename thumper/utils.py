@@ -219,7 +219,12 @@ def check_user_databases_and_set_info(config, strict_mode=False):
 
 def integrate_user_config(config):
     config = check_and_set_alphabets(config)
-    config = check_user_databases_and_set_info(config)
+    pipeline = config["pipeline"]
+    if config["pipelines"][pipeline]["databases_required"]:
+        config["get_databases"] = True
+        config = check_user_databases_and_set_info(config)
+    else:
+        config["get_databases"] = False
     return config
 
 
@@ -284,17 +289,25 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     config = integrate_user_config(config)
     ## What alphabets are we using? ##
     alphabet_info = config["alphabet_info"]
+    ## set run basename
+    basename = config.get("basename", "thumper-output")
 
     ## What databases are we using? ##
-    database_targets, database_names = generate_database_targets(config, also_return_database_names=True)
     # Pipeline:: find steps in this pipeline
     pipeline= config["pipeline"]
+    db_required = config["pipelines"][pipeline]["databases_required"]
+    if db_required:
+        database_targets, database_names = generate_database_targets(config, also_return_database_names=True)
+    else:
+        generate_db_targets=False
+        database_targets,database_names=[],[]
     steps = []
     # if nucleotide input, run both protein and nucl steps, else just run protein steps
     if "nucleotide" in alphabet_info.keys():
         steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
-    # assume we always want to run protein steps
-    steps += config["pipelines"][pipeline]["steps"]["protein"]
+    protein_alphas = ["protein", "dayhoff", "hp"]
+    # assume we always want to run protein steps (if there are any in the pipeline)
+    steps += config["pipelines"][pipeline]["steps"].get("protein", [])
 
     # generate targets for each step
     for step in steps:
@@ -303,7 +316,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
 
         # fill variables in the output filenames
         for stepF in step_files:
-            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names)
+            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename)
 
     if generate_db_targets:
         targets = database_targets + pipeline_targets

@@ -13,12 +13,12 @@ output_dir: output.test-nucl
 input_type: nucleotide
 
 # Database info
-database_dir: tests/test-data/databases
+database_dir: test-data/databases
 
 turn_off_default_databases: True
 
 search_databases:
-  - gtdb-five
+  - gtdb-nine
 
 # list of genome filenames to decontaminate
 sample_list: config/nucl-samplelist.txt
