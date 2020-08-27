@@ -14,7 +14,7 @@ output_dir: output.test-prot
 input_type: protein
 
 # Database info
-database_dir: test-data/databases
+database_dir: tests/test-data/databases
 
 turn_off_default_databases: True
 
@@ -22,7 +22,7 @@ search_databases:
   - gtdb-nine
 
 # list of genome filenames to decontaminate
-sample_list: config/prot-samplelist.txt
+sample_list: tests/config/prot-samplelist.txt
 
 # directory in which genome filenames live
-data_dir: test-data/proteomes
+data_dir: tests/test-data/proteomes
