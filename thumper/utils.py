@@ -25,22 +25,6 @@ def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml
         sys.stderr.write(f'\tFound {name} at {found_file}\n')
     return found_file
 
-
-#def read_samples(samples_file, data_dir, strict_mode=False):
-#    samples_file = find_input_file(samples_file)
-#    sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
-#    sample_list = [ line for line in sample_list if line ]   # remove empty lines
-#    # verify that all genome files exist -
-#    data_dir = sanitize_path(data_dir)
-#    for filename in sample_list:
-#        fullpath = os.path.join(data_dir, filename)
-#        if not os.path.exists(fullpath):
-#            print(f'** ERROR: genome file {filename} does not exist in {data_dir}')
-#            if strict_mode:
-#                print('** exiting.')
-#                sys.exit(-1)
-#    return sample_list
-
 def read_samples(samples_file, data_dir, strict_mode=False):
     samples_file = find_input_file(samples_file)
     if '.tsv' in samples_file or '.csv' in samples_file:
@@ -114,11 +98,8 @@ def check_input_type(config, strict_mode=False):
                 sys.exit(-1)
     else:
         print(f'** ERROR: "input_type: protein" or "input_type: nucleotide" must be specified in the config file')
-        #if strict_mode:
         print('** exiting.')
         sys.exit(-1)
-        #else:
-            #input_type = config["default_input_type"]
     return config
 
 def check_and_set_alphabets(config, strict_mode=False):
@@ -305,7 +286,6 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     # if nucleotide input, run both protein and nucl steps, else just run protein steps
     if "nucleotide" in alphabet_info.keys():
         steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
-    protein_alphas = ["protein", "dayhoff", "hp"]
     # assume we always want to run protein steps (if there are any in the pipeline)
     steps += config["pipelines"][pipeline]["steps"].get("protein", [])
 

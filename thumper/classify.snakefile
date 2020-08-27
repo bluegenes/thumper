@@ -235,23 +235,22 @@ rule sourmash_index_sbt_protein:
         --from-file {input}  2> {log}
         """
 
-#rule contigs_clean_just_taxonomy:
-rule contig_classify:
+rule contig_classify_protein:
     input: 
-        sample_file=os.path.join(data_dir, "{filename}"),
+        sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
         #matches=rules.sourmash_search_containment_protein.output.matches,
-        matches=os.path.join(out_dir, "search-containment", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.search-contain-matches.sig"),
-        db_info=lambda w: config["databases"][w.db_name]["info_csv"],
+        matches=os.path.join(out_dir, "search-containment", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.search-contain-matches.sig"),
+        db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
 #        script = srcdir('just_taxonomy.py'),
 #        genome = genome_dir + '/{f}',
 #        matches = output_dir + '/{f}.gather-matches.sig',
 #        lineages = config['lineages_csv']
     output: 
-        clean=os.path.join(out_dir,"classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.clean.fa.gz"),
-        dirty=os.path.join(out_dir,"classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.dirty.fa.gz"),
-        report=os.path.join(out_dir,"classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.report.txt"),
-        contig_report=os.path.join(out_dir, "classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.contigs.csv"),
-        csv=os.path.join(out_dir, "classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.summary.csv")
+        clean=os.path.join(out_dir,"classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.clean.fa.gz"),
+        dirty=os.path.join(out_dir,"classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.dirty.fa.gz"),
+        report=os.path.join(out_dir,"classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.report.txt"),
+        contig_report=os.path.join(out_dir, "classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.contigs.csv"),
+        csv=os.path.join(out_dir, "classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.summary.csv")
     params:
         lineage = "", #get_provided_lineage,
         force = "", #force_param,
@@ -261,8 +260,44 @@ rule contig_classify:
     resources:
         mem_mb=lambda wildcards, attempt: attempt *10000,
         runtime=6000,
-    log: os.path.join(logs_dir, "classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.guess-tax.log")
-    benchmark: os.path.join(benchmarks_dir, "classify", "{filename}.x.{db_name}.{prot_alphabet}-k{ksize}.guess-tax.benchmark")
+    log: os.path.join(logs_dir, "classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.guess-tax.log")
+    benchmark: os.path.join(benchmarks_dir, "classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.guess-tax.benchmark")
+    conda: "envs/sourmash-dev.yml"
+    shell: """
+        python -m thumper.guess_taxonomy \
+            --genome {input.sample_file} --lineages_csv {input.db_info} \
+            --matches_sig {input.matches} \
+            --clean {output.clean} --dirty {output.dirty} \
+            --report {output.report} --summary {output.csv} \
+            --match-rank {params.match_rank} \
+            --contig-report {output.contig_report}
+    """
+rule contig_classify_nucleotide:
+    input: 
+        sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
+        matches=os.path.join(out_dir, "search-containment", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.search-contain-matches.sig"),
+        db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
+#        script = srcdir('just_taxonomy.py'),
+#        genome = genome_dir + '/{f}',
+#        matches = output_dir + '/{f}.gather-matches.sig',
+#        lineages = config['lineages_csv']
+    output: 
+        clean=os.path.join(out_dir,"classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.clean.fa.gz"),
+        dirty=os.path.join(out_dir,"classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.dirty.fa.gz"),
+        report=os.path.join(out_dir,"classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.report.txt"),
+        contig_report=os.path.join(out_dir, "classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.contigs.csv"),
+        csv=os.path.join(out_dir, "classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.summary.csv")
+    params:
+        lineage = "", #get_provided_lineage,
+        force = "", #force_param,
+        match_rank = "genus", #match_rank,
+        #moltype = config['moltype']
+        moltype = lambda w: w.nucl_alphabet,
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *10000,
+        runtime=6000,
+    log: os.path.join(logs_dir, "classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.guess-tax.log")
+    benchmark: os.path.join(benchmarks_dir, "classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.guess-tax.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell: """
         python -m thumper.guess_taxonomy \
