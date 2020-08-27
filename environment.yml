@@ -9,3 +9,5 @@ dependencies:
     - pandas>=1.03
     - python>=3.8
     - snakemake-minimal=5.21
+    - pip:
+      - pytest_dependency

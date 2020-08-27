@@ -3,6 +3,7 @@ import pytest
 import tempfile
 import shutil
 import os
+from pytest_dependency import depends
 
 from thumper.__main__ import run_snakemake
 from . import pytest_utils as utils
@@ -37,8 +38,10 @@ def _run_snakemake_test(conf, target, extra_args=[]):
                            outdir=_tempdir, extra_args=[target] + conda_args + extra_args)
     return status
 
-test_genomes = ['2.fa.gz','63.fa.gz']
+test_genomes = ['GCA_002691795.1_genomic.fna.gz', 'GCF_003143755.1_genomic.fna.gz']
 test_proteomes = ['GB_GCA_002691795.1_protein.faa.gz', 'RS_GCF_003143755.1_protein.faa.gz']
+nucl_databases = ['gtdb-nine.nucleotide-k21', 'gtdb-nine.nucleotide-k31', 'gtdb-nine.nucleotide-k51']
+prot_databases = ['gtdb-nine.protein-k11', 'gtdb-nine.dayhoff-k19', 'gtdb-nine.hp-k33', 'gtdb-nine.hp-k42']
 
 @pytest.mark.dependency()
 @pytest.mark.parametrize("genome_file", test_genomes)
@@ -68,40 +71,38 @@ def test_protein_sketch(genome_file):
     assert os.path.exists(os.path.join(_tempdir, target))
 
 
-#@pytest.mark.dependency(depends=['test_nucleotide_sketch'])
-#def test_nucleotide_search_containment():
-#    global _tempdir
-#
-#    prot_conf = utils.relative_file('tests/config/prot-test.yaml')
-#    targets = ["output.test-prot/signatures/2.fa.gz.protein.sig",
-#               "output.test-prot/signatures/63.fa.gz.protein.sig"]
-#
-#    status = test_run_snakemake(dory_conf, verbose=True, outdir=_tempdir,
-#                           extra_args=targets)
-#    assert status == 0
-#    assert os.path.exists(os.path.join(_tempdir, target))
+@pytest.mark.dependency()
+@pytest.mark.parametrize("genome_file", test_genomes)
+@pytest.mark.parametrize("database_name", nucl_databases)
+def test_nucleotide_search_containment(request, genome_file, database_name):
+    depends(request, [f"test_nucleotide_sketch[{g}]" for g in test_genomes])
+    target = f"{genome_file}.x.{database_name}.search-contain-matches.sig"
+    status = _run_snakemake_test('tests/config/nucl-test.yaml', target)
+
+    assert status == 0
+    assert os.path.exists(os.path.join(_tempdir, target))
 
 
-#@pytest.mark.dependency(depends=['test_translate_sketch'])
-#def test_translate_search_containment():
-#    global _tempdir
-#
-#    dory_conf = utils.relative_file('spacegraphcats/conf/dory-test.yaml')
-#    target = 'dory_k21_r1/catlas.csv'
-#    status = test_run_snakemake(dory_conf, verbose=True, outdir=_tempdir,
-#                           extra_args=[target])
-#    assert status == 0
-#    assert os.path.exists(os.path.join(_tempdir, target))
+@pytest.mark.dependency()
+@pytest.mark.parametrize("genome_file", test_genomes)
+@pytest.mark.parametrize("database_name", prot_databases)
+def test_translate_search_containment(request, genome_file, database_name):
+    depends(request, [f"test_translate_sketch[{g}]" for g in test_genomes])
+    target = f"{genome_file}.x.{database_name}.search-contain-matches.sig"
+    status = _run_snakemake_test('tests/config/nucl-test.yaml', target)
+
+    assert status == 0
+    assert os.path.exists(os.path.join(_tempdir, target))
 
 
-#@pytest.mark.dependency(depends=['test_protein_sketch'])
-#def test_protein_search_containment():
-#    global _tempdir
-#
-#    dory_conf = utils.relative_file('spacegraphcats/conf/dory-test.yaml')
-#    target = 'dory_k21_r1/catlas.csv'
-#    status = test_run_snakemake(dory_conf, verbose=True, outdir=_tempdir,
-#                           extra_args=[target])
-#    assert status == 0
-#    assert os.path.exists(os.path.join(_tempdir, target))
+@pytest.mark.dependency()
+@pytest.mark.parametrize("genome_file", test_proteomes)
+@pytest.mark.parametrize("database_name", prot_databases)
+def test_protein_search_containment(request, genome_file, database_name):
+    depends(request, [f"test_protein_sketch[{g}]" for g in test_proteomes])
+    target = f"{genome_file}.x.{database_name}.search-contain-matches.sig"
+    status = _run_snakemake_test('tests/config/prot-test.yaml', target)
+
+    assert status == 0
+    assert os.path.exists(os.path.join(_tempdir, target))
 
