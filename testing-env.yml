@@ -8,7 +8,7 @@ dependencies:
   - mamba
   - pytest
   - rust
-  - pandas>=1.1
+  - pandas=1.1.1
   - python>=3.8
   - snakemake-minimal=5.23
   - pip

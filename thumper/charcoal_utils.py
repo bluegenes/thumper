@@ -1,13 +1,11 @@
 """
 utility functions for charcoal.
-version from https://github.com/dib-lab/charcoal/pull/110
 """
-import math
+import json
 from collections import defaultdict, Counter
-import screed
 
 import sourmash
-from sourmash.lca import lca_utils
+from sourmash.lca import lca_utils, LineagePair
 
 
 def is_lineage_match(lin_a, lin_b, rank):
@@ -63,7 +61,6 @@ def gather_lca_assignments(hashvals, rank, dblist, ldb):
     assignments = defaultdict(set)
     for hashval in hashvals:
         for lca_db in dblist:
-            lineages = set()
             for ident in get_idents_for_hashval(lca_db, hashval):
                 lineage = ldb.ident_to_lineage[ident]
 
@@ -160,12 +157,21 @@ def gather_at_rank(mh, lca_db, lin_db, match_rank):
         counts[match_lineage] += common
 
         # finish out gather algorithm!
-        minhash.remove_many(match_sig.minhash.get_mins())
+        minhash.remove_many(match_sig.minhash.hashes)
         query_sig = sourmash.SourmashSignature(minhash)
 
     # return!
     for lin, count in counts.most_common():
         yield lin, count
+
+
+def summarize_at_rank(lincounts, rank):
+    newcounts = Counter()
+    for lin, count in lincounts:
+        lin = pop_to_rank(lin, rank)
+        newcounts[lin] += count
+
+    return newcounts.most_common()
 
 
 def get_ident(sig):
@@ -174,3 +180,37 @@ def get_ident(sig):
     ident = ident.split()[0]
     ident = ident.split('.')[0]
     return ident
+
+def load_contigs_gather_json(filename):
+    # load contigs JSON file - @CTB
+    with open(filename, 'rt') as fp:
+        contigs_d = json.load(fp)
+        for k in contigs_d:
+            (size, v) = contigs_d[k]
+            vv = []
+            for (lin, count) in v:
+                vv.append(([ LineagePair(*x) for x in lin ], count))
+            contigs_d[k] = (size, vv)
+
+    return contigs_d
+
+
+def is_contig_contaminated(genome_lineage, contig_taxlist, rank, match_count_threshold):
+    taxlist_at_rank = summarize_at_rank(contig_taxlist, rank)
+
+    top_hit = None
+    if contig_taxlist:
+        top_hit, count = contig_taxlist[0]
+        if count < match_count_threshold:
+            top_hit = None
+
+    is_bad = False
+    if genome_lineage and top_hit and not is_lineage_match(genome_lineage, top_hit, rank):
+        is_bad = True
+
+        # rescue?
+        for hit, count in contig_taxlist[1:]:
+            if is_lineage_match(genome_lineage, hit, rank):
+                is_bad = False
+
+    return is_bad

@@ -12,14 +12,10 @@ CTB:
 from __future__ import print_function, division
 import json
 import gzip
-from collections import OrderedDict, defaultdict, Counter
+from collections import OrderedDict, defaultdict
 import functools
 import pytest
 
-import sourmash
-from sourmash import lca
-from sourmash.logging import notify, error, debug
-from sourmash.lca.lca_utils import LCA_Database, LineagePair
 from sourmash.lca import LineagePair
 
 
@@ -190,7 +186,7 @@ class LineageDB(object):
             save_d['ident_to_idx'] = self.ident_to_idx
             save_d['idx_to_lid'] = self.idx_to_lid
             save_d['lid_to_lineage'] = self.lid_to_lineage
-
+            
             json.dump(save_d, fp)
 
 
@@ -199,7 +195,7 @@ def test_lineage_db_1():
                 LineagePair('rank2', 'name2')))
 
     ldb = LineageDB()
-    lid = ldb.insert('uniq', lineage)
+    ldb.insert('uniq', lineage)
 
     assert 'uniq' in ldb.lineage_to_idents[lineage]
     assert ldb.ident_to_lineage['uniq'] == lineage

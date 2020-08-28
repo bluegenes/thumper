@@ -71,24 +71,23 @@ def test_protein_sketch(genome_file):
     assert os.path.exists(os.path.join(_tempdir, target))
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency(["test_nucleotide_sketch"])
 @pytest.mark.parametrize("genome_file", test_genomes)
 @pytest.mark.parametrize("database_name", nucl_databases)
 def test_nucleotide_search_containment(request, genome_file, database_name):
     depends(request, [f"test_nucleotide_sketch[{g}]" for g in test_genomes])
-    target = f"search-containment/{genome_file}.x.{database_name}.search-contain-matches.sig"
+    target = f"search/{genome_file}.x.{database_name}.matches.sig"
     status = _run_snakemake_test('config/test-nucl.yaml', target)
 
     assert status == 0
     assert os.path.exists(os.path.join(_tempdir, target))
-
 
 @pytest.mark.dependency()
 @pytest.mark.parametrize("genome_file", test_genomes)
 @pytest.mark.parametrize("database_name", prot_databases)
 def test_translate_search_containment(request, genome_file, database_name):
     depends(request, [f"test_translate_sketch[{g}]" for g in test_genomes])
-    target = f"search-containment/{genome_file}.x.{database_name}.search-contain-matches.sig"
+    target = f"search/{genome_file}.x.{database_name}.matches.sig"
     status = _run_snakemake_test('config/test-nucl.yaml', target)
 
     assert status == 0
@@ -100,9 +99,46 @@ def test_translate_search_containment(request, genome_file, database_name):
 @pytest.mark.parametrize("database_name", prot_databases)
 def test_protein_search_containment(request, genome_file, database_name):
     depends(request, [f"test_protein_sketch[{g}]" for g in test_proteomes])
-    target = f"search-containment/{genome_file}.x.{database_name}.search-contain-matches.sig"
+    target = f"search/{genome_file}.x.{database_name}.matches.sig"
     status = _run_snakemake_test('config/test-prot.yaml', target)
 
     assert status == 0
     assert os.path.exists(os.path.join(_tempdir, target))
+
+
+#@pytest.mark.dependency()
+@pytest.mark.parametrize("genome_file", test_genomes)
+@pytest.mark.parametrize("database_name", nucl_databases)
+def test_nucleotide_contigs_taxonomy(request, genome_file, database_name):
+    depends(request, [f"test_nucleotide_search_containment[{genome_file},{database_name}]"])
+    target = f"classify/{genome_file}.x.{database_name}.contigs-tax.json"
+    status = _run_snakemake_test('config/test-nucl.yaml', target)
+
+    assert status == 0
+    assert os.path.exists(os.path.join(_tempdir, target))
+
+
+@pytest.mark.dependency()
+@pytest.mark.parametrize("genome_file", test_genomes)
+@pytest.mark.parametrize("database_name", prot_databases)
+def test_translate_contigs_taxonomy(request, genome_file, database_name):
+    depends(request, [f"test_translate_search_containment[{genome_file}, {database_name}]"])
+    target = f"classify/{genome_file}.x.{database_name}.contigs-tax.json"
+    status = _run_snakemake_test('config/test-nucl.yaml', target)
+
+    assert status == 0
+    assert os.path.exists(os.path.join(_tempdir, target))
+
+
+@pytest.mark.dependency()
+@pytest.mark.parametrize("genome_file", test_proteomes)
+@pytest.mark.parametrize("database_name", prot_databases)
+def test_protein_contigs_taxonomy(request, genome_file, database_name):
+    depends(request, [f"test_protein_search_containment[{genome_file},{database_name}]"])
+    target = f"classify/{genome_file}.x.{database_name}.contigs-tax.json"
+    status = _run_snakemake_test('config/test-prot.yaml', target)
+
+    assert status == 0
+    assert os.path.exists(os.path.join(_tempdir, target))
+
 
