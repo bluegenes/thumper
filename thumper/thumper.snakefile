@@ -214,6 +214,11 @@ def aggregate_taxonomy_files(w):
 # make one of these per database = don't expand db_name
 rule make_hit_list:
     input: unpack(aggregate_taxonomy_files)
+    #input:
+        #sample_list = config["sample_list"],
+        #db_info = config["database_info"][w.db_name]["info_csv"],
+        #all_json = expand(os.path.join(out_dir, "classify/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.contigs-tax.json"), sample=sample_names)
+        #all_sig = expand(os.path.join(out_dir, "search/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.matches.sig"), sample=sample_names)
     output:
         os.path.join(out_dir, "classify", "{db_name}.hit_list_for_filtering.csv")
     conda: 'envs/sourmash-dev.yml'

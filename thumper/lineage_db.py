@@ -1,5 +1,5 @@
 """Lineage database and associated utilities.
-
+from charcoal c7fd192
 Extracted from sourmash LCA Databases.
 
 TODO:
@@ -186,7 +186,7 @@ class LineageDB(object):
             save_d['ident_to_idx'] = self.ident_to_idx
             save_d['idx_to_lid'] = self.idx_to_lid
             save_d['lid_to_lineage'] = self.lid_to_lineage
-            
+
             json.dump(save_d, fp)
 
 
