@@ -6,13 +6,13 @@ pipelines:
     databases_required: True
     steps:
       nucleotide:
-        - sourmash_sketch_nucleotide
-        - sourmash_search_containment_nucleotide
-        - contigs_taxonomy_nucleotide
+        - sourmash_sketch
+        - sourmash_search_containment
+        - contigs_taxonomy
       protein:
-        - sourmash_sketch_protein
-        - sourmash_search_containment_protein
-        - contigs_taxonomy_protein
+        - sourmash_sketch
+        - sourmash_search_containment
+        - contigs_taxonomy
         #- contig_classify
     databases:
       - gtdb.rep_genus

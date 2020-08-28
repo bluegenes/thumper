@@ -1,65 +1,48 @@
 output_dir: output.thumper
+basename: thumper-output
 #experiment_suffix: ""
 logs_dir: logs
 #sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir?
 
 pipeline: taxonomic_classification_gtdb
 
-
 ### default settings 
 default_input_type: protein
 
 protein_scaled: 100
 nucleotide_scaled: 1000
+search_threshold: 0.001
 
 # defaults for each alphabet 
 alphabet_defaults:
   nucleotide: 
     ksizes: [21,31,51]
     scaled: 1000
+    alpha_cmd: "--dna"
+    ksize_multiplier: 1
   protein:
     ksizes: [11]
     scaled: 100
+    alpha_cmd: "--protein"
+    ksize_multiplier: 3
   dayhoff:
     ksizes: [19]
     scaled: 100
+    alpha_cmd: "--dayhoff"
+    ksize_multiplier: 3
   hp:
     ksizes: [33, 42]
     scaled: 100
+    alpha_cmd: "--hp"
+    ksize_multiplier: 3
 
-## program params ##
-sourmash_sketch_nucleotide:
+## rule params ##
+sourmash_sketch:
   output_dir: signatures
   output_files:
-    - "{sample}.nucleotide.sig"
-  params:
-    scaled: [100]
-    # ksize --> don't set here. instead, get this from alpha defaults + user input!?
+    - "{sample}.sig"
 
-sourmash_sketch_protein:
-  output_dir: signatures
-  output_files:
-    - "{sample}.protein.sig"
-  params:
-    # hmm. better to set universal defaults for all downstream steps.
-    # --> don't set here. instead, get this from alpha defaults + user input!?
-    scaled: [100]
-    ksize: [11]
-
-sourmash_gather_protein:
-  output_dir: gather
-  output_files:
-    - "{sample}.x.{database}.gather-matches.csv"
-    - "{sample}.x.{database}.gather-matches.sig"
-    - "{sample}.x.{database}.gather-matches.txt"
-    - "{sample}.x.{database}.gather-unassigned.sig"
-  databases:
-   - gtdb.rep_genus
-  #params:
-    #gather_scaled: 1000
-    #extra: ""
-
-sourmash_search_containment_protein:
+sourmash_search_containment:
   output_dir: search
   output_files:
     - "{sample}.x.{database}.matches.csv"
@@ -68,7 +51,28 @@ sourmash_search_containment_protein:
   databases:
    - gtdb.rep_genus
 
-sourmash_gather_nucleotide:
+contigs_taxonomy:
+  output_dir: classify
+  output_files:
+    - '{sample}.x.{database}.contigs-tax.json'
+
+#thumper_classify:
+  # output_files:
+    #- "{basename}.x.{database}.classified.csv" --> final classification summary
+
+## index snakefile ##
+signames_to_file:
+  output_dir: index
+  output_files:
+    - "{basename}.signatures.txt"
+
+sourmash_index_sbt:
+  output_dir: index
+  output_files:
+    - "{basename}.{index-name}.sbt.zip" # "index name" needs to include alphabet, ksize 
+
+## not currently in use ##
+sourmash_gather:
   output_dir: gather
   output_files:
     - "{sample}.x.{database}.gather-matches.csv"
@@ -77,50 +81,6 @@ sourmash_gather_nucleotide:
     - "{sample}.x.{database}.gather-unassigned.sig"
   databases:
    - gtdb.rep_genus
-  #params:
-    #gather_scaled: 1000
-    #extra: ""
-
-sourmash_search_containment_nucleotide:
-  output_dir: search
-  output_files:
-    - "{sample}.x.{database}.matches.csv"
-    - "{sample}.x.{database}.matches.sig"
-    - "{sample}.x.{database}.matches.txt"
-  databases:
-   - gtdb.rep_genus
-
-protein_signames_to_file:
-  output_dir: index
-  output_files:
-    - "{basename}.protein-signatures.txt"
-
-nucleotide_signames_to_file:
-  output_dir: index
-  output_files:
-    - "{basename}.nucleotide-signatures.txt"
-
-# "index name" needs to include alphabet, ksize
-sourmash_index_sbt_protein:
-  output_dir: index
-  output_files:
-    - "{basename}.{index-name}.sbt.zip"
-
-sourmash_index_sbt_nucleotide:
-  output_dir: index
-  output_files:
-    - "{basename}.{index-name}.sbt.zip"
-
-contigs_taxonomy_protein:
-  output_dir: classify
-  output_files:
-    - '{sample}.x.{database}.contigs-tax.json'
-
-contigs_taxonomy_nucleotide:
-  output_dir: classify
-  output_files:
-    - '{sample}.x.{database}.contigs-tax.json'
-
 
 contig_classify:
   output_dir: classify
@@ -132,15 +92,4 @@ contig_classify:
     - "{sample}.x.{database}.summary.csv"
   databases:
    - gtdb.rep_genus
-
-  #params:
-  #  threshold: .5 # potentially: the threshold for a gather tophit to be used for classification?
-  #  tophit: True
-  #  lca: True
-    #extra: ""
-
-
-#thumper_classify:
-  # output_files:
-    #- "{basename}.x.{database}.classified.csv" --> final classification summary
 

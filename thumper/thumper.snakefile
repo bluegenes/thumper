@@ -64,6 +64,7 @@ if config["get_databases"]:
     include: "download_databases.snakefile"
 include: "index.snakefile"
 include: "common.snakefile"
+alphabet_info = config["alphabet_info"]
 
 def build_sketch_params(output_type):
     sketch_cmd = ""
@@ -74,7 +75,7 @@ def build_sketch_params(output_type):
             ksizes = config["alphabet_info"]["nucleotide"]["ksizes"]
             scaled = config["alphabet_info"]["nucleotide"]["scaled"]
             # always track abund when sketching (?)
-            sketch_cmd = "-p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
+            sketch_cmd = "dna -p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
             return sketch_cmd
         else:
             sketch_cmd = "translate "
@@ -88,161 +89,109 @@ def build_sketch_params(output_type):
         sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
     return sketch_cmd
 
+if config["input_type"] == "nucleotide":
+    rule sourmash_sketch_nucleotide_input:
+        input: lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
+        output:
+            full_sketch=os.path.join(out_dir, "signatures", "{sample}.sig"),
+        params:
+            nucl_sketch_params = build_sketch_params("nucleotide"),
+            translate_sketch_params = build_sketch_params("protein"),
+            nucl_sketch=os.path.join(out_dir, "signatures", "{sample}.nucleotide.sig"),
+            prot_sketch=os.path.join(out_dir, "signatures", "{sample}.translate.sig"),
+            #signame = lambda w: accession2signame[w.accession],
+        threads: 1
+        resources:
+            mem_mb=lambda wildcards, attempt: attempt *1000,
+            runtime=1200,
+        log: os.path.join(logs_dir, "sourmash_sketch_nucl_input", "{sample}.sketch.log")
+        benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_nucl_input", "{sample}.sketch.benchmark")
+        conda: "envs/sourmash-dev.yml"
+        shell:
+            """
+            sourmash sketch {params.nucl_sketch_params} -o {params.nucl_sketch} --name {wildcards.sample} {input}  2> {log}
+            sourmash sketch {params.translate_sketch_params} -o {params.prot_sketch} --name {wildcards.sample} {input}  2>> {log}
+            sourmash sig cat {params.nucl_sketch} {params.prot_sketch} -o {output.full_sketch} 2>> {log}
+            rm {params.nucl_sketch}
+            rm {params.prot_sketch}
+            """
+else:
+    rule sourmash_sketch_protein_input:
+        input: lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
+        output:
+            os.path.join(out_dir, "signatures", "{sample}.sig"),
+        params:
+            sketch_params = build_sketch_params("protein")
+            #signame = lambda w: accession2signame[w.accession],
+        threads: 1
+        resources:
+            mem_mb=lambda wildcards, attempt: attempt *1000,
+            runtime=1200,
+        log: os.path. join(logs_dir, "sourmash_sketch_prot_input", "{sample}.sketch.log")
+        benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_prot_input", "{sample}.sketch.benchmark")
+        #wildcard_constraints:
+        #    alphabet="protein|dayhoff|hp",
+        conda: "envs/sourmash-dev.yml"
+        shell:
+            """
+            sourmash sketch {params.sketch_params} -o {output} --name {wildcards.sample} {input} 2> {log}
+            """
 
-rule sourmash_sketch_nucleotide:
-    input: lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
-    output:
-        os.path.join(out_dir, "signatures", "{sample}.nucleotide.sig"),
-    params:
-        sketch_params = build_sketch_params("nucleotide"),
-        #signame = lambda w: accession2signame[w.accession],
-    threads: 1
-    resources:
-        mem_mb=lambda wildcards, attempt: attempt *1000,
-        runtime=1200,
-    log: os.path.join(logs_dir, "sourmash_sketch_nucl", "{sample}.nucl.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_nucl", "{sample}.nucl.benchmark")
-    #wildcard_constraints:
-    #    alphabet="nucleotide|dna|rna",
-    conda: "envs/sourmash-dev.yml"
-    shell:
-        """
-        sourmash sketch dna {params.sketch_params} -o {output} --name {wildcards.sample} {input}  2> {log}
-        """
-
-rule sourmash_sketch_protein:
-    input: lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
-    output:
-        os.path.join(out_dir, "signatures", "{sample}.protein.sig"),
-    params:
-        sketch_params = build_sketch_params("protein")
-        #signame = lambda w: accession2signame[w.accession],
-    threads: 1
-    resources:
-        mem_mb=lambda wildcards, attempt: attempt *1000,
-        runtime=1200,
-    log: os.path.join(logs_dir, "sourmash_sketch_prot", "{sample}.protein.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_prot", "{sample}.protein.benchmark")
-    #wildcard_constraints:
-    #    alphabet="protein|dayhoff|hp",
-    conda: "envs/sourmash-dev.yml"
-    shell:
-        """
-        sourmash sketch {params.sketch_params} -o {output} --name {wildcards.sample} {input} 2> {log}
-        """
-
-#rule cat_sigs
-# cat sigs together, so don't need to worry have different rules for nucl, protein searches, etc
-# then, make ksize dictionary, use to get ksize in params of all rules (k=k*3 for all protein, etc)
-rule sourmash_search_containment_protein:
+rule sourmash_search_containment:
     input:
-        prot_query=rules.sourmash_sketch_protein.output,
-        database=os.path.join(database_dir, "{db_name}.{prot_alphabet}-k{ksize}.sbt.zip")
+        query=os.path.join(out_dir, "signatures", "{sample}.sig"),
+        database=os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}.sbt.zip")
     output:
-        csv = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.matches.csv"),
-        matches = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.matches.sig"),
-        txt = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.matches.txt"),
+        csv = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.csv"),
+        matches = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.sig"),
+        txt = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.txt"),
     params:
-        alpha_cmd = lambda w: "--" + w.prot_alphabet, # one alpha at at time. rn using ksize instead
-        scaled = config["protein_scaled"],
-        ksize = lambda w: int(w.ksize)*3
+        alpha_cmd = lambda w: alphabet_info[w.alphabet]["alpha_cmd"],
+        scaled = lambda w: alphabet_info[w.alphabet]["scaled"],
+        ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
+        search_threshold = config.get("search_threshold", 0.001)
     resources:
         mem_mb=lambda wildcards, attempt: attempt *20000,
         runtime=6000,
-    log: os.path.join(logs_dir, "search", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.search.log")
-    benchmark: os.path.join(benchmarks_dir, "search", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.search.benchmark")
+    log: os.path.join(logs_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.search.log")
+    benchmark: os.path.join(benchmarks_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.search.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell:
         """
-        sourmash search --containment {input.prot_query} {input.database} \
-        -o {output.csv} \
+        sourmash search --containment {input.query} \
+        {input.database} -o {output.csv} \
         {params.alpha_cmd} --scaled {params.scaled} \
-        -k {params.ksize}  --threshold=0.001 \
+        -k {params.ksize}  --threshold={params.search_threshold} \
         --save-matches {output.matches}  \
         >& {output.txt} 2> {log}
         touch {output.csv} {output.matches}
         """
-
-rule sourmash_search_containment_nucleotide:
-    input:
-        nucl_query=rules.sourmash_sketch_nucleotide.output,
-        database=os.path.join(database_dir, "{db_name}.{nucl_alphabet}-k{ksize}.sbt.zip")
-    output:
-        csv = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.matches.csv"),
-        matches = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.matches.sig"),
-        txt = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.matches.txt"),
-    params:
-        alpha_cmd = lambda w: "--dna", # one alpha at at time. rn using ksize instead
-        scaled = config["nucleotide_scaled"],
-    resources:
-        mem_mb=lambda wildcards, attempt: attempt *20000,
-        runtime=6000,
-    log: os.path.join(logs_dir, "search", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.search.log")
-    benchmark: os.path.join(benchmarks_dir, "search", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.search.benchmark")
-    conda: "envs/sourmash-dev.yml"
-    shell:
-        """
-        sourmash search --containment {input.nucl_query} {input.database} \
-        -o {output.csv} --threshold=0.001 \
-        {params.alpha_cmd} --scaled {params.scaled} \
-        -k {wildcards.ksize}  \
-        --save-matches {output.matches}  \
-        >& {output.txt} 2> {log}
-        touch {output.csv} {output.matches}
-        """
-
 
 # generate contigs taxonomy
-rule contigs_taxonomy_protein:
+rule contigs_taxonomy:
     input:
         sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
-        protein_sig=rules.sourmash_sketch_protein.output,
-        matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.matches.sig"),
+        sig=os.path.join(out_dir, "signatures", "{sample}.sig"),
+        matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.sig"),
         db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
     output:
-        json=os.path.join(out_dir, 'classify', '{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.contigs-tax.json'),
+        json=os.path.join(out_dir, 'classify', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.json'),
     params:
-        ksize = lambda w: int(w.ksize)*3,
+        ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
     conda: 'envs/sourmash-dev.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *10000,
         runtime=6000,
-    log: os.path.join(logs_dir, "classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.contigs-tax.log")
-    benchmark: os.path.join(benchmarks_dir, "classify", "{sample}.x.{db_name}.{prot_alphabet}-k{ksize}.contigs-tax.benchmark")
+    log: os.path.join(logs_dir, "classify", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.log")
+    benchmark: os.path.join(benchmarks_dir, "classify", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.benchmark")
     shell: 
         """
         python -m thumper.contigs_search \
             --genome {input.sample_file} \
             --lineages-csv {input.db_info} \
-            --alphabet {wildcards.prot_alphabet}\
+            --alphabet {wildcards.alphabet}\
             --ksize {params.ksize} \
-            --genome-sig {input.protein_sig} \
-            --matches-sig {input.matches} \
-            --json-out {output.json}
-        """
-
-
-rule contigs_taxonomy_nucleotide:
-    input:
-        sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
-        nucl_sig=rules.sourmash_sketch_nucleotide.output,
-        matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.matches.sig"),
-        db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
-    output:
-        json=os.path.join(out_dir, "classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.contigs-tax.json"),
-    conda: 'envs/sourmash-dev.yml'
-    resources:
-        mem_mb=lambda wildcards, attempt: attempt *10000,
-        runtime=6000,
-    log: os.path.join(logs_dir, "classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.contigs-tax.log")
-    benchmark: os.path.join(benchmarks_dir, "classify", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.contigs-tax.benchmark")
-    shell:
-        """
-        python -m thumper.contigs_search \
-            --genome {input.sample_file} \
-            --lineages-csv {input.db_info} \
-            --alphabet {wildcards.nucl_alphabet}\
-            --genome-sig {input.nucl_sig} \
+            --genome-sig {input.sig} \
             --matches-sig {input.matches} \
             --json-out {output.json}
         """
