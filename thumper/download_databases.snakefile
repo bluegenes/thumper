@@ -11,7 +11,7 @@ db_benchmarks = os.path.join(database_dir, "benchmarks")
 
 urls_begin = ["http", "ftp"]
 
-database_info=config["databases"]
+database_info=config["database_info"]
 
 
 # if running as standalone, use this as rule all
@@ -36,8 +36,7 @@ rule get_sbt:
     output:
         os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}.sbt.zip")
     params:
-        #sbt_info = lambda w: database_links[w.db_name]["sbt"]
-        sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + w.ksize]["sbt"]
+        sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["sbt"]
     log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.sbt.zip.get")
     run:
         if params.sbt_info.startswith(tuple(urls_begin)):
@@ -51,7 +50,7 @@ rule get_lca:
     output:
         os.path.join(database_dir, "{db_name}.{alphabet}.k{ksize}.lca.json.gz")
     params:
-        lca_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + w.ksize]["lca"]
+        lca_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["lca"]
     log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.lca.json.gz.get")
     run:
         if params.lca_info.startswith(tuple(urls_begin)):

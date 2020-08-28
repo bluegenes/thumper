@@ -9,10 +9,12 @@ pipelines:
         - sourmash_sketch
         - sourmash_search_containment
         - contigs_taxonomy
+        - make_hit_list
       protein:
         - sourmash_sketch
         - sourmash_search_containment
         - contigs_taxonomy
+        - make_hit_list
         #- contig_classify
     databases:
       - gtdb.rep_genus

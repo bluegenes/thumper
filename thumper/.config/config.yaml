@@ -13,10 +13,16 @@ protein_scaled: 100
 nucleotide_scaled: 1000
 search_threshold: 0.001
 
+# minimum fraction of hashes that must be identified to classify a genome
+min_f_ident: 0.1
+
+# minimum fraction of hashes that must be classified as lineage to -> genome
+min_f_major: 0.2
+
 # defaults for each alphabet 
 alphabet_defaults:
   nucleotide: 
-    ksizes: [21,31,51]
+    ksizes: [21] #,31,51]
     scaled: 1000
     alpha_cmd: "--dna"
     ksize_multiplier: 1
@@ -31,7 +37,7 @@ alphabet_defaults:
     alpha_cmd: "--dayhoff"
     ksize_multiplier: 3
   hp:
-    ksizes: [33, 42]
+    ksizes: [33] #, 42]
     scaled: 100
     alpha_cmd: "--hp"
     ksize_multiplier: 3
@@ -55,6 +61,11 @@ contigs_taxonomy:
   output_dir: classify
   output_files:
     - '{sample}.x.{database}.contigs-tax.json'
+
+make_hit_list:
+  output_dir: classify
+  output_files:
+    - "{db_name}.hit_list_for_filtering.csv"
 
 #thumper_classify:
   # output_files:

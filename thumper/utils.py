@@ -190,6 +190,9 @@ def check_user_databases_and_set_info(config, strict_mode=False):
         print('** exiting.')
         sys.exit(-1)
 
+    ## TO DO: ##
+    # check for alpha-ksize for each db; only run alpha-ksizes that exist in dbs
+
     config["databases"] = databases
 
     # sanitize database directory path
@@ -296,7 +299,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
 
         # fill variables in the output filenames
         for stepF in step_files:
-            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename)
+            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename, db_name=config["databases"])
 
     if generate_db_targets:
         targets = database_targets + pipeline_targets

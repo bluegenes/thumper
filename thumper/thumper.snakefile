@@ -195,33 +195,43 @@ rule contigs_taxonomy:
             --json-out {output.json}
         """
 
-#rule make_hit_list:
-#    input:
-#        # maybe expand just over the same database?
-#        all_json=expand(os.path.join(outdir, "classify", '{sample}.x.{{db_name}}.{nucl_alphabet}-k{ksize}.contigs-tax.json', g=genome_list),
-#        all_sig=expand(os.path.join(out_dir, "search", "{sample}.x.{db_name}.{nucl_alphabet}-k{ksize}.matches.sig")),
-#        all_sig=expand(output_dir + '/{g}.matches.sig', g=sample_names),
-#        lineages = config['lineages_csv'],
-#        provided_lineages = provided_lineages_file,
-#        genome_list = genome_list_file
-#    output:
-#        output_dir + '/hit_list_for_filtering.csv'
-#    conda: 'conf/env-sourmash.yml'
-#    params:
-#        output_dir = output_dir,
-#        min_f_major = min_f_major,
-#        min_f_ident = min_f_ident,
-#    shell: 
-#        """
-#        python -m charcoal.compare_taxonomy \
-#            --input-directory {params.output_dir} \
-#            --genome-list-file {input.genome_list} \
-#            --lineages-csv {input.lineages} \
-#            --provided-lineages {input.provided_lineages} \
-#            --output {output} \
-#            --min_f_ident={params.min_f_ident} \
-#            --min_f_major={params.min_f_major}
-#        """
+def aggregate_taxonomy_files(w):
+    sample_list = config["sample_list"]
+    db_info = config["database_info"][w.db_name]["info_csv"],
+    json_tax,search_sigs=[],[]
+    tax_file = "classify/{sample}.x.{{db_name}}.{alphabet}-k{ksize}.contigs-tax.json"
+    sig_file = "search/{sample}.x.{{db_name}}.{alphabet}-k{ksize}.matches.sig"
+    for alpha, alphaInfo in alphabet_info.items():
+        json_tax += expand(os.path.join(out_dir, tax_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
+        search_sigs += expand(os.path.join(out_dir, sig_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
+
+    db_files = {"sample_list": sample_list,
+                "db_info": db_info,
+                "all_json": json_tax,
+                "all_sig": search_sigs}
+    return db_files
+
+# make one of these per database = don't expand db_name
+rule make_hit_list:
+    input: unpack(aggregate_taxonomy_files)
+    output:
+        os.path.join(out_dir, "classify", "{db_name}.hit_list_for_filtering.csv")
+    conda: 'envs/sourmash-dev.yml'
+    params:
+        output_dir = out_dir,
+        min_f_major = float(config["min_f_major"]),
+        min_f_ident = float(config["min_f_ident"]),
+    shell:
+        #    --provided-lineages {input.provided_lineages} \
+        """
+        python -m thumper.compare_taxonomy \
+            --input-directory {params.output_dir} \
+            --genome-list-file {input.sample_list} \
+            --lineages-csv {input.db_info} \
+            --output {output} \
+            --min_f_ident={params.min_f_ident} \
+            --min_f_major={params.min_f_major}
+        """
 
 
 
