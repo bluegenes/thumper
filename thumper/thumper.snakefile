@@ -26,8 +26,7 @@ if force:
 # snakemake workflow
 
 wildcard_constraints:
-    prot_alphabet="protein|dayhoff|hp",
-    nucl_alphabet="nucleotide|dna|rna",
+    alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
     ksize="\d+"
     #database = "(?!x\.).+"
 

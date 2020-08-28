@@ -22,8 +22,8 @@ rule sourmash_index_sbt:
     resources:
         mem_mb=lambda wildcards, attempt: attempt *50000,
         runtime=6000,
-    log: os.path.join(logs_dir, "index", "{basename}.{prot_alphabet}-k{ksize}.index-sbt.log")
-    benchmark: os.path.join(benchmarks_dir, "index", "{basename}.{prot_alphabet}-k{ksize}.index-sbt.benchmark")
+    log: os.path.join(logs_dir, "index", "{basename}.{alphabet}-k{ksize}.index-sbt.log")
+    benchmark: os.path.join(benchmarks_dir, "index", "{basename}.{alphabet}-k{ksize}.index-sbt.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell:
         """
