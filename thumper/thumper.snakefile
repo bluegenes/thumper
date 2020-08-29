@@ -179,7 +179,7 @@ rule contigs_taxonomy:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
     conda: 'envs/sourmash-dev.yml'
     resources:
-        mem_mb=lambda wildcards, attempt: attempt *10000,
+        mem_mb=lambda wildcards, attempt: attempt *40000,
         runtime=6000,
     log: os.path.join(logs_dir, "classify", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.log")
     benchmark: os.path.join(benchmarks_dir, "classify", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.benchmark")
@@ -195,7 +195,8 @@ rule contigs_taxonomy:
             --json-out {output.json}
         """
 
-def aggregate_taxonomy_files(w):
+# For later? Expand sample, alpha, ksize, do NOT expand dbname. Aggregate reports over alpha/ksize
+def aggregate_taxonomy_files_by_database(w):
     sample_list = config["sample_list"]
     db_info = config["database_info"][w.db_name]["info_csv"],
     json_tax,search_sigs=[],[]
@@ -211,28 +212,31 @@ def aggregate_taxonomy_files(w):
                 "all_sig": search_sigs}
     return db_files
 
-# make one of these per database = don't expand db_name
 rule make_hit_list:
-    input: unpack(aggregate_taxonomy_files)
-    #input:
-        #sample_list = config["sample_list"],
-        #db_info = config["database_info"][w.db_name]["info_csv"],
-        #all_json = expand(os.path.join(out_dir, "classify/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.contigs-tax.json"), sample=sample_names)
-        #all_sig = expand(os.path.join(out_dir, "search/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.matches.sig"), sample=sample_names)
+    #input: unpack(aggregate_taxonomy_files)
+    input:
+        sample_list = config["sample_list"],
+        db_info = lambda w: config["database_info"][w.db_name]["info_csv"],
+        all_json = expand(os.path.join(out_dir, "classify/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.contigs-tax.json"), sample=sample_names),
+        all_sig = expand(os.path.join(out_dir, "search/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.matches.sig"), sample=sample_names),
     output:
-        os.path.join(out_dir, "classify", "{db_name}.hit_list_for_filtering.csv")
+        os.path.join(out_dir, "classify", "{db_name}.{alphabet}-k{ksize}.hit_list_for_filtering.csv")
     conda: 'envs/sourmash-dev.yml'
     params:
         output_dir = out_dir,
         min_f_major = float(config["min_f_major"]),
         min_f_ident = float(config["min_f_ident"]),
+        moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
     shell:
         #    --provided-lineages {input.provided_lineages} \
         """
         python -m thumper.compare_taxonomy \
             --input-directory {params.output_dir} \
             --genome-list-file {input.sample_list} \
+            --database-name {wildcards.db_name} \
             --lineages-csv {input.db_info} \
+            --alphabet {params.moltype} \
+            --ksize {wildcards.ksize} \
             --output {output} \
             --min_f_ident={params.min_f_ident} \
             --min_f_major={params.min_f_major}

@@ -96,10 +96,10 @@ def choose_genome_lineage(guessed_genome_lineage, provided_lineage, match_rank,
 
 
 def get_genome_taxonomy(matches_filename, genome_sig_filename, provided_lineage,
-                        tax_assign, match_rank, min_f_ident, min_f_major):
+                        tax_assign, match_rank, min_f_ident, min_f_major, alphabet, ksize):
     with open(matches_filename, 'rt') as fp:
         try:
-            siglist = list(sourmash.load_signatures(fp, do_raise=True, quiet=True))
+            siglist = list(sourmash.load_signatures(fp, do_raise=True, quiet=True, select_moltype=alphabet, ksize=ksize))
         except sourmash.exceptions.SourmashError:
             siglist = None
 
@@ -186,13 +186,19 @@ def main(args):
     print(f'loaded {len(tax_assign)} tax assignments.')
 
     # load in all the genome names
-    genome_names = set([ x.strip() for x in open(args.genome_list_file) ])
-    genome_names = set([ os.path.basename(n) for n in genome_names ])
-    # thumper to do :: enable csv sample_list
-    #genome_names=[]
-    #r = csv.reader(args.genome_list_file)
-    #for row in r:
-    #    genome_names+=[row[0]]
+    #genome_names = set([ x.strip() for x in open(args.genome_list_file) ])
+    #genome_names = set([ os.path.basename(n) for n in genome_names ])
+
+    # thumper to do :: better enable csv sample_list. options for txt, `,`, `\t`
+    genome_names=[]
+    with open(args.genome_list_file, 'rt') as gl:
+        r = csv.reader(gl)
+        for row in r:
+            if len(row) >1:
+                genome_names+=[row[1]]
+            else:
+                genome_names+=[row[0]]
+
     dirname = args.input_directory
 
     print(f"loaded list of {len(genome_names)} genomes.")
@@ -210,23 +216,34 @@ def main(args):
     print(f"loaded {len(provided_lineages)} provided lineages")
 
     # process every genome individually.
-    # thumper to do :: process each alpha-ksize individually for each genome
+    # thumper to do :: process each alpha-ksize individually for each genome?
     summary_d = {}
+
+    #matches_fn = "{dirname}/search/{sample}.x.{dbname}.{alphabet}-k{ksize}.matches.sig"
+    #sig_fn= "{dirname}/signatures/{sample}.sig"
+    #contigs_json_fn = "{dirname}/classify/{sample}.x.{dbname}.{alphabet}-k{ksize}.contigs-tax.json"
+
     # can we just iterate over the matches files?
     # or provide samples as a param (= shorter names used in snakefile)
     for genome_name in genome_names:
-        ### THUMPER WORKING HERE: this doesn't work bc have different alphas, ksizes!
-        matches_filename = os.path.join(dirname, "search", genome_name + '.matches.sig')
-        genome_sig = os.path.join(dirname, "signatures", genome_name + '.sig')
         lineage = provided_lineages.get(genome_name, '')
-        contigs_json = os.path.join(dirname, "classify", genome_name + '.contigs-tax.json')
+        ### THUMPER WORKING HERE: this doesn't work bc have different alphas, ksizes!
+
+        #matches_filename = os.path.join(dirname, "search", genome_name + '.matches.sig')
+        matches_filename = os.path.join(dirname, "search", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{args.ksize}.matches.sig")
+        #genome_sig = os.path.join(dirname, "signatures", genome_name + '.sig')
+        genome_sig = os.path.join(dirname, "signatures", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{args.ksize}.sig")
+        #contigs_json = os.path.join(dirname, "classify", genome_name + '.contigs-tax.json')
+        contigs_json = os.path.join(dirname, "classify", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{args.ksize}.contigs-tax.json")
 
         x = get_genome_taxonomy(matches_filename,
                                 genome_sig,
                                 lineage,
                                 tax_assign, match_rank,
                                 args.min_f_ident,
-                                args.min_f_major)
+                                args.min_f_major,
+                                args.alphabet,
+                                args.ksize)
         genome_lineage, comment, f_major, f_ident = x
 
         # did we get a lineage for this genome? if so, propose filtering at
@@ -315,6 +332,10 @@ def cmdline(sys_args):
     p.add_argument('--input-directory', required=True)
     p.add_argument('--genome-list-file', required=True)
     p.add_argument('-o', '--output', required=True)
+    # for now, make input include dbname, alpha, ksize. Later aggregate over those?
+    p.add_argument('--database-name', required=True)
+    p.add_argument('--alphabet', required=True)
+    p.add_argument('--ksize', required=True, type=int)
     p.add_argument('--lineages-csv', help='lineage spreadsheet', required=True)
     p.add_argument('--provided-lineages', help='provided lineages')
     p.add_argument('--min_f_ident', type=float, default=F_IDENT_THRESHOLD)

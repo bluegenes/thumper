@@ -16,7 +16,7 @@ from sourmash.lca import LCA_Database
 
 from .lineage_db import LineageDB
 from .version import version
-from .utils import (gather_at_rank, get_ident)
+from thumper.charcoal_utils import (gather_at_rank, get_ident)
 
 
 def main(args):
@@ -26,11 +26,11 @@ def main(args):
 
     # load taxonomy CSV
     tax_assign, _ = load_taxonomy_assignments(args.lineages_csv,
-                                              start_column=3)
+                                              start_column=2)
     print(f'loaded {len(tax_assign)} tax assignments.')
 
     # load the genome signature
-    genome_sig = sourmash.load_one_signature(args.genome_sig)
+    genome_sig = sourmash.load_one_signature(args.genome_sig, select_moltype=args.alphabet, ksize=args.ksize)
 
     # load all of the matches from search --containment in the database
     with open(args.matches_sig, 'rt') as fp:
@@ -113,6 +113,9 @@ def cmdline(sys_args):
     p.add_argument('--genome-sig', help='genome sig', required=True)
     p.add_argument('--matches-sig', help='all relevant matches', required=True)
     p.add_argument('--lineages-csv', help='lineage spreadsheet', required=True)
+    p.add_argument('--alphabet', help='alphabet', required=True)
+    p.add_argument('--ksize', help='ksize', required=True)
+
     p.add_argument('--force', help='continue past survivable errors',
                    action='store_true')
 
