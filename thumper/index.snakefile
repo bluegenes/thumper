@@ -11,7 +11,7 @@ rule signames_to_file:
           done
         """
 
-rule sourmash_index_sbt:
+rule index_sbt:
     input: os.path.join(out_dir, "index", "{basename}.signatures.txt")
     output: os.path.join(out_dir, "index", "{basename}.{alphabet}-k{ksize}.sbt.zip"),
     threads: 1

@@ -28,17 +28,17 @@ alphabet_defaults:
     ksize_multiplier: 1
   protein:
     ksizes: [11]
-    scaled: 100
+    scaled: 10 #0
     alpha_cmd: "--protein"
     ksize_multiplier: 3
   dayhoff:
     ksizes: [19]
-    scaled: 100
+    scaled: 10 #0
     alpha_cmd: "--dayhoff"
     ksize_multiplier: 3
   hp:
     ksizes: [33] #, 42]
-    scaled: 100
+    scaled: 10 #0
     alpha_cmd: "--hp"
     ksize_multiplier: 3
 
@@ -77,10 +77,10 @@ signames_to_file:
   output_files:
     - "{basename}.signatures.txt"
 
-sourmash_index_sbt:
+index_sbt:
   output_dir: index
   output_files:
-    - "{basename}.{index-name}.sbt.zip" # "index name" needs to include alphabet, ksize 
+    - "{index}.sbt.zip" # "index name" needs to include alphabet, ksize
 
 ## not currently in use ##
 sourmash_gather:

@@ -285,21 +285,20 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     else:
         generate_db_targets=False
         database_targets,database_names=[],[]
-    steps = []
-    # if nucleotide input, run both protein and nucl steps, else just run protein steps
-    if "nucleotide" in alphabet_info.keys():
-        steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
-    # assume we always want to run protein steps (if there are any in the pipeline)
-    steps += config["pipelines"][pipeline]["steps"].get("protein", [])
+    index_names = []
+    if pipeline == "generate_index":
+        for alpha, alphaInfo in alphabet_info.items():
+            index_names+=expand("{basename}.{alpha}-k{ksize}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"])
 
     # generate targets for each step
+    steps = config["pipelines"][pipeline]["steps"]
     for step in steps:
         step_outdir = config[step]["output_dir"]
         step_files = config[step]["output_files"]
 
         # fill variables in the output filenames
         for stepF in step_files:
-            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename, db_name=config["databases"])
+            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename, db_name=config.get("databases", []), index=index_names)
 
     if generate_db_targets:
         targets = database_targets + pipeline_targets
