@@ -121,11 +121,16 @@ def check_and_set_alphabets(config, strict_mode=False):
                 print(f'Strict mode is off: attempting to continue. Removing {alpha} from alphabet list.')
                 alphabets.remove(alpha)
         else:
-            #for now, just transfer over defaults. later, enable ksize, scaled param setting?
+            # first, set defaults
             alphaInfo[alpha] = default_alphabets[alpha]
+            # if override values are provided in the config, replace defaults
+            #import pdb;pdb.set_trace()
+            if isinstance(alphabets, dict):
+                alphaInfo[alpha]["ksizes"] = alphabets[alpha].get("ksizes", default_alphabets[alpha]["ksizes"])
+                alphaInfo[alpha]["scaled"] = alphabets[alpha].get("scaled", default_alphabets[alpha]["scaled"])
     if alphaInfo:
         config["alphabet_info"] = alphaInfo
-        alphabets = check_input_type(config)
+        config = check_input_type(config)
     else:
         print(f'** ERROR: no valid alphabets remain')
         print('** exiting.')
