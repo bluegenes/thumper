@@ -9,15 +9,15 @@ pipeline: taxonomic_classification_gtdb
 ### default settings 
 default_input_type: protein
 
-protein_scaled: 100
-nucleotide_scaled: 1000
+#protein_scaled: 10
+#nucleotide_scaled: 1000
 search_threshold: 0.001
 
 # minimum fraction of hashes that must be identified to classify a genome
-min_f_ident: 0.1
+min_f_ident: 0.01
 
 # minimum fraction of hashes that must be classified as lineage to -> genome
-min_f_major: 0.2
+min_f_major: 0.01
 
 # defaults for each alphabet 
 alphabet_defaults:
@@ -29,19 +29,19 @@ alphabet_defaults:
     ksize_multiplier: 1
   protein:
     ksizes: [11]
-    scaled: 10 #0
+    scaled: 100
     alpha_cmd: "--protein"
     moltype: "protein"
     ksize_multiplier: 3
   dayhoff:
     ksizes: [19]
-    scaled: 10 #0
+    scaled: 100
     alpha_cmd: "--dayhoff"
     moltype: "dayhoff"
     ksize_multiplier: 3
   hp:
-    ksizes: [33] #, 42]
-    scaled: 10 #0
+    ksizes: [35] #, 42]
+    scaled: 100
     alpha_cmd: "--hp"
     moltype: "hp"
     ksize_multiplier: 3
@@ -69,7 +69,7 @@ contigs_taxonomy:
 make_hit_list:
   output_dir: classify
   output_files:
-    - "{database}.hit_list_for_filtering.csv"
+    - "{basename}.x.{database}.hit_list_for_filtering.csv"
 
 #thumper_classify:
   # output_files:

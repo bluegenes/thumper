@@ -72,14 +72,14 @@ def choose_genome_lineage(guessed_genome_lineage, provided_lineage, match_rank,
     genome_lineage = None
 
     if provided_lineage:
-        if utils.is_lineage_match(provided_lineage, guessed_genome_lineage, match_rank):
+        if charcoal_utils.is_lineage_match(provided_lineage, guessed_genome_lineage, match_rank):
             report(f'(provided lineage agrees with k-mer classification at {match_rank} level)')
         elif guessed_genome_lineage:
             report(f'(provided lineage disagrees with k-mer classification at or above {match_rank} level)')
         else:
             pass
 
-        genome_lineage = utils.pop_to_rank(provided_lineage, match_rank)
+        genome_lineage = charcoal_utils.pop_to_rank(provided_lineage, match_rank)
         report(f'\nUsing provided lineage as genome lineage.')
     else:
         if f_ident < min_f_ident:
@@ -89,7 +89,7 @@ def choose_genome_lineage(guessed_genome_lineage, provided_lineage, match_rank,
             report(f'** ERROR: fraction of identified hashes in major lineage (f_major) < {min_f_major*100:.0f}%.')
             comment = f"too few hashes in major lineage; f_major < {min_f_major*100:.0f}%. provide a lineage for this genome."
         else:
-            genome_lineage = utils.pop_to_rank(guessed_genome_lineage, match_rank)
+            genome_lineage = charcoal_utils.pop_to_rank(guessed_genome_lineage, match_rank)
             report(f'Using majority gather lineage as genome lineage.')
 
     return genome_lineage, comment
@@ -231,7 +231,7 @@ def main(args):
         file_ksize = int(args.ksize/3)
         matches_filename = os.path.join(dirname, "search", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{file_ksize}.matches.sig")
         genome_sig = os.path.join(dirname, "signatures", f"{genome_name}.sig")
-        contigs_json = os.path.join(dirname, "classify", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{args.ksize}.contigs-tax.json")
+        contigs_json = os.path.join(dirname, "classify", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{file_ksize}.contigs-tax.json")
 
         x = get_genome_taxonomy(matches_filename,
                                 genome_sig,

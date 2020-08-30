@@ -1,7 +1,7 @@
 # location for all generated files
 basename: protein-one
 
-output_dir: output.protein-one
+output_dir: output.protein-one #.xr89
 
 # type of input data (protein or nucleotide)
 input_type: protein
@@ -19,7 +19,15 @@ strict: 1
 force: 0
 
 # try using the gtdb-nine test set
+turn_off_default_databases: True
 search_databases:
   - gtdb-nine
+  #- gtdb-r89
 
-protein_scaled: 10
+alphabets:
+  protein:
+    scaled: [10]
+  dayhoff:
+    scaled: [10]
+  hp:
+    scaled: [10]
