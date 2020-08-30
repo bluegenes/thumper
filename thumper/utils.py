@@ -124,7 +124,6 @@ def check_and_set_alphabets(config, strict_mode=False):
             # first, set defaults
             alphaInfo[alpha] = default_alphabets[alpha]
             # if override values are provided in the config, replace defaults
-            #import pdb;pdb.set_trace()
             if isinstance(alphabets, dict):
                 alphaInfo[alpha]["ksizes"] = alphabets[alpha].get("ksizes", default_alphabets[alpha]["ksizes"])
                 alphaInfo[alpha]["scaled"] = alphabets[alpha].get("scaled", default_alphabets[alpha]["scaled"])
@@ -235,10 +234,7 @@ def generate_database_targets(config, also_return_database_names=False):
     info_templates = db_target_templates["info_csv"]
     db_templates = db_target_templates["database"]
 
-    # iterate through dbinfo and build targets for the alphabet's we're using
-    # later, could enable ksize choice here too.
-    ## OR, maybe figure out cleaner/clearer/better db specification in yaml file! Not so much nesting?
-    ## instead of nesting protein - name them uniquely? handier for matching exact db in config.yaml
+    # iterate through dbinfo and build targets for the alphabets we're using
     for db in databases:
         db_targs,db_names=[],[]
         db_info = config["database_info"][db]
@@ -246,6 +242,8 @@ def generate_database_targets(config, also_return_database_names=False):
             if db_alphabet in alphabet_info.keys():
                 for db_ksize, dbs in db_alpha_info.items():
                     ksize_int = int(db_ksize[1:]) # db_ksize is string w/format: k{ksize}
+                    # only build target if db has matching ksize available.
+                    # todo: also handle scaled here???
                     if ksize_int in alphabet_info[db_alphabet]["ksizes"]:
                         for db_type in dbs.keys():
                             suffix = config["database_suffixes"][db_type]

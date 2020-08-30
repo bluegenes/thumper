@@ -113,7 +113,7 @@ def get_genome_taxonomy(matches_filename, genome_sig_filename, provided_lineage,
     scaled = empty_mh.scaled
     moltype = empty_mh.moltype
 
-    genome_sig = sourmash.load_one_signature(genome_sig_filename)
+    genome_sig = sourmash.load_one_signature(genome_sig_filename, select_moltype=alphabet, ksize=ksize)
     entire_mh = genome_sig.minhash
 
     assert entire_mh.scaled == scaled
@@ -227,13 +227,10 @@ def main(args):
     # or provide samples as a param (= shorter names used in snakefile)
     for genome_name in genome_names:
         lineage = provided_lineages.get(genome_name, '')
-        ### THUMPER WORKING HERE: this doesn't work bc have different alphas, ksizes!
 
-        #matches_filename = os.path.join(dirname, "search", genome_name + '.matches.sig')
-        matches_filename = os.path.join(dirname, "search", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{args.ksize}.matches.sig")
-        #genome_sig = os.path.join(dirname, "signatures", genome_name + '.sig')
-        genome_sig = os.path.join(dirname, "signatures", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{args.ksize}.sig")
-        #contigs_json = os.path.join(dirname, "classify", genome_name + '.contigs-tax.json')
+        file_ksize = int(args.ksize/3)
+        matches_filename = os.path.join(dirname, "search", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{file_ksize}.matches.sig")
+        genome_sig = os.path.join(dirname, "signatures", f"{genome_name}.sig")
         contigs_json = os.path.join(dirname, "classify", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{args.ksize}.contigs-tax.json")
 
         x = get_genome_taxonomy(matches_filename,

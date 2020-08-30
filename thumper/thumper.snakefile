@@ -179,7 +179,7 @@ rule contigs_taxonomy:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
     conda: 'envs/sourmash-dev.yml'
     resources:
-        mem_mb=lambda wildcards, attempt: attempt *40000,
+        mem_mb=lambda wildcards, attempt: attempt *100000,
         runtime=6000,
     log: os.path.join(logs_dir, "classify", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.log")
     benchmark: os.path.join(benchmarks_dir, "classify", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.benchmark")
@@ -220,13 +220,17 @@ rule make_hit_list:
         all_json = expand(os.path.join(out_dir, "classify/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.contigs-tax.json"), sample=sample_names),
         all_sig = expand(os.path.join(out_dir, "search/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.matches.sig"), sample=sample_names),
     output:
-        os.path.join(out_dir, "classify", "{db_name}.{alphabet}-k{ksize}.hit_list_for_filtering.csv")
-    conda: 'envs/sourmash-dev.yml'
+        os.path.join(out_dir, "classify", "{basename}.x.{db_name}.{alphabet}-k{ksize}.hit_list_for_filtering.csv")
     params:
         output_dir = out_dir,
         min_f_major = float(config["min_f_major"]),
         min_f_ident = float(config["min_f_ident"]),
         moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
+        ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *40000,
+        runtime=6000,
+    conda: 'envs/sourmash-dev.yml'
     shell:
         #    --provided-lineages {input.provided_lineages} \
         """
@@ -236,7 +240,7 @@ rule make_hit_list:
             --database-name {wildcards.db_name} \
             --lineages-csv {input.db_info} \
             --alphabet {params.moltype} \
-            --ksize {wildcards.ksize} \
+            --ksize {params.ksize} \
             --output {output} \
             --min_f_ident={params.min_f_ident} \
             --min_f_major={params.min_f_major}
