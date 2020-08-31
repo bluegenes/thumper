@@ -7,6 +7,6 @@
 test:
 	py.test tests/test_snakemake.py
 
-verbosetest:
+vtest:
 	py.test tests/test_snakemake.py -s
 	#py.test tests

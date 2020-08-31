@@ -59,7 +59,7 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
         configfiles+= [configfile]
 
 
-    cmd += ["--configfile"] + configfiles
+    cmd += ["--configfiles"] + configfiles
 
     if verbose:
         print('final command:', cmd)

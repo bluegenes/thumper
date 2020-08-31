@@ -228,11 +228,15 @@ def main(args):
     # or provide samples as a param (= shorter names used in snakefile)
     for genome_name in genome_names:
         lineage = provided_lineages.get(genome_name, '')
-
-        file_ksize = int(args.ksize/3)
-        matches_filename = os.path.join(dirname, "search", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{file_ksize}.matches.sig")
+        if args.alphabet =="dna":
+            file_ksize = args.ksize
+            file_alpha = "nucleotide"
+        else:
+            file_ksize = int(args.ksize/3)
+            file_alpha = args.alphabet
+        matches_filename = os.path.join(dirname, "search", f"{genome_name}.x.{args.database_name}.{file_alpha}-k{file_ksize}.matches.sig")
         genome_sig = os.path.join(dirname, "signatures", f"{genome_name}.sig")
-        contigs_json = os.path.join(dirname, "classify", f"{genome_name}.x.{args.database_name}.{args.alphabet}-k{file_ksize}.contigs-tax.json")
+        contigs_json = os.path.join(dirname, "classify", f"{genome_name}.x.{args.database_name}.{file_alpha}-k{file_ksize}.contigs-tax.json")
 
         x = get_genome_taxonomy(matches_filename,
                                 genome_sig,

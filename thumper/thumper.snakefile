@@ -148,7 +148,7 @@ rule sourmash_search_containment:
         alpha_cmd = lambda w: alphabet_info[w.alphabet]["alpha_cmd"],
         scaled = lambda w: alphabet_info[w.alphabet]["scaled"],
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
-        search_threshold = config.get("search_threshold", 0.001)
+        search_threshold = float(config.get("search_threshold", 0.001))
     resources:
         mem_mb=lambda wildcards, attempt: attempt *20000,
         runtime=6000,
@@ -177,6 +177,7 @@ rule contigs_taxonomy:
         json=os.path.join(out_dir, 'classify', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.json'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
+        moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
     conda: 'envs/sourmash-dev.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *100000,
@@ -188,7 +189,7 @@ rule contigs_taxonomy:
         python -m thumper.contigs_search \
             --genome {input.sample_file} \
             --lineages-csv {input.db_info} \
-            --alphabet {wildcards.alphabet}\
+            --alphabet {params.moltype} \
             --ksize {params.ksize} \
             --genome-sig {input.sig} \
             --matches-sig {input.matches} \

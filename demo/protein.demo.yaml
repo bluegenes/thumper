@@ -19,6 +19,6 @@ strict: 1
 force: 0
 
 # try using the gtdb-nine test set
+turn_off_default_databases: True
 search_databases:
   - gtdb-nine
-

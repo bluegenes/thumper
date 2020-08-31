@@ -28,7 +28,8 @@ database_info:
     alphabets:
       nucleotide:
         k21:
-          sbt: https://osf.io/s7ryx/download
+          #sbt: https://osf.io/s7ryx/download
+          sbt: /home/ntpierce/2020-gtdb-smash/index-gtdb/sbt/gtdb_rna.rep_genus.nucleotide_scaled1000_k21.index.sbt.zip
       protein:
         k11:
           #sbt: https://osf.io/3w5xr/download
@@ -77,12 +78,12 @@ database_info:
           sbt: tests/test-data/databases/gtdb-nine.nucleotide-k51.sbt.zip
       protein:
         k11:
-          sbt: tests/test-data/databases/gtdb-nine.protein-k11.sbt.zip
+          sbt: tests/test-data/databases/gtdb-nine.protein-k11.scaled10.sbt.zip
       dayhoff:
         k19:
-          sbt: tests/test-data/databases/gtdb-nine.dayhoff-k19.sbt.zip
+          sbt: tests/test-data/databases/gtdb-nine.dayhoff-k19.scaled10.sbt.zip
       hp:
         k33:
-          sbt: tests/test-data/databases/gtdb-nine.hp-k33.sbt.zip
+          sbt: tests/test-data/databases/gtdb-nine.hp-k33.scaled10.sbt.zip
         k42:
-          sbt: tests/test-data/databases/gtdb-nine.hp-k42.sbt.zip
+          sbt: tests/test-data/databases/gtdb-nine.hp-k42.scaled10.sbt.zip
