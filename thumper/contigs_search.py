@@ -16,7 +16,7 @@ from sourmash.lca import LCA_Database
 
 from .lineage_db import LineageDB
 from .version import version
-from thumper.charcoal_utils import (gather_at_rank, get_ident)
+from thumper.charcoal_utils import (gather_at_rank, get_ident, ContigGatherInfo)
 
 
 def main(args):
@@ -95,7 +95,8 @@ def main(args):
         results = list(gather_at_rank(mh, lca_db, lin_db, match_rank))
 
         # store together with size of sequence.
-        contigs_tax[record.name] = (len(record.sequence), results)
+        info = ContigGatherInfo(len(record.sequence), len(mh), results)
+        contigs_tax[record.name] = info
 
     print(f"Processed {len(contigs_tax)} contigs.")
 

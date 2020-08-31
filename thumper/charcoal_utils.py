@@ -1,12 +1,12 @@
 """
 utility functions for charcoal.
-from charcoal c7fd192
 """
 import json
-from collections import defaultdict, Counter
+from collections import defaultdict, Counter, namedtuple
+import csv
 
 import sourmash
-from sourmash.lca import lca_utils, LineagePair
+from sourmash.lca import lca_utils, LineagePair, taxlist
 
 
 def is_lineage_match(lin_a, lin_b, rank):
@@ -115,7 +115,7 @@ def pretty_print_lineage2(lin, rank):
     return sourmash.lca.display_lineage(lin)
 
 
-class WriteAndTrackFasta(object):
+class WriteAndTrackFasta:
     def __init__(self, outfp, mh_ex):
         self.minhash = mh_ex.copy_and_clear()
         self.outfp = outfp
@@ -182,16 +182,21 @@ def get_ident(sig):
     ident = ident.split('.')[0]
     return ident
 
+
+ContigGatherInfo = namedtuple('ContigGatherInfo',
+                              ['length', 'num_hashes', 'gather_tax'])
+
 def load_contigs_gather_json(filename):
     # load contigs JSON file - @CTB
     with open(filename, 'rt') as fp:
         contigs_d = json.load(fp)
         for k in contigs_d:
-            (size, v) = contigs_d[k]
+            (size, num_hashes, v) = contigs_d[k]
             vv = []
             for (lin, count) in v:
-                vv.append(([ LineagePair(*x) for x in lin ], count))
-            contigs_d[k] = (size, vv)
+                vv.append((tuple([ LineagePair(*x) for x in lin ]), count))
+            info = ContigGatherInfo(size, num_hashes, vv)
+            contigs_d[k] = info
 
     return contigs_d
 
@@ -215,3 +220,26 @@ def is_contig_contaminated(genome_lineage, contig_taxlist, rank, match_count_thr
                 is_bad = False
 
     return is_bad
+
+
+class HitList:
+    def __init__(self, filename):
+        self.rows = {}
+        with open(filename, 'rt') as fp:
+            r = csv.DictReader(fp)
+            for row in r:
+                genome = row['genome']
+                self.rows[genome] = row
+
+    def __getitem__(self, g):
+        return self.rows[g]
+
+
+def make_lineage(lineage):
+    "Turn a ; or ,-separated set of lineages into a tuple of LineagePair objs."
+    lin = lineage.split(';')
+    if len(lin) == 1:
+        lin = lineage.split(',')
+    lin = [ LineagePair(rank, n) for (rank, n) in zip(taxlist(), lin) ]
+
+    return lin
