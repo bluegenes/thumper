@@ -78,12 +78,12 @@ database_info:
           sbt: tests/test-data/databases/gtdb-nine.nucleotide-k51.sbt.zip
       protein:
         k11:
-          sbt: tests/test-data/databases/gtdb-nine.protein-k11.scaled10.sbt.zip
+          sbt: tests/test-data/databases/gtdb-nine.protein-k11.sbt.zip
       dayhoff:
         k19:
-          sbt: tests/test-data/databases/gtdb-nine.dayhoff-k19.scaled10.sbt.zip
+          sbt: tests/test-data/databases/gtdb-nine.dayhoff-k19.sbt.zip
       hp:
         k33:
-          sbt: tests/test-data/databases/gtdb-nine.hp-k33.scaled10.sbt.zip
-        k42:
-          sbt: tests/test-data/databases/gtdb-nine.hp-k42.scaled10.sbt.zip
+          sbt: tests/test-data/databases/gtdb-nine.hp-k33.sbt.zip
+        #k42:
+        #  sbt: tests/test-data/databases/gtdb-nine.hp-k42.scaled10.sbt.zip

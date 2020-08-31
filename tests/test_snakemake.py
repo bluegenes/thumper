@@ -51,7 +51,7 @@ def _run_snakemake_test(conf, target, extra_args=[]):
 test_genomes = ['GCA_002691795.1_genomic.fna.gz', 'GCF_003143755.1_genomic.fna.gz']
 test_proteomes = ['GB_GCA_002691795.1_protein.faa.gz', 'RS_GCF_003143755.1_protein.faa.gz']
 nucl_databases = ['gtdb-nine.nucleotide-k21', 'gtdb-nine.nucleotide-k31', 'gtdb-nine.nucleotide-k51']
-prot_databases = ['gtdb-nine.protein-k11', 'gtdb-nine.dayhoff-k19', 'gtdb-nine.hp-k33', 'gtdb-nine.hp-k42']
+prot_databases = ['gtdb-nine.protein-k11', 'gtdb-nine.dayhoff-k19', 'gtdb-nine.hp-k33'] #, 'gtdb-nine.hp-k42']
 
 @pytest.mark.dependency()
 @pytest.mark.parametrize("genome_file", test_genomes)
@@ -79,7 +79,7 @@ def test_nucleotide_search_containment(request, genome_file, database_name):
     depends(request, [f"test_sketch_nucleotide_input[{g}]" for g in test_genomes])
     target = f"search/{genome_file}.x.{database_name}.matches.sig"
     status, out, err = _run_snakemake_test("config/test-nucl.yaml", target)
-    import pdb;pdb.set_trace()
+
     print(out)
     print(err)
 

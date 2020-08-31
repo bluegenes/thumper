@@ -22,7 +22,7 @@ min_f_major: 0.01
 # defaults for each alphabet 
 alphabet_defaults:
   nucleotide: 
-    ksizes: [21] #,31,51]
+    ksizes: [21,31,51]
     scaled: 1000
     alpha_cmd: "--dna"
     moltype: "dna"
@@ -40,7 +40,7 @@ alphabet_defaults:
     moltype: "dayhoff"
     ksize_multiplier: 3
   hp:
-    ksizes: [35] #, 42]
+    ksizes: [33] #, 42]
     scaled: 100
     alpha_cmd: "--hp"
     moltype: "hp"
