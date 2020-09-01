@@ -44,6 +44,35 @@ def calculate_contam(genome_lin, contigs_d, rank, filter_names=None):
 
     return (good_names, bad_names)
 
+def guess_contig_taxonomy_by_gather(contigs_d, rank):
+    contig_taxD = dict()
+
+    for contig_name, gather_info in contigs_d.items():
+        contig_taxlist = gather_info.gather_tax
+        top_hit=None
+        if contig_taxlist:
+            taxlist_at_rank = summarize_at_rank(contig_taxlist, rank)
+            top_hit, count = taxlist_at_rank[0]
+            # set a threshold % match here? or also look at 2nd best hit?
+            if count < GATHER_MIN_MATCHES
+                top_hit=None
+        if top_hit:
+            contig_taxD[contig_name] = top_hit #, gather_info.length) # length = # bp used in match?
+
+    return contig_taxD
+
+def guess_contig_tax(genome_lineage, contig_taxlist, rank, match_count_threshold):
+    taxlist_at_rank = summarize_at_rank(contig_taxlist, rank)
+
+    top_hit = None
+    if contig_taxlist:
+        top_hit, count = contig_taxlist[0]
+        if count < match_count_threshold:
+            top_hit = None
+
+    # top_hit should be taxonomic classification
+    return top_hit
+
 
 def guess_tax_by_gather(entire_mh, lca_db, lin_db, match_rank, report_fp):
     "Guess likely taxonomy using gather."
@@ -125,11 +154,11 @@ def get_genome_taxonomy(matches_filename, genome_sig_filename, provided_lineage,
         if entire_mh.similarity(ss.minhash) < 1.0:
             new_siglist.append(ss)
         else:
-            if provided_lineage and provided_lineage != 'NA':
-                print(f'found exact match: {ss.name()}. removing.')
-            else:
-                print(f'found exact match: {ss.name()}. but no provided lineage! exiting.')
-                return None, f'found exact match: {ss.name()}. but no provided lineage! exiting.', 1.0, 1.0
+            #if provided_lineage and provided_lineage != 'NA':
+            print(f'found exact match: {ss.name()}. removing.')
+            #else:
+            #    print(f'found exact match: {ss.name()}. but no provided lineage! exiting.')
+            #    return None, f'found exact match: {ss.name()}. but no provided lineage! exiting.', 1.0, 1.0
 
     # ...but leave exact matches in if they're the only matches, I guess!
     if new_siglist:
@@ -237,6 +266,7 @@ def main(args):
         matches_filename = os.path.join(dirname, "search", f"{genome_name}.x.{args.database_name}.{file_alpha}-k{file_ksize}.matches.sig")
         genome_sig = os.path.join(dirname, "signatures", f"{genome_name}.sig")
         contigs_json = os.path.join(dirname, "classify", f"{genome_name}.x.{args.database_name}.{file_alpha}-k{file_ksize}.contigs-tax.json")
+        contigs_tax_out = os.path.join(dirname, "classify", f"{genome_name}.x.{args.database_name}.{file_alpha}-k{file_ksize}.contigs-tax.report.csv")
 
         x = get_genome_taxonomy(matches_filename,
                                 genome_sig,
@@ -260,46 +290,74 @@ def main(args):
         contigs_d = load_contigs_gather_json(contigs_json)
 
         # track contigs that have been eliminated at various ranks
-        eliminate = set()
-        print(f'examining {genome_name} for contamination:')
+        #eliminate = set()
+        #print(f'examining {genome_name} for contamination:')
 
-        summary_d[genome_name] = {}
-        summary_d[genome_name]['f_ident'] = f_ident
-        summary_d[genome_name]['f_major'] = f_major
-        summary_d[genome_name]['comment'] = comment
-        summary_d[genome_name]['lineage'] = genome_lineage
-        summary_d[genome_name]['filter_at'] = filter_at
+        #summary_d[genome_name] = {}
+        #summary_d[genome_name]['f_ident'] = f_ident
+        #summary_d[genome_name]['f_major'] = f_major
+        #summary_d[genome_name]['comment'] = comment
+        #summary_d[genome_name]['lineage'] = genome_lineage
+        #summary_d[genome_name]['filter_at'] = filter_at
 
-        total_bad_n = 0
-        total_bad_bp = 0
-        for rank in sourmash.lca.taxlist():
-            (good_names, bad_names) = calculate_contam(genome_lineage,
-                                                       contigs_d,
-                                                       rank,
-                                                       filter_names=eliminate)
-            eliminate.update(bad_names)
-            bad_n = len(bad_names)
-            bad_bp = sum(bad_names.values())
-            total_bad_n += bad_n
-            total_bad_bp += bad_bp
+        #total_bad_n = 0
+        #total_bad_bp = 0
+        contig_taxonomy=dict()
 
-            print(f'   {rank}: {len(bad_names)} contigs w/ {kb(bad_bp)}kb')
-            summary_d[genome_name][rank] = total_bad_bp
-            if rank == match_rank:
-                break
+        for contig_name, gather_info in contigs_d.items():
+            contig_taxlist = gather_info.gather_tax
+            contig_tax_by_rank = dict()
+			if contig_taxlist:
+                for rank in sourmash.lca.taxlist():
+                    top_hit=None
+					taxlist_at_rank = summarize_at_rank(contig_taxlist, rank)
+					top_hit, count = taxlist_at_rank[0]
+					# set a threshold % match here? or also look at 2nd best hit?
+					if count < GATHER_MIN_MATCHES
+						top_hit=None
+				    if top_hit:
+					    contig_tax_by_rank[rank] = top_hit #, gather_info.length) # length = # bp used in match?
+					if rank == match_rank:
+						break
+            contig_taxonomy[contig_name] = contig_tax_by_rank
 
-        summary_d[genome_name]['total_bad_bp'] = total_bad_bp
+        fp = open(contigs_tax_out, 'wt')
+        taxonomy_w= csv.writer(fp)
 
-        print(f'   (total): {total_bad_n} contigs w/ {kb(total_bad_bp)}kb')
+        taxonomy_w.writerow(['contig_name', 'superkingdom_taxguess', 'phylum_taxguess',
+                            'class_taxguess', 'order_taxguess', 'family_taxguess', 'genus_taxguess'])
+
+        #summary_items = list(summary_d.items())
+        #summary_items.sort(key=lambda x: -x[1]["total_bad_bp"])
+        for contig_name, vals in contig_taxonomy.items():
+            ## WORKING HERE
+            # to do: need to pretty print lineage at each rank
+            # also print a metric for each - % match, etc?
+		    #vals = summary_d[genome_name]
+			taxonomy_w.writerow([contig_name,
+								vals['filter_at'], '',
+								vals["total_bad_bp"],
+								vals['superkingdom'],
+								vals['phylum'],
+								vals['class'],
+								vals['order'],
+								vals['family'],
+								vals['genus'],
+								f'{vals["f_ident"]:.03}',
+								f'{vals["f_major"]:.03}',
+								sourmash.lca.display_lineage(vals["lineage"]),
+								vals["comment"]])
+        #summary_d[genome_name]['total_bad_bp'] = total_bad_bp
+
+        #print(f'   (total): {total_bad_n} contigs w/ {kb(total_bad_bp)}kb')
 
     # output a sorted summary CSV
     fp = open(args.output, 'wt')
-    summary_w = csv.writer(fp)
+    taxonomy_w= csv.writer(fp)
 
-    summary_w.writerow(['genome', 'filter_at', 'override_filter_at',
-        'total_bad_bp', 'superkingdom_bad_bp', 'phylum_bad_bp',
-        'class_bad_bp', 'order_bad_bp', 'family_bad_bp', 'genus_bad_bp',
-        'f_ident', 'f_major', 'lineage', 'comment'])
+    taxonomy_w.writerow(['contig_name', 'superkingdom_taxguess', 'phylum_taxguess',
+        'class_taxguess', 'order_taxguess', 'family_taxguess', 'genus_taxguess'])
+        #'f_ident', 'f_major', 'lineage', 'comment'])
 
     summary_items = list(summary_d.items())
     summary_items.sort(key=lambda x: -x[1]["total_bad_bp"])
