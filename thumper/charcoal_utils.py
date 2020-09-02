@@ -153,17 +153,17 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
     for (similarity, match_sig, filename) in search_iter:
         md5 = match_sig.md5sum()
         if md5 not in found_md5:
-			found_md5.add(md5)
+            found_md5.add(md5)
 
             # get lineage
-			match_ident = get_ident(match_sig)
-			match_lineage = lin_db.ident_to_lineage[match_ident]
-			match_lineage = pop_to_rank(match_lineage, match_rank)
+            match_ident = get_ident(match_sig)
+            match_lineage = lin_db.ident_to_lineage[match_ident]
+            match_lineage = pop_to_rank(match_lineage, match_rank)
 
-			results.append((similarity, match_sig, filename, match_lineage))
+            results.append((similarity, match_sig, filename, match_lineage))
 
-			if summarize_at_ranks:
-				# add the match_sig hashes so we can calculate containment of contig by this genome
+            if summarize_at_ranks:
+                # add the match_sig hashes so we can calculate containment of contig by this genome
                 for rank in taxlist:
                     lin_at_rank = pop_to_rank(match_lineage, rank)
                     if lin_at_rank not in lin_hashes.keys()
