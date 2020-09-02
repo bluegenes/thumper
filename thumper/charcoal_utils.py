@@ -138,7 +138,7 @@ def gather_at_rank(mh, lca_db, lin_db, match_rank):
     import copy
     minhash = copy.copy(mh)
     query_sig = sourmash.SourmashSignature(minhash)
-
+    matched_hashes = {}
     # do the gather:
     counts = Counter()
     while 1:
@@ -147,7 +147,6 @@ def gather_at_rank(mh, lca_db, lin_db, match_rank):
             break
 
         (match, match_sig, _) = results[0]
-
         # retrieve lineage & pop to match_rank
         match_ident = get_ident(match_sig)
         match_lineage = lin_db.ident_to_lineage[match_ident]
@@ -157,22 +156,54 @@ def gather_at_rank(mh, lca_db, lin_db, match_rank):
         common = match_sig.minhash.count_common(query_sig.minhash)
         counts[match_lineage] += common
 
+        # store matched hashes per lineage
+        #sourmash.SourmashSignature(minhash)
+        if match_lineage not in matched_hashes.keys():
+            fresh_mh = minhash.copy_and_clear()
+            # add the match_sig hashes so we can calculate containment of contig by this genome
+            fresh_mh.add_many(match_sig.minhash.hashes)
+            matched_hashes[match_lineage] = fresh_mh
+        else:
+            import pdb;pdb.set_trace()
+            current_mh = matched_hashes[match_lineage]
+            current_mh.add_many(match_sig.minhash.hashes)
+            matched_hashes[match_lineage] = current_mh
+
         # finish out gather algorithm!
         minhash.remove_many(match_sig.minhash.hashes)
         query_sig = sourmash.SourmashSignature(minhash)
 
     # return!
-    for lin, count in counts.most_common():
-        yield lin, count
+    full_query = sourmash.SourmashSignature(mh)
+    if counts.most_common():
+        for lin, count in counts.most_common():
+            lin_mh = matched_hashes[lin]
+            lin_sig = sourmash.SourmashSignature(lin_mh)
+            query_contained =full_query.contained_by(lin_sig)
+            yield lin, count, lin_mh, query_contained
+    return []
 
 
-def summarize_at_rank(lincounts, rank):
+def summarize_at_rank(lincounts, query_sig, rank):
     newcounts = Counter()
-    for lin, count in lincounts:
+    hashes_at_rank = {}
+
+    for lin, count, lin_mh, _ in lincounts:
         lin = pop_to_rank(lin, rank)
         newcounts[lin] += count
+        if lin not in hashes_at_rank.keys():
+            hashes_at_rank[lin] = lin_mh
+        else:
+            current_mh = hashes_at_rank[lin]
+            current_mh.add_many(lin_mh)
+            hashes_at_rank[lin] = current_mh
 
-    return newcounts.most_common()
+    for lin, count in newcounts.most_common():
+        matched_hashes = hashes_at_rank[lin]
+        lin_sig = sourmash.SourmashSignature(matched_hashes)
+        query_contained = query_sig.contained_by(lin_sig)
+        return lin, count, query_contained
+    #return newcounts.most_common(), hashes_at_rank
 
 
 def get_ident(sig):
