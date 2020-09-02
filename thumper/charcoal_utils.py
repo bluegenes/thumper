@@ -164,7 +164,7 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
 
             results.append((similarity, match_sig, filename, match_lineage))
 
-            if summarize_at_ranks and len(results) >1: # no need to summarize if we just have one hit
+            if summarize_at_ranks and len(search_iter) >1: # no need to summarize if we just have one hit
                 # add the match_sig hashes so we can calculate containment of contig by this genome
                 for rank in lca_utils.taxlist(include_strain=False):
                     lin_at_rank = pop_to_rank(match_lineage, rank)
