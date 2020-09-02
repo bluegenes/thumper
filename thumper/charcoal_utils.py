@@ -3,6 +3,7 @@ utility functions for charcoal.
 """
 import json
 from collections import defaultdict, Counter, namedtuple
+from operator import itemgetter
 import csv
 
 import sourmash
@@ -141,7 +142,7 @@ SearchResult = namedtuple('SearchResult',
 RankSumSearchResult = namedtuple('RankSumSearchResult',
                           'lineage, similarity, match')
 
-def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=True, summarize_at_ranks=True, taxlist=lca_utils.taxlist()):
+def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=False, summarize_at_ranks=True):
     "Run search --containment, and aggregate at given rank and above."
     # do we need to copy mh if not modifying it?
     import copy
@@ -149,7 +150,8 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
     query_sig = sourmash.SourmashSignature(minhash)
     results=[]
     lin_hashes={}
-    search_iter = lca_db.search(query_sig, threshold=0, do_containment=True,ignore_abundance=ignore_abundance)
+    found_md5=set()
+    search_iter = lca_db.search(query_sig, threshold=0, do_containment=True, ignore_abundance=ignore_abundance, best_only=False, unload_data=False)
     for (similarity, match_sig, filename) in search_iter:
         md5 = match_sig.md5sum()
         if md5 not in found_md5:
@@ -162,18 +164,20 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
 
             results.append((similarity, match_sig, filename, match_lineage))
 
-            if summarize_at_ranks:
+            if summarize_at_ranks and len(results) >1: # no need to summarize if we just have one hit
                 # add the match_sig hashes so we can calculate containment of contig by this genome
-                for rank in taxlist:
+                for rank in lca_utils.taxlist(include_strain=False):
                     lin_at_rank = pop_to_rank(match_lineage, rank)
-                    if lin_at_rank not in lin_hashes.keys()
+                    if lin_at_rank not in lin_hashes.keys():
                         # would be neat to have a query_sig.return_common(match_sig) to get *just* the hashes in common
-                        lin_hashes[lin_at_rank] = (match_sig.minhash.hashes, rank)
+                        fresh_mh = mh.copy_and_clear()
+                        fresh_mh.add_many(match_sig.minhash.hashes)
+                        lin_hashes[lin_at_rank] = (fresh_mh, rank)
                         #lin_hashes[lin_at_rank] = (match_sig.minhash.hashes, similarity)
                     else:
-                        current_hashes = lin_hashes[lin_at_rank][0]
-                        current_hashes.add_many(match_sig.minhash.hashes)
-                        lin_hashes[lin_at_rank] = (current_hashes, rank)
+                        current_mh = lin_hashes[lin_at_rank][0]
+                        current_mh.add_many(match_sig.minhash.hashes)
+                        lin_hashes[lin_at_rank] = (current_mh, rank)
                         # could also calculate + store containment here. But would recalculated every time we add more hashes.. too many containment operations?
                         #similarity = query_sig.contained_by(current_hashes)
                         #lin_hashes[lin_at_rank] = (match_sig.minhash.hashes, similarity)
@@ -181,7 +185,7 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
                         break
 
     # sort normal search --containment results on similarity (reverse)
-    results.sort(key=lambda x: -x[0])
+    results.sort(key=itemgetter(0), reverse=True)
 
     x = []
     for (similarity, match, filename, match_lineage) in results:
@@ -196,24 +200,24 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
 
     # now, calculate containment for each lineage match at each rank
     summarized_results = defaultdict(list)
+    y = []
     if summarize_at_ranks:
-        for lin, match_hashes, rank in lin_hashes:
+        for lin, (match_hashes, rank) in lin_hashes.items():
             linmatch_sig = sourmash.SourmashSignature(match_hashes)
             containment = query_sig.contained_by(linmatch_sig)
             summarized_results[rank].append((rank, lin, containment, linmatch_sig))
 
-    # sort and store results
-    y = []
+        # sort and store results
 
-    # iterate superkingdom --> match_rank
-    for rank in taxlist:
-        rank_res = summarized_results[rank]
-        # sort by containment
-        rank_res.sort(key=lambda x: -x[2])
-        for (rank, lin, containment, linmatch_sig) in rank_res:
-            y.append(RankSumSearchResult(lineage=lin, similarity=containment, match=linmatch_sig))
-        if rank == match_rank:
-            break
+        # iterate superkingdom --> match_rank
+        for rank in lca_utils.taxlist(include_strain=False):
+            rank_res = summarized_results[rank]
+            # sort by containment
+            rank_res.sort(key=lambda x: -x[2])
+            for (rank, lin, containment, linmatch_sig) in rank_res:
+                y.append(RankSumSearchResult(lineage=lin, similarity=containment, match=linmatch_sig))
+            if rank == match_rank:
+                break
     return x,y
 
 
