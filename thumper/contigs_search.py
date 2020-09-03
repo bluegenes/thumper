@@ -16,7 +16,7 @@ from sourmash.lca import LCA_Database
 
 from .lineage_db import LineageDB
 from .version import version
-from thumper.charcoal_utils import (gather_at_rank, get_ident, ContigGatherInfo, summarize_at_rank)
+from thumper.charcoal_utils import (gather_at_rank, get_ident, ContigSearchInfo, search_containment_at_rank)
 
 
 def main(args):
@@ -89,27 +89,27 @@ def main(args):
         # look at each contig individually
         mh = empty_mh.copy_and_clear()
         mh.add_sequence(record.sequence, force=True)
-
         # collect all the gather results at genus level, together w/counts;
         # here, results is a list of (lineage, count) tuples.
         # ntp: results is now (lineage,count, lin_mh, query_contained)
-        results = list(gather_at_rank(mh, lca_db, lin_db, match_rank))
+        results,rank_results = search_containment_at_rank(mh, lca_db, lin_db, match_rank)
         #results = gather_at_rank(mh, lca_db, lin_db, match_rank)
 
         # now summarize this up the chain
-        rank_summary = {}
-        if results:
-            query_sig = sourmash.SourmashSignature(mh)
-            for rank in sourmash.lca.taxlist():
-                rank_summary[rank] = summarize_at_rank(results, query_sig, rank)
-                if rank == match_rank:
-                    break
+        #rank_summary = {}
+        #if results:
+        #    query_sig = sourmash.SourmashSignature(mh)
+        #    for rank in sourmash.lca.taxlist():
+        #        rank_summary[rank] = summarize_at_rank(results, query_sig, rank)
+        #        if rank == match_rank:
+        #            break
 
         ## WORKING HERE..now do something with these summaries
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         # store together with size of sequence.
         # note, don't want to store the minhashes here/write them out. Summarize first
-        info = ContigGatherInfo(len(record.sequence), len(mh), results)
+        #info = ContigSearchInfo(len(record.sequence), len(mh), results, rank_results)
+        info = ContigSearchInfo(len(record.sequence), len(mh), [], rank_results)
         contigs_tax[record.name] = info
 
     print(f"Processed {len(contigs_tax)} contigs.")

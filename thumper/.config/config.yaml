@@ -84,7 +84,7 @@ signames_to_file:
 index_sbt:
   output_dir: index
   output_files:
-    - "{index}.sbt.zip" # "index name" needs to include alphabet, ksize
+    - "{index}.sbt.zip" # "index name" needs to include alphabet, ksize, scaled
 
 ## not currently in use ##
 sourmash_gather:

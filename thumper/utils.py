@@ -245,6 +245,7 @@ def generate_database_targets(config, also_return_database_names=False):
                     # only build target if db has matching ksize available.
                     # todo: also handle scaled here???
                     if ksize_int in alphabet_info[db_alphabet]["ksizes"]:
+
                         for db_type in dbs.keys():
                             suffix = config["database_suffixes"][db_type]
                             db_filenames = expand(db_templates, db_name=db,alphabet=db_alphabet, ksize=db_ksize, db_type=db_type, suffix=suffix)
@@ -291,7 +292,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     index_names = []
     if pipeline == "generate_index":
         for alpha, alphaInfo in alphabet_info.items():
-            index_names+=expand("{basename}.{alpha}-k{ksize}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"])
+            index_names+=expand("{basename}.{alpha}-k{ksize}.scaled{scaled}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
 
     # generate targets for each step
     steps = config["pipelines"][pipeline]["steps"]
