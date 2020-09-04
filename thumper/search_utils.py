@@ -8,7 +8,7 @@ import csv
 
 import sourmash
 from sourmash.lca import lca_utils, LineagePair, taxlist
-#from thumper.charcoal_utils import get_ident
+from thumper.charcoal_utils import *
 
 
 ## NOTE: see here for intersection mins
@@ -30,6 +30,16 @@ RankSumSearchResult = namedtuple('RankSumSearchResult',
 ContigSearchInfo = namedtuple('ContigSearchInfo',
                               ['length', 'num_hashes', 'search_containment', 'contained_at_rank'])
 
+
+
+#defaultdict requires funcction that defines an empty minhash
+# def f(): return mh.copy_and_clear()
+
+
+# define a minhash factory? class
+
+
+
 def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=False, summarize_at_ranks=True):
     "Run search --containment, and aggregate at given rank and above."
     # do we need to copy mh if not modifying it?
@@ -47,6 +57,7 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
 
             # get lineage
             match_ident = get_ident(match_sig)
+            print(match_ident)
             match_lineage = lin_db.ident_to_lineage[match_ident]
             match_lineage = pop_to_rank(match_lineage, match_rank)
 
@@ -164,10 +175,10 @@ def test_contain_at_rank_1():
     hashval  = 12345678
     mh = sourmash.MinHash(n=0, scaled=1, ksize=3)
     mh.add_hash(hashval) # make another test using add_hash_with_abundance?
-    sig1 = sourmash.SourmashSignature(mh)
+    ident = 'uniq'
+    sig1 = sourmash.SourmashSignature(mh, name=ident)
 
     # create lca_db w sig1
-    ident = 'uniq'
     lca_db = LCA_Database(scaled=1, ksize=3)
     lca_db.insert(sig1, ident=ident)
 
@@ -178,12 +189,12 @@ def test_contain_at_rank_1():
     # lineage db created properly?
     assert 'uniq' in lin_db.lineage_to_idents[lin]
 
-    results, rank_results =search_containment_at_rank(mh, lca_db, lin_db, "order")
+    results, rank_results =search_containment_at_rank(mh, lca_db, lin_db, "class")
     print(results)
 
     print(rank_results)
 
-
+#test_contain_at_rank_1()
     #assert 'uniq' in ldb.lineage_to_idents[lineage]
     #assert ldb.ident_to_lineage['uniq'] == lineage
     #assert assignments[hashval] == set([ lin ])
