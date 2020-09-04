@@ -26,8 +26,11 @@ search_databases:
 
 alphabets:
   protein:
-    scaled: 10
+    ksizes: [11] #[5,7,10,11]
+    scaled: 10 #1
   dayhoff:
-    scaled: 10
+    ksizes: [19] #15 
+    scaled: 10 # 1
   hp:
-    scaled: 10
+    ksizes: [33] #30
+    scaled: 10 #1
