@@ -11,12 +11,6 @@ from sourmash.lca import lca_utils, LineagePair, taxlist
 from thumper.charcoal_utils import *
 
 
-## NOTE: see here for intersection mins
-# https://github.com/dib-lab/sourmash/blob/7df142e4fe4de2bda4891936ea51cbc237168bcf/sourmash/search.py
-#found_mins = set(_filter_max_hash(found_mins, new_max_hash))
-#intersect_mins = query_mins.intersection(found_mins)
-#intersect_orig_query_mins = orig_query_mins.intersection(found_mins)
-#intersect_bp = cmp_scaled * len(intersect_orig_query_mins)
 
 
 # generic SearchResult WITH lineage
@@ -25,187 +19,271 @@ SearchResult = namedtuple('SearchResult',
 
 # generic RankSearchResult = summarized containment at rank
 RankSumSearchResult = namedtuple('RankSumSearchResult',
-                          'lineage, similarity')
+                                 'lineage, containment, match_sig')
 
 ContigSearchInfo = namedtuple('ContigSearchInfo',
                               ['length', 'num_hashes', 'search_containment', 'contained_at_rank'])
 
 
+def add_hashes_at_higher_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
+    for rank in lca_utils.taxlist(include_strain=False):
+        lin_at_rank = pop_to_rank(lineage, rank)
+        lineage_hashD[lin_at_rank].add_many(hashes_to_add)
+        if rank == match_rank:
+            break
+    return lineage_hashD
 
-#defaultdict requires funcction that defines an empty minhash
-# def f(): return mh.copy_and_clear()
+# test_add_hashes_at_higher_ranks
+# 1. two sigs, lineages match at phylum level - check that hashes add
+# 2. two sigs, lineages do not match at all - check that get added separately to dict
 
 
-# define a minhash factory? class
+def get_lineage_at_match_rank(linDB, sig, match_rank):
+    match_ident = get_ident(sig)
+    match_lineage = linDB.ident_to_lineage[match_ident]
+    match_lineage = pop_to_rank(match_lineage, match_rank)
+    return match_lineage
+
+# test_get_lineage_at_match_rank
+# 1. check that lineage gets popped back to match rank
+
+def calculate_containment_at_rank(lineage_hashD, query_sig, match_rank):
+    # calculate containment for each lineage match at each rank
+    summarized_results = defaultdict(list)
+    for lin, matched_hashes in lineage_hashD.items():
+        rank = lin[-1].rank
+        # maybe also calculate matched_bp?
+        #intersect_bp = scaled * len(intersected_hashes)
+        linmatch_sig = sourmash.SourmashSignature(matched_hashes)
+        containment = query_sig.contained_by(linmatch_sig)
+        summarized_results[rank].append((rank, lin, containment, linmatch_sig)) # optionally don't keep track of sig here
+
+    return summarized_results
+
+# test calculate_containment_at_rank
+# same tests as overall, bv this is the main function
+# 1. one lineage, calculate query containment at rank
+# 2. two lineages, match at phylum level
+# 3. two lineages, match fully
+# 4. two lineages, no match
 
 
+def sort_by_rank_and_containment(summarized_results, match_rank):
+    sorted_results = []
+    # iterate superkingdom --> match_rank
+    for rank in lca_utils.taxlist(include_strain=False):
+        rank_res = summarized_results[rank]
+        rank_res.sort(key=itemgetter(2), reverse=True)  # sort by containment
+        #print(rank_res)
+        for (rank, lin, containment, match_sig) in rank_res:
+            sorted_results.append(RankSumSearchResult(lineage=lin, containment=containment, match_sig=match_sig))
+        if rank == match_rank:
+            break
+    return sorted_results
+
+# test_sort_by_rank_and_containment
+# 1. three results, check that they sort by rank, containment
+
+
+def sort_and_store_search_results(res):
+    # sort normal search --containment results on similarity (reverse)
+    sorted_rs = []
+    res.sort(key=itemgetter(0), reverse=True)
+    for (similarity, match, filename, match_lineage) in res:
+       sorted_rs.append(SearchResult(similarity=similarity,
+                                     match=match,
+                                     md5=match.md5sum(),
+                                     filename=filename,
+                                     name=match.name(),
+                                     lineage=match_lineage))
+    return sorted_rs
+
+# test_sort_and_store_search_results
+# 1. three results, check that they sort by containment
 
 def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=False, summarize_at_ranks=True):
     "Run search --containment, and aggregate at given rank and above."
-    # do we need to copy mh if not modifying it?
-    import copy
-    minhash = copy.copy(mh)
-    query_sig = sourmash.SourmashSignature(minhash)
+
     results=[]
-    lin_hashes={}
     found_md5=set()
-    search_iter = lca_db.search(query_sig, threshold=0, do_containment=True, ignore_abundance=ignore_abundance, best_only=False, unload_data=False)
+    def gen_mh():
+        return mh.copy_and_clear()
+    lin_hashes=defaultdict(gen_mh) #defaultdict requires function that defines an empty minhash
+    query_hashes = set(mh.hashes)
+    query_sig = sourmash.SourmashSignature(mh)
+
+    # search
+    search_iter = lca_db.search(query_sig, threshold=0, do_containment=True, \
+                  ignore_abundance=ignore_abundance, best_only=False, unload_data=False)
+
+    # iterate through matches
     for (similarity, match_sig, filename) in search_iter:
         md5 = match_sig.md5sum()
         if md5 not in found_md5:
             found_md5.add(md5)
+            match_lineage = get_lineage_at_match_rank(lin_db, match_sig, match_rank)
+            results.append((similarity, match_sig, filename, match_lineage)) #store search results + lineage
 
-            # get lineage
-            match_ident = get_ident(match_sig)
-            print(match_ident)
-            match_lineage = lin_db.ident_to_lineage[match_ident]
-            match_lineage = pop_to_rank(match_lineage, match_rank)
+            if summarize_at_ranks:
+                # Keep track of matched hashes at higher taxonomic ranks
+                intersected_hashes = query_hashes.intersection(set(match_sig.minhash.hashes))
+                lin_hashes = add_hashes_at_higher_ranks(lin_hashes, intersected_hashes, match_lineage, match_rank)
 
-            results.append((similarity, match_sig, filename, match_lineage))
-
-            if summarize_at_ranks: #and len(search_iter) >1: # no need to summarize if we just have one hit
-                # add the match_sig hashes so we can calculate containment of contig by this genome
-                for rank in lca_utils.taxlist(include_strain=False):
-                    lin_at_rank = pop_to_rank(match_lineage, rank)
-                    if lin_at_rank not in lin_hashes.keys():
-                        # would be neat to have a query_sig.return_common(match_sig) to get *just* the hashes in common
-                        fresh_mh = mh.copy_and_clear()
-                        fresh_mh.add_many(match_sig.minhash.hashes)
-                        lin_hashes[lin_at_rank] = (fresh_mh, rank)
-                        #lin_hashes[lin_at_rank] = (match_sig.minhash.hashes, similarity)
-                    else:
-                        current_mh = lin_hashes[lin_at_rank][0]
-                        current_mh.add_many(match_sig.minhash.hashes)
-                        lin_hashes[lin_at_rank] = (current_mh, rank)
-                        # could also calculate + store containment here. But would recalculated every time we add more hashes.. too many containment operations?
-                        #similarity = query_sig.contained_by(current_hashes)
-                        #lin_hashes[lin_at_rank] = (match_sig.minhash.hashes, similarity)
-                    if rank == match_rank:
-                        break
-
-    # sort normal search --containment results on similarity (reverse)
-    results.sort(key=itemgetter(0), reverse=True)
-
-    x = []
-    for (similarity, match, filename, match_lineage) in results:
-
-        x.append(SearchResult(similarity=similarity,
-                              match=[],# match
-                              md5=match.md5sum(),
-                              filename=filename,
-                              name=match.name(),
-                              lineage=match_lineage))
-
-
-    # now, calculate containment for each lineage match at each rank
-    summarized_results = defaultdict(list)
-    y = []
+    # sort and store results
+    search_results = sort_and_store_search_results(results)
+    search_results_at_rank = []
     if summarize_at_ranks:
-        for lin, (match_hashes, rank) in lin_hashes.items():
-            linmatch_sig = sourmash.SourmashSignature(match_hashes)
-            containment = query_sig.contained_by(linmatch_sig)
-            summarized_results[rank].append((rank, lin, containment)) #, linmatch_sig))
+        rank_containment = calculate_containment_at_rank(lin_hashes, query_sig, match_rank)
+        search_results_at_rank = sort_by_rank_and_containment(rank_containment, match_rank)
 
-        # sort and store results
-
-        # iterate superkingdom --> match_rank
-        for rank in lca_utils.taxlist(include_strain=False):
-            rank_res = summarized_results[rank]
-            # sort by containment
-            #rank_res.sort(key=lambda x: -x[2])
-            rank_res.sort(key=itemgetter(2), reverse=True)
-            for (rank, lin, containment) in rank_res:
-                y.append(RankSumSearchResult(lineage=lin, similarity=containment)) #, match=linmatch_sig))
-            if rank == match_rank:
-                break
-    return x,y
+    return search_results, search_results_at_rank
 
 
-## make test fixtures? lca db, lindb
-#class FakeLCA_Database(object):
-#    def __init__(self):
-#        self._assignments = {}
-#
-#    def _set_lineage_assignment(self, hashval, assignment):
-#        self._assignments[hashval] = assignment
-#
-#    def get_lineage_assignments(self, hashval):
-#        if hashval in self._assignments:
-            #return self._assignments[hashval]
-        #else:
-        #    return None
 
-#@pytest.fixture
-#def lin_db():
-# build lindb
-#    return lindb
-    # make a mh
 
-    #mh = sourmash.MinHash(n=1, ksize=20, track_abundance=True)
-    #mh.add_kmer("AT" * 10)
-    #sig1 = SourmashSignature(mh, name='foo')
 
-    #lineage = ((LineagePair('rank1', 'name1'),
-    #            LineagePair('rank2', 'name2')))
+## tests (to do - move to separate testing file)
+## TO DO:
+  # - turn mh/sig generation into function?
+  # - move to separate testing file
 
-#from sourmash.lca.command_index import load_taxonomy_assignments
 
-# from charcoal_utils:
-#def get_ident(sig):
-#    "Hack and slash identifiers."
-#    ident = sig.name()
-#    ident = ident.split()[0]
-#    ident = ident.split('.')[0]
-#    return ident
+from sourmash.lca import LCA_Database
+from thumper.lineage_db import LineageDB
 
-#def get_idents_for_hashval(lca_db, hashval):
-#    "Get the identifiers associated with this hashval."
-#    idx_list = lca_db.hashval_to_idx.get(hashval, [])
-#    for idx in idx_list:
-#        ident = lca_db.idx_to_ident[idx]
-#        yield ident
+
+def make_sig_and_lin(hashvals, ident, lin, ksize=3, scaled=1):
+    mh = sourmash.MinHash(n=0, scaled=1, ksize=3)
+    mh.add_many(hashvals)
+    sig = sourmash.SourmashSignature(mh, name=ident)
+    lineage = lca_utils.make_lineage('a;b;c')
+    return mh, sig, lineage
+
+def make_mh(hashvals, ksize=3, scaled=1):
+    mh = sourmash.MinHash(n=0, scaled=1, ksize=3)
+    mh.add_many(hashvals)
+    return mh
 
 
 def test_contain_at_rank_1():
-    from sourmash.lca import LCA_Database
-    from lineage_db import LineageDB
-    # like, one minhash, one set of ranks
+    # one minhash, one set of ranks
 
     # create mh, sig w/hashval
     hashval  = 12345678
-    mh = sourmash.MinHash(n=0, scaled=1, ksize=3)
-    mh.add_hash(hashval) # make another test using add_hash_with_abundance?
     ident = 'uniq'
-    sig1 = sourmash.SourmashSignature(mh, name=ident)
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident, 'a;b;c')
 
     # create lca_db w sig1
     lca_db = LCA_Database(scaled=1, ksize=3)
     lca_db.insert(sig1, ident=ident)
 
-    # next, make lin_db
-    lin = lca_utils.make_lineage('a;b;c')
+    # make lin_db
     lin_db = LineageDB()
-    lin_db.insert(ident, lin)
+    lin_db.insert(ident, lin1)
     # lineage db created properly?
-    assert 'uniq' in lin_db.lineage_to_idents[lin]
+    # assert 'uniq' in lin_db.lineage_to_idents[lin1]
 
-    results, rank_results =search_containment_at_rank(mh, lca_db, lin_db, "class")
-    print(results)
+    results, rank_results=search_containment_at_rank(mh1, lca_db, lin_db, "class")
+    #print(results)
+    #print(rank_results)
 
-    print(rank_results)
-
-#test_contain_at_rank_1()
     #assert 'uniq' in ldb.lineage_to_idents[lineage]
     #assert ldb.ident_to_lineage['uniq'] == lineage
     #assert assignments[hashval] == set([ lin ])
 
+def test_contain_at_rank_2():
+    #two minhashes, fully shared ranks
 
-#def test_contain_at_rank_2():
-     #two minhashes, fully shared ranks
+    # first sig
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
 
+    # second sig
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;c')
 
-#def test_contain_at_rank_3():
+    # create lca_db w sigs
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    results, rank_results=search_containment_at_rank(search_mh, lca_db, lin_db, "class")
+
+    #print(results)
+    #print(rank_results)
+
+def test_contain_at_rank_3():
     # two minhashes, totally distinct ranks
+    # first sig
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
 
-#def test_contain_at_rank_4():
-    # two minhashes, totally distinct ranks
+    # second sig
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'd;e;f')
+
+    # create lca_db w sig1
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+
+    # next, make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    results, rank_results=search_containment_at_rank(search_mh, lca_db, lin_db, "class")
+
+    # check results
+    #print(results)
+    #print(rank_results)
+
+def test_contain_at_rank_4():
+    # two minhashes, share ranks at phylum level
+
+    # first sig
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
+
+    # second sig
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;f')
+
+    # create lca_db w sigs
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    results, rank_results=search_containment_at_rank(search_mh, lca_db, lin_db, "class")
+
+    #print(results)
+    #print(rank_results)
+
+# run the tests
+#test_contain_at_rank_1()
+#test_contain_at_rank_2()
+#test_contain_at_rank_3()
+#test_contain_at_rank_4()
+
