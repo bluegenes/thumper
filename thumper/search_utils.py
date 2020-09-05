@@ -11,8 +11,6 @@ from sourmash.lca import lca_utils, LineagePair, taxlist
 from thumper.charcoal_utils import *
 
 
-
-
 # generic SearchResult WITH lineage
 SearchResult = namedtuple('SearchResult',
                           'similarity, match, md5, filename, name, lineage')
@@ -25,17 +23,16 @@ ContigSearchInfo = namedtuple('ContigSearchInfo',
                               ['length', 'num_hashes', 'search_containment', 'contained_at_rank'])
 
 
-def add_hashes_at_higher_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
+def add_hashes_at_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
+    # first add full lineage
+    lineage_hashD[lineage].add_many(hashes_to_add)
     for rank in lca_utils.taxlist(include_strain=False):
+        # TODO: add check to pop ONLY if needed (no need to pop at genus if lineage only has superk, phyl)
         lin_at_rank = pop_to_rank(lineage, rank)
         lineage_hashD[lin_at_rank].add_many(hashes_to_add)
         if rank == match_rank:
             break
     return lineage_hashD
-
-# test_add_hashes_at_higher_ranks
-# 1. two sigs, lineages match at phylum level - check that hashes add
-# 2. two sigs, lineages do not match at all - check that get added separately to dict
 
 
 def get_lineage_at_match_rank(linDB, sig, match_rank):
@@ -44,28 +41,19 @@ def get_lineage_at_match_rank(linDB, sig, match_rank):
     match_lineage = pop_to_rank(match_lineage, match_rank)
     return match_lineage
 
-# test_get_lineage_at_match_rank
-# 1. check that lineage gets popped back to match rank
 
 def calculate_containment_at_rank(lineage_hashD, query_sig, match_rank):
     # calculate containment for each lineage match at each rank
     summarized_results = defaultdict(list)
     for lin, matched_hashes in lineage_hashD.items():
         rank = lin[-1].rank
+        print(rank)
         # maybe also calculate matched_bp?
         #intersect_bp = scaled * len(intersected_hashes)
         linmatch_sig = sourmash.SourmashSignature(matched_hashes)
         containment = query_sig.contained_by(linmatch_sig)
-        summarized_results[rank].append((rank, lin, containment, linmatch_sig)) # optionally don't keep track of sig here
-
+        summarized_results[rank].append((lin, containment, linmatch_sig)) # optionally don't keep track of sig here
     return summarized_results
-
-# test calculate_containment_at_rank
-# same tests as overall, bv this is the main function
-# 1. one lineage, calculate query containment at rank
-# 2. two lineages, match at phylum level
-# 3. two lineages, match fully
-# 4. two lineages, no match
 
 
 def sort_by_rank_and_containment(summarized_results, match_rank):
@@ -73,9 +61,9 @@ def sort_by_rank_and_containment(summarized_results, match_rank):
     # iterate superkingdom --> match_rank
     for rank in lca_utils.taxlist(include_strain=False):
         rank_res = summarized_results[rank]
-        rank_res.sort(key=itemgetter(2), reverse=True)  # sort by containment
+        rank_res.sort(key=itemgetter(1), reverse=True)  # sort by containment
         #print(rank_res)
-        for (rank, lin, containment, match_sig) in rank_res:
+        for (lin, containment, match_sig) in rank_res:
             sorted_results.append(RankSumSearchResult(lineage=lin, containment=containment, match_sig=match_sig))
         if rank == match_rank:
             break
@@ -127,7 +115,7 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
             if summarize_at_ranks:
                 # Keep track of matched hashes at higher taxonomic ranks
                 intersected_hashes = query_hashes.intersection(set(match_sig.minhash.hashes))
-                lin_hashes = add_hashes_at_higher_ranks(lin_hashes, intersected_hashes, match_lineage, match_rank)
+                lin_hashes = add_hashes_at_ranks(lin_hashes, intersected_hashes, match_lineage, match_rank)
 
     # sort and store results
     search_results = sort_and_store_search_results(results)
@@ -144,25 +132,215 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
 
 ## tests (to do - move to separate testing file)
 ## TO DO:
-  # - turn mh/sig generation into function?
   # - move to separate testing file
 
 
 from sourmash.lca import LCA_Database
 from thumper.lineage_db import LineageDB
 
-
-def make_sig_and_lin(hashvals, ident, lin, ksize=3, scaled=1):
-    mh = sourmash.MinHash(n=0, scaled=1, ksize=3)
-    mh.add_many(hashvals)
-    sig = sourmash.SourmashSignature(mh, name=ident)
-    lineage = lca_utils.make_lineage('a;b;c')
-    return mh, sig, lineage
-
 def make_mh(hashvals, ksize=3, scaled=1):
     mh = sourmash.MinHash(n=0, scaled=1, ksize=3)
     mh.add_many(hashvals)
     return mh
+
+def make_sig_and_lin(hashvals, ident, lin, ksize=3, scaled=1):
+    mh = make_mh(hashvals)
+    sig = sourmash.SourmashSignature(mh, name=ident)
+    lineage = lca_utils.make_lineage('a;b;c')
+    return mh, sig, lineage
+
+def test_gen_mh():
+    mh = make_mh([12345678])
+    return mh.copy_and_clear()
+
+def test_add_hashes_at_ranks_1():
+    lin1 = lca_utils.make_lineage('a')
+    hashval1  = 12345678
+    lineage_hashD=defaultdict(test_gen_mh)
+    # manually add hashval1 to a
+    lineage_hashD[lin1].add_many([hashval1])
+
+    # test that hashval2 gets added to lin1
+    lin2 = lca_utils.make_lineage('a;b')
+    hashval2 = 87654321
+    match_rank="genus"
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+
+    assert set(lineage_hashD[lin1].hashes) == set([hashval1, hashval2])
+    assert set(lineage_hashD[lin2].hashes) == set([hashval2])
+
+def test_add_hashes_at_ranks_2():
+    lin1 = lca_utils.make_lineage('a;b')
+    lin2 = lca_utils.make_lineage('a')
+    hashval1  = 12345678
+    lineage_hashD=defaultdict(test_gen_mh)
+    # manually add hashval1 to a;, a;b
+    lineage_hashD[lin1].add_many([hashval1])
+    lineage_hashD[lin2].add_many([hashval1])
+
+    # test that hashval2 gets added to *both* lin1, lin2
+    lin3 = lca_utils.make_lineage('a;b;c')
+    hashval2 = 87654321
+    match_rank="genus"
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
+
+    assert set(lineage_hashD[lin1].hashes) == set([hashval1, hashval2])
+    assert set(lineage_hashD[lin2].hashes) == set([hashval1, hashval2])
+    assert set(lineage_hashD[lin3].hashes) == set([hashval2])
+
+def test_add_hashes_at_ranks_3():
+    lin1 = lca_utils.make_lineage('a;b')
+    lin2 = lca_utils.make_lineage('a')
+    hashval1  = 12345678
+    lineage_hashD=defaultdict(test_gen_mh)
+    # manually add hashval1 to a;, a;b
+    lineage_hashD[lin1].add_many([hashval1])
+    lineage_hashD[lin2].add_many([hashval1])
+
+    # test that hashval2 is added separately
+    lin3 = lca_utils.make_lineage('d;e;f')
+    lin4 = lca_utils.make_lineage('d;e')
+    lin5 = lca_utils.make_lineage('d')
+    hashval2 = 87654321
+    match_rank="genus"
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
+
+    assert set(lineage_hashD[lin1].hashes) == set([hashval1])
+    assert set(lineage_hashD[lin2].hashes) == set([hashval1])
+    assert set(lineage_hashD[lin3].hashes) == set([hashval2])
+    assert set(lineage_hashD[lin4].hashes) == set([hashval2])
+    assert set(lineage_hashD[lin5].hashes) == set([hashval2])
+
+def test_add_hashes_at_ranks_4():
+    lin1 = lca_utils.make_lineage('a;b')
+    lin2 = lca_utils.make_lineage('a')
+    hashval1  = 12345678
+    lineage_hashD=defaultdict(test_gen_mh)
+    # manually add hashval1 to a;, a;b
+    lineage_hashD[lin1].add_many([hashval1])
+    lineage_hashD[lin2].add_many([hashval1])
+
+    # test that hashval2 is added appropriately
+    lin3 = lca_utils.make_lineage('a;d')
+    hashval2 = 87654321
+    match_rank="genus"
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
+
+    assert set(lineage_hashD[lin1].hashes) == set([hashval1])
+    assert set(lineage_hashD[lin2].hashes) == set([hashval1, hashval2])
+    assert set(lineage_hashD[lin3].hashes) == set([hashval2])
+
+
+def test_get_lineage_at_match_rank():
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    superkingdom = lineage = lca_utils.make_lineage('a')
+    phylum = lineage = lca_utils.make_lineage('a;b')
+
+    assert get_lineage_at_match_rank(lin_db, sig1, "phylum") == phylum
+    assert get_lineage_at_match_rank(lin_db, sig1, "superkingdom") == superkingdom
+    assert get_lineage_at_match_rank(lin_db, sig1, "class") == lin1
+
+
+def test_calculate_containment_at_rank_1():
+    # one lineage, calculate query containment at rank
+    hashval1  = 12345678
+    ident = 'uniq'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval1], ident, 'a;b')
+    match_rank="genus"
+    # make lineage hashD
+    lineage_hashD=defaultdict(test_gen_mh)
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+
+    # calculate containment
+    containmentD = calculate_containment_at_rank(lineage_hashD, sig1, match_rank)
+
+    # superkingdom lineage that should have 100% containment
+    assert containmentD["superkingdom"][0][1] == 1.0
+    assert containmentD["phylum"][0][1] == 1.0
+
+
+def test_calculate_containment_at_rank_2():
+    # two lineages, match at phylum level
+    hashval1  = 12345678
+    ident = 'uniq'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval1], ident, 'a;b;c')
+    lin2 = lca_utils.make_lineage('a;d')
+    hashval2 = 87654321
+    match_rank="genus"
+    # make lineage hashD
+    lineage_hashD=defaultdict(test_gen_mh)
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+
+    # calculate containment
+    containmentD = calculate_containment_at_rank(lineage_hashD, sig1, match_rank)
+
+    # superkingdom lineage that should have 100% containment
+    lin3 = lca_utils.make_lineage('a')
+    assert containmentD["superkingdom"][0][1] == 1.0
+    assert containmentD["class"][0][1] == 1.0
+    phylum_containment = set([containmentD["phylum"][0][1], containmentD["phylum"][1][1]])
+    assert set([0.0, 1.0]) == phylum_containment
+
+def test_calculate_containment_at_rank_3():
+    # two lineages with overlapping hashes (50% containment)
+    hashval1  = 12345678
+    ident = 'uniq'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval1], ident, 'a;b;c')
+    lin2 = lca_utils.make_lineage('a;d')
+    hashval2 = 87654321
+    match_rank="genus"
+    # make lineage hashD
+    lineage_hashD=defaultdict(test_gen_mh)
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+
+    # make query sig
+    mh = make_mh([hashval1,hashval2])
+    query_sig = sourmash.SourmashSignature(mh, name='query')
+
+    # calculate containment
+    containmentD = calculate_containment_at_rank(lineage_hashD, query_sig, match_rank)
+
+    # superkingdom lineage that should have 100% containment
+    lin3 = lca_utils.make_lineage('a')
+    assert containmentD["superkingdom"][0][1] == 1.0
+    # class should have 50% containment
+    assert containmentD["class"][0][1] == 0.5
+    phylum_containment = [containmentD["phylum"][0][1], containmentD["phylum"][1][1]]
+    assert [0.5, 0.5] == phylum_containment
+
+def test_calculate_containment_at_rank_4():
+    # add two (nonmatching) hashvals to query
+    hashval1  = 12345678
+    ident = 'uniq'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval1], ident, 'a;b;c')
+    lin2 = lca_utils.make_lineage('a;d')
+    hashval2 = 87654321
+    match_rank="genus"
+    # make lineage hashD
+    lineage_hashD=defaultdict(test_gen_mh)
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+
+    # make query sig
+    mh = make_mh([hashval1,hashval2, 33333333, 44444444])
+    query_sig = sourmash.SourmashSignature(mh, name='query')
+
+    # calculate containment
+    containmentD = calculate_containment_at_rank(lineage_hashD, query_sig, match_rank)
+
+    # superkingdom lineage that should have 50% containment
+    lin3 = lca_utils.make_lineage('a')
+    assert containmentD["superkingdom"][0][1] == 0.5
+    # each class should have 25% containment
+    assert containmentD["class"][0][1] == 0.25
+    assert [containmentD["phylum"][0][1], containmentD["phylum"][1][1]] == [0.25, 0.25]
 
 
 def test_contain_at_rank_1():
@@ -280,10 +458,4 @@ def test_contain_at_rank_4():
 
     #print(results)
     #print(rank_results)
-
-# run the tests
-#test_contain_at_rank_1()
-#test_contain_at_rank_2()
-#test_contain_at_rank_3()
-#test_contain_at_rank_4()
 
