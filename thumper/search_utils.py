@@ -1,5 +1,5 @@
 """
-utility functions for charcoal.
+Perform search --containment and optionally aggregate at rank
 """
 import json
 from collections import defaultdict, Counter, namedtuple

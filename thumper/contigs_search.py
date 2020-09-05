@@ -89,34 +89,22 @@ def main(args):
         # look at each contig individually
         mh = empty_mh.copy_and_clear()
         mh.add_sequence(record.sequence, force=True)
-        # collect all the gather results at genus level, together w/counts;
-        # here, results is a list of (lineage, count) tuples.
-        # ntp: results is now (lineage,count, lin_mh, query_contained)
         results,rank_results = search_containment_at_rank(mh, lca_db, lin_db, match_rank)
-        #results = gather_at_rank(mh, lca_db, lin_db, match_rank)
 
-        # now summarize this up the chain
-        #rank_summary = {}
-        #if results:
-        #    query_sig = sourmash.SourmashSignature(mh)
-        #    for rank in sourmash.lca.taxlist():
-        #        rank_summary[rank] = summarize_at_rank(results, query_sig, rank)
-        #        if rank == match_rank:
-        #            break
+        ## WORKING HERE..write immediately instead of storing these values -- we are not comparing, like charcoal
+        ## write report (lineage, containment, intersect_bp); optionally write: unmatched read/sig, match sig
 
-        ## WORKING HERE..now do something with these summaries
         #import pdb;pdb.set_trace()
-        # store together with size of sequence.
-        # note, don't want to store the minhashes here/write them out. Summarize first
         #info = ContigSearchInfo(len(record.sequence), len(mh), results, rank_results)
-        info = ContigSearchInfo(len(record.sequence), len(mh), [], rank_results)
-        contigs_tax[record.name] = info
+        #info = ContigSearchInfo(len(record.sequence), len(mh), [], rank_results)
+        #contigs_tax[record.name] = info
+
 
     print(f"Processed {len(contigs_tax)} contigs.")
 
     # save!
-    with open(args.json_out, 'wt') as fp:
-        fp.write(json.dumps(contigs_tax))
+    #with open(args.json_out, 'wt') as fp:
+    #    fp.write(json.dumps(contigs_tax))
 
     # write contig-level csv here instead/too?
 
