@@ -12,15 +12,19 @@ from thumper.charcoal_utils import get_ident, pop_to_rank
 
 
 # generic SearchResult WITH lineage
-SearchResult = namedtuple('SearchResult',
+SearchResultLin = namedtuple('SearchResult',
                           'similarity, match, md5, filename, name, lineage')
 
 # generic RankSearchResult = summarized containment at rank
 RankSumSearchResult = namedtuple('RankSumSearchResult',
-                                 'lineage, containment, intersect_bp, match_sig')
+                                 #'lineage, containment, intersect_bp, match_sig')
+                                 'lineage, contained_at_rank, contained_bp, match_sig')
 
-ContigSearchInfo = namedtuple('ContigSearchInfo',
-                              ['length', 'num_hashes', 'search_containment', 'contained_at_rank'])
+# use csv instead of json for now
+#ContigSearchInfo = namedtuple('ContigSearchInfo',
+#                              ['length', 'num_hashes', 'contained_at_rank', 'bp_contained'])
+
+# for rank results: contig_name,length,num_hashes,match_rank,lineage,contained_at_rank,bp_contained
 
 
 def add_hashes_at_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
@@ -64,7 +68,7 @@ def sort_by_rank_and_containment(summarized_results, match_rank):
         rank_res = summarized_results[rank]
         rank_res.sort(key=itemgetter(1), reverse=True)  # sort by containment
         for (lin, containment, intersect_bp, match_sig) in rank_res:
-            sorted_results.append(RankSumSearchResult(lineage=lin, containment=containment, intersect_bp=intersect_bp, match_sig=match_sig))
+            sorted_results.append(RankSumSearchResult(lineage=lin, contained_at_rank=containment, contained_bp=intersect_bp, match_sig=match_sig))
         if rank == match_rank:
             break
     return sorted_results
@@ -75,12 +79,12 @@ def sort_and_store_search_results(res): # same as in charcoal_utils
     sorted_rs = []
     res.sort(key=itemgetter(0), reverse=True)
     for (similarity, match, filename, match_lineage) in res:
-       sorted_rs.append(SearchResult(similarity=similarity,
-                                     match=match,
-                                     md5=match.md5sum(),
-                                     filename=filename,
-                                     name=match.name(),
-                                     lineage=match_lineage))
+       sorted_rs.append(SearchResultLin(similarity=similarity,
+                                        match=match,
+                                        md5=match.md5sum(),
+                                        filename=filename,
+                                        name=match.name(),
+                                        lineage=match_lineage))
     return sorted_rs
 
 

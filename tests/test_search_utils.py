@@ -252,16 +252,16 @@ def test_sort_by_rank_and_containment_1():
     containmentD = calculate_containment_at_rank(lineage_hashD, query_sig, match_rank)
     sorted_results = sort_by_rank_and_containment(containmentD, match_rank)
     assert sorted_results[0].lineage == superK_lin
-    assert sorted_results[0].containment == 0.5
+    assert sorted_results[0].contained_at_rank == 0.5
     # phylum results
     assert sorted_results[1].lineage[-1].rank == "phylum"
     assert sorted_results[2].lineage[-1].rank == "phylum"
     assert set([sorted_results[1].lineage, sorted_results[2].lineage]) == set([lin2,phylum_match_lin])
-    assert sorted_results[1].containment == 0.25
-    assert sorted_results[2].containment == 0.25
+    assert sorted_results[1].contained_at_rank == 0.25
+    assert sorted_results[2].contained_at_rank == 0.25
     # class results
     assert sorted_results[3].lineage[-1].rank == "class"
-    assert sorted_results[3].containment == 0.25
+    assert sorted_results[3].contained_at_rank == 0.25
 
 
 def test_sort_by_rank_and_containment_2():
@@ -286,15 +286,15 @@ def test_sort_by_rank_and_containment_2():
     containmentD = calculate_containment_at_rank(lineage_hashD, query_sig, match_rank)
     sorted_results = sort_by_rank_and_containment(containmentD, match_rank)
     assert sorted_results[0].lineage == superK_lin
-    assert sorted_results[0].containment == 0.75
+    assert sorted_results[0].contained_at_rank == 0.75
     # phylum results should also be sorted by containment
     assert sorted_results[1].lineage[-1].rank == "phylum"
-    assert sorted_results[1].containment == 0.5
+    assert sorted_results[1].contained_at_rank == 0.5
     assert sorted_results[2].lineage[-1].rank == "phylum"
-    assert sorted_results[2].containment == 0.25
+    assert sorted_results[2].contained_at_rank == 0.25
     # class results
     assert sorted_results[3].lineage[-1].rank == "class"
-    assert sorted_results[3].containment == 0.5
+    assert sorted_results[3].contained_at_rank == 0.5
 
 
 def test_contain_at_rank_1():
@@ -319,13 +319,13 @@ def test_contain_at_rank_1():
     phylum_match_lin = lca_utils.make_lineage('a;b')
     assert len(rank_results) == 3
     assert rank_results[0].lineage == superk_lin
-    assert rank_results[0].containment == 1.0
+    assert rank_results[0].contained_at_rank == 1.0
     assert rank_results[1].lineage == phylum_match_lin
-    assert rank_results[1].containment == 1.0
-    assert rank_results[1].intersect_bp == 3
+    assert rank_results[1].contained_at_rank == 1.0
+    assert rank_results[1].contained_bp == 3
     assert rank_results[2].lineage == lin1
-    assert rank_results[2].containment == 1.0
-    assert rank_results[2].intersect_bp == 3
+    assert rank_results[2].contained_at_rank == 1.0
+    assert rank_results[2].contained_bp == 3
 
 def test_contain_at_rank_2():
     #two minhashes, fully shared ranks
@@ -363,13 +363,13 @@ def test_contain_at_rank_2():
     phylum_match_lin = lca_utils.make_lineage('a;b')
     assert len(rank_results) == 3
     assert rank_results[0].lineage == superk_lin
-    assert rank_results[0].containment == 1.0
+    assert rank_results[0].contained_at_rank == 1.0
     assert rank_results[1].lineage == phylum_match_lin
-    assert rank_results[1].containment == 1.0
-    assert rank_results[1].intersect_bp == 6
+    assert rank_results[1].contained_at_rank == 1.0
+    assert rank_results[1].contained_bp == 6
     assert rank_results[2].lineage == lin1
-    assert rank_results[2].containment == 1.0
-    assert rank_results[2].intersect_bp == 6
+    assert rank_results[2].contained_at_rank == 1.0
+    assert rank_results[2].contained_bp == 6
 
 def test_contain_at_rank_3():
     # two minhashes, totally distinct ranks
@@ -409,16 +409,16 @@ def test_contain_at_rank_3():
     assert len(rank_results) == 6
 
     assert set([rank_results[0].lineage, rank_results[1].lineage])== set([superk_lin1, superk_lin2])
-    assert set([rank_results[0].containment, rank_results[1].containment])== set([0.5])
-    assert set([rank_results[0].intersect_bp, rank_results[1].intersect_bp])== set([3])
+    assert set([rank_results[0].contained_at_rank, rank_results[1].contained_at_rank])== set([0.5])
+    assert set([rank_results[0].contained_bp, rank_results[1].contained_bp])== set([3])
 
     assert set([rank_results[2].lineage, rank_results[3].lineage])== set([phylum_lin1, phylum_lin2])
-    assert set([rank_results[2].containment, rank_results[3].containment])== set([0.5])
-    assert set([rank_results[2].intersect_bp, rank_results[3].intersect_bp])== set([3])
+    assert set([rank_results[2].contained_at_rank, rank_results[3].contained_at_rank])== set([0.5])
+    assert set([rank_results[2].contained_bp, rank_results[3].contained_bp])== set([3])
 
     assert set([rank_results[4].lineage, rank_results[5].lineage])== set([lin1, lin2])
-    assert set([rank_results[4].containment, rank_results[5].containment])== set([0.5])
-    assert set([rank_results[4].intersect_bp, rank_results[5].intersect_bp])== set([3])
+    assert set([rank_results[4].contained_at_rank, rank_results[5].contained_at_rank])== set([0.5])
+    assert set([rank_results[4].contained_bp, rank_results[5].contained_bp])== set([3])
 
 def test_contain_at_rank_4():
     # two minhashes, share ranks at phylum level
@@ -452,12 +452,12 @@ def test_contain_at_rank_4():
     assert len(rank_results) == 4
     # superk and phylum aggregate
     assert rank_results[0].lineage == superk_lin
-    assert rank_results[0].containment == 1.0
+    assert rank_results[0].contained_at_rank == 1.0
     assert rank_results[1].lineage == phylum_match_lin
-    assert rank_results[1].containment == 1.0
-    assert rank_results[1].intersect_bp == 6
+    assert rank_results[1].contained_at_rank == 1.0
+    assert rank_results[1].contained_bp == 6
     # different results at class
     assert set([rank_results[2].lineage, rank_results[3].lineage])== set([lin1, lin2])
-    assert set([rank_results[2].containment, rank_results[3].containment])== set([0.5])
-    assert set([rank_results[2].intersect_bp, rank_results[3].intersect_bp])== set([3])
+    assert set([rank_results[2].contained_at_rank, rank_results[3].contained_at_rank])== set([0.5])
+    assert set([rank_results[2].contained_bp, rank_results[3].contained_bp])== set([3])
 
