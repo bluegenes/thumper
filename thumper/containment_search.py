@@ -103,7 +103,7 @@ def main(args):
     search_w.writeheader()
 
     rank_csv = open(args.ranksum_csv, "w")
-    rank_fieldnames = ['contig_name', 'contig_length', 'match_rank', 'lineage', 'contained_at_rank', 'bp_contained']
+    rank_fieldnames = ['contig_name', 'contig_length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
     # for rank results: contig_name,contig_length,match_rank,lineage,contained_at_rank,bp_contained #also num_hashes?
     rank_w = csv.DictWriter(rank_csv, fieldnames=rank_fieldnames)
     rank_w.writeheader()
