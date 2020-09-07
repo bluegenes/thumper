@@ -1,7 +1,8 @@
 #ll:
 #	@echo "You can run the following make targets: quicktest and test"
 
-#quicktest:
+quicktest:
+	pytest tests/test_search_utils.py
 	#py.test -k "not snakemake" tests
 
 snaketest:
