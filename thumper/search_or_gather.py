@@ -11,6 +11,7 @@ import sys
 import argparse
 import os.path
 import json
+import csv
 
 import screed
 
@@ -94,7 +95,7 @@ def main(args):
 
     out_prefix = args.output_prefix
     # contigs with no matches
-    unmatchedF f"{out_prefix}.unmatched.fq"
+    unmatchedF = f"{out_prefix}.unmatched.fq"
     unmatched = open(unmatchedF, "w")
 
 
@@ -162,7 +163,7 @@ def main(args):
                     # better way to do this?
                     d["contig_name"] = record.name
                     d["length"] = contig_len
-                    w.writerow(d)
+                    search_w.writerow(d)
 
                 # now, print containment at rank results
                 for sr in search_rank_results:
@@ -173,8 +174,8 @@ def main(args):
                     d["contig_name"] = contig_name
                     d["length"] = contig_len
                     d["rank"] = sr.lineage[-1]
-                    w.writerow(d)
-                    report_csv.write(res)
+                    rank_w.writerow(d)
+                    #report_csv.write(res)
 
         if args.gather:
             # first, gather at match rank (default genus)
@@ -200,8 +201,8 @@ def main(args):
                     d["length"] = contig_len
                     d["rank"] = gr.lineage[-1]
                     d["major_bp"] = get_match_bp(float(gr.f_major))
-                    w.writerow(d)
-                    report_csv.write(res)
+                    gather_rank_w.writerow(d)
+                    #report_csv.write(res)
 
     print(f"Processed {n} contigs.")
 
@@ -233,14 +234,16 @@ def cmdline(sys_args):
                    action='store_true')
     # switch search types
     p.add_argument('--no-search', help='do not run search with containment',
-                   action='store_true')
-    p.add_argument('--gather', help='run sourmash gather', action='store_true')
+                   action='store_true', default=False)
+    p.add_argument('--gather', help='run sourmash gather',
+                   action='store_true', default=False)
     p.add_argument('--gather-min-matches', type=int, default=3)
 
     # output options:
     # build outputs based on the options above.
     p.add_argument('--output-prefix',
-                    help='prefix for search or gather results', required=True)
+                    help='prefix for search or gather results',
+                    required=True)
     args = p.parse_args()
 
     return main(args)
