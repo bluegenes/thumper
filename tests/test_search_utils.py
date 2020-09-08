@@ -9,7 +9,7 @@ import csv
 import sourmash
 from sourmash.lca import lca_utils, LineagePair, LCA_Database, taxlist
 from thumper.lineage_db import LineageDB
-from thumper.charcoal_utils import get_ident, pop_to_rank
+from thumper.charcoal_utils import get_ident, pop_to_rank, gather_at_rank
 # to do: specific imports!
 from thumper.search_utils import *
 
@@ -461,3 +461,269 @@ def test_contain_at_rank_4():
     assert set([rank_results[2].contained_at_rank, rank_results[3].contained_at_rank])== set([0.5])
     assert set([rank_results[2].contained_bp, rank_results[3].contained_bp])== set([3])
 
+def test_gather_at_rank_1():
+    # one minhash, one set of ranks
+    hashval  = 12345678
+    ident = 'uniq'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident, 'a;b;c')
+
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident)
+
+    lin_db = LineageDB()
+    lin_db.insert(ident, lin1)
+
+    gather_results=list(gather_at_rank(mh1, lca_db, lin_db, "class"))
+    assert len(gather_results) == 1
+    assert gather_results[0][0] == lin1
+    assert gather_results[0][1] == 1
+
+
+def test_gather_at_rank_2():
+   #two minhashes, fully shared ranks
+
+    # first sig
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
+
+    # second sig
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;c')
+
+    # create lca_db w sigs
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+    assert len(gather_results) == 1
+    assert gather_results[0][0] == lin1
+    assert gather_results[0][1] == 2
+
+
+def test_gather_at_rank_3():
+    # two minhashes, totally distinct ranks
+    # first sig
+    hashval1  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval1], ident1, 'a;b;c')
+
+    # second sig
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'd;e;f')
+
+    # create lca_db w sig1
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+
+    # next, make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+
+    # search with combined hashvals
+    search_mh = make_mh([hashval1, hashval2])
+    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+
+    assert len(gather_results) == 2
+    assert set([gather_results[0][0],gather_results[1][0]]) == set([lin1, lin2])
+    assert set([gather_results[0][1],gather_results[1][1]]) == set([1])
+
+
+def test_gather_guess_tax_at_rank_1():
+    # one minhash, one set of ranks
+    hashval  = 12345678
+    ident = 'uniq'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident, 'a;b;c')
+
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident)
+
+    lin_db = LineageDB()
+    lin_db.insert(ident, lin1)
+
+    num_hashes = 1
+    phylum_match_lin = lca_utils.make_lineage('a;b')
+
+    gather_results=list(gather_at_rank(mh1, lca_db, lin_db, "class"))
+    phylum_results = gather_guess_tax_at_rank(gather_results, num_hashes, "phylum", minimum_matches=1)
+
+    assert len(phylum_results) == 3
+
+    assert phylum_results[0] == phylum_match_lin
+    assert phylum_results[1] == 1.0
+
+def test_gather_guess_tax_at_rank_2():
+    # one minhash, one set of ranks
+    hashval  = 12345678
+    ident = 'uniq'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident, 'a;b;c')
+
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident)
+
+    lin_db = LineageDB()
+    lin_db.insert(ident, lin1)
+
+    num_hashes = 1
+    phylum_match_lin = lca_utils.make_lineage('a;b')
+
+    gather_results=list(gather_at_rank(mh1, lca_db, lin_db, "class"))
+    phylum_results = gather_guess_tax_at_rank(gather_results, num_hashes, "phylum", minimum_matches=3)
+
+    assert len(phylum_results) == 3
+    assert set(phylum_results) == set([""])
+
+
+def test_gather_guess_tax_at_each_rank_1():
+   #two minhashes, fully shared ranks
+
+    # first sig
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
+
+    # second sig
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;c')
+
+    # create lca_db w sigs
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+
+    num_hashes = 2
+    superk_lin = lca_utils.make_lineage('a')
+    phylum_lin = lca_utils.make_lineage('a;b')
+
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+    rank_results=gather_guess_tax_at_each_rank(gather_results, num_hashes, minimum_matches=1, \
+                                               lowest_rank="class",
+                                               taxlist=lca_utils.taxlist(include_strain=False))
+
+    assert len(rank_results) == 3
+
+    assert rank_results[0] == RankSumGatherResult(lineage=superk_lin,f_ident=1.0, f_major=1.0)
+    assert rank_results[1] == RankSumGatherResult(lineage=phylum_lin,f_ident=1.0, f_major=1.0)
+    assert rank_results[2] == RankSumGatherResult(lineage=lin1,f_ident=1.0, f_major=1.0)
+
+
+def test_gather_guess_tax_at_each_rank_2():
+    # two minhashes, share ranks at phylum level
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;f')
+    # create lca_db w sigs
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+
+    # some useful bits
+    num_hashes = 2
+    superk_lin = lca_utils.make_lineage('a')
+    phylum_lin = lca_utils.make_lineage('a;b')
+
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+    rank_results=gather_guess_tax_at_each_rank(gather_results, num_hashes, minimum_matches=1, \
+                                               lowest_rank="class", \
+                                               taxlist=lca_utils.taxlist(include_strain=False))
+
+    assert len(rank_results) == 3
+
+    assert rank_results[0] == RankSumGatherResult(lineage=superk_lin,f_ident=1.0, f_major=1.0)
+    assert rank_results[1] == RankSumGatherResult(lineage=phylum_lin,f_ident=1.0, f_major=1.0)
+
+    assert rank_results[2].lineage in [lin1,lin2]
+    assert rank_results[2].f_ident == 1.0
+    assert rank_results[2].f_major == 0.5
+
+
+def test_gather_guess_tax_at_each_rank_3():
+    # two minhashes, totally distinct ranks
+    # first sig
+    hashval1  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval1], ident1, 'a;b;c')
+
+    # second sig
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'd;e;f')
+
+    # create lca_db w sig1
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+
+    # next, make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+
+    num_hashes = 2
+    #winner seems to be def lineage.. will this remain true always?
+    superk_lin = lca_utils.make_lineage('d')
+    phylum_lin = lca_utils.make_lineage('d;e')
+
+    # search with combined hashvals
+    search_mh = make_mh([hashval1, hashval2])
+    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+    rank_results=gather_guess_tax_at_each_rank(gather_results, num_hashes, minimum_matches=1, \
+                                               lowest_rank="class",
+                                               taxlist=lca_utils.taxlist(include_strain=False))
+    assert len(rank_results) == 3
+
+    assert rank_results[0] == RankSumGatherResult(lineage=superk_lin,f_ident=1.0, f_major=0.5)
+    assert rank_results[1] == RankSumGatherResult(lineage=phylum_lin,f_ident=1.0, f_major=0.5)
+    assert rank_results[2] == RankSumGatherResult(lineage=lin2,f_ident=1.0, f_major=0.5)
+
+def test_get_match_bp_1():
+    num_matched_hashes=2
+    scaled=1
+    ksize=3
+    match_bp = get_match_bp(scaled, ksize, num_matched_hashes=num_matched_hashes)
+    assert match_bp == 6
+
+def test_get_match_bp_2():
+    total_num_hashes=4
+    f_major = 0.5
+    scaled=1
+    ksize=3
+    match_bp = get_match_bp(scaled, ksize, match_percent=f_major, total_num_hashes=total_num_hashes)
+    assert match_bp == 6
+
+def test_get_match_bp_3():
+    total_num_hashes=4
+    f_major = 0.5
+    scaled=1
+    ksize=3
+    match_bp = get_match_bp(scaled, ksize, match_percent=f_major)
+    assert match_bp == "NA"

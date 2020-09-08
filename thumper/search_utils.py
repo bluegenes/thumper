@@ -8,8 +8,9 @@ import csv
 
 import sourmash
 from sourmash.lca import lca_utils, LineagePair, taxlist
-from thumper.charcoal_utils import get_ident, pop_to_rank
+from thumper.charcoal_utils import get_ident, pop_to_rank, gather_at_rank, summarize_at_rank
 
+#GATHER_MIN_MATCHES=3
 
 # generic SearchResult WITH lineage
 SearchResultLin = namedtuple('SearchResult',
@@ -19,6 +20,11 @@ SearchResultLin = namedtuple('SearchResult',
 RankSumSearchResult = namedtuple('RankSumSearchResult',
                                  #'lineage, containment, intersect_bp, match_sig')
                                  'lineage, contained_at_rank, contained_bp, match_sig')
+
+RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
+
+#RankSumGatherResult = namedtuple('RankSumGatherResult',
+#                                 'lineage, num_hashes, matched_bp')
 
 # use csv instead of json for now
 #ContigSearchInfo = namedtuple('ContigSearchInfo',
@@ -54,7 +60,8 @@ def calculate_containment_at_rank(lineage_hashD, query_sig, match_rank):
     for lin, matched_hashes in lineage_hashD.items():
         rank = lin[-1].rank
         # TODO; check this. just scaled_val, or scaled * ksize * num matched hashes?
-        intersect_bp = scaled_val * len(matched_hashes) * ksize
+        #intersect_bp = scaled_val * len(matched_hashes) * ksize
+        intersect_bp = get_match_bp(scaled_val, ksize, num_matched_hashes=len(matched_hashes))
         linmatch_sig = sourmash.SourmashSignature(matched_hashes)
         containment = query_sig.contained_by(linmatch_sig)
         summarized_results[rank].append((lin, containment, intersect_bp, linmatch_sig)) # optionally don't keep track of sig here
@@ -124,3 +131,61 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
         search_results_at_rank = sort_by_rank_and_containment(rank_containment, match_rank)
 
     return search_results, search_results_at_rank
+
+
+def get_match_bp(scaled, ksize, num_matched_hashes=None, match_percent=None, total_num_hashes=None):
+    if match_percent and total_num_hashes:
+        return (float(match_percent)*int(total_num_hashes) * int(scaled) * int(ksize))
+    elif num_matched_hashes:
+        return (float(num_matched_hashes) * int(scaled) * int(ksize) )
+    else:
+        # to be safe, should probably return something useful if we don't have these...
+        print("Can't calculate matched bp. Please make sure you've provided all the right info.")
+        return "NA"
+
+
+def gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=3):
+    # modified from charcoal_utils
+    "Guess likely taxonomy using gather."
+    sum_ident = 0
+    first_lin = ()
+    first_count = 0
+    # summarize to rank
+    rank_gather = summarize_at_rank(gather_results, rank)
+    for lin, count in rank_gather:
+        if count >= minimum_matches:
+            # record the first lineage we come across as likely lineage.
+            if not first_lin:
+                first_lin = lin
+                first_count = count
+
+        sum_ident += count
+
+    if not first_lin:
+        return "","",""
+
+    f_ident = sum_ident / num_hashes
+    f_major = first_count / sum_ident
+
+    return first_lin, f_ident, f_major
+
+
+def gather_guess_tax_at_each_rank(gather_results, num_hashes, taxlist=lca_utils.taxlist(include_strain=False), minimum_matches=3, lowest_rank="genus"):
+    rank_results = []
+    prev_lineage=""
+    top_lineage=""
+    for rank in taxlist:
+        top_lineage, f_ident, f_major = gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=minimum_matches)
+
+        # summarizing at a lower rank than exists will yield same result as prev. break!
+        if not top_lineage or top_lineage == prev_lineage:
+            break
+        rank_results.append(RankSumGatherResult(lineage=top_lineage, f_ident=f_ident, f_major=f_major))
+        prev_lineage = top_lineage
+        if rank == lowest_rank:
+            break
+
+    return rank_results
+
+
+
