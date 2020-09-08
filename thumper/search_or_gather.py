@@ -186,7 +186,10 @@ def main(args):
                 unmatched.write(record.name + "\n" + record.sequence + "\n")
             else:
                 # next, summarize at higher ranks
-                gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, lca_utils.taxlist(include_strain=False))
+                gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
+                                                                         minimum_matches=args.gather_min_matches, \
+                                                                         lowest_rank=match_rank, \
+                                                                         taxlist=lca_utils.taxlist(include_strain=False))
                 #results = list of RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
 
                 # write taxonomy out
@@ -232,6 +235,7 @@ def cmdline(sys_args):
     p.add_argument('--no-search', help='do not run search with containment',
                    action='store_true')
     p.add_argument('--gather', help='run sourmash gather', action='store_true')
+    p.add_argument('--gather-min-matches', type=int, default=3)
 
     # output options:
     # build outputs based on the options above.
