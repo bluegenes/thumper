@@ -167,33 +167,38 @@ rule sourmash_search_containment:
         """
 
 # generate contigs taxonomy
-rule contigs_taxonomy:
+rule contigs_search:
     input:
         sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
-        sig=os.path.join(out_dir, "signatures", "{sample}.sig"),
+        sample_sig=os.path.join(out_dir, "signatures", "{sample}.sig"),
         matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.sig"),
         db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
     output:
-        json=os.path.join(out_dir, 'classify', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.json'),
+        search_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.csv'),
+        search_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.matches.sig'),
+        ranksearch_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.csv'),
+        ranksearch_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.matches.sig'),
+        unmatched=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.unmatched.fq'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
         moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
+        out_prefix = lambda w: os.path.join(out_dir, 'contig-search', f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}"),
     conda: 'envs/sourmash-dev.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *100000,
         runtime=6000,
-    log: os.path.join(logs_dir, "classify", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.log")
-    benchmark: os.path.join(benchmarks_dir, "classify", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-tax.benchmark")
+    log: os.path.join(logs_dir, "contig-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-search.log")
+    benchmark: os.path.join(benchmarks_dir, "contig-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-search.benchmark")
     shell: 
         """
-        python -m thumper.contigs_search \
+        python -m thumper.search_or_gather \
             --genome {input.sample_file} \
+            --genome-sig {input.sample_sig} \
+            --matches-sig {input.matches} \
             --lineages-csv {input.db_info} \
             --alphabet {params.moltype} \
             --ksize {params.ksize} \
-            --genome-sig {input.sig} \
-            --matches-sig {input.matches} \
-            --json-out {output.json}
+            --output-prefix {params.out_prefix}
         """
 
 # For later? Expand sample, alpha, ksize, do NOT expand dbname. Aggregate reports over alpha/ksize
@@ -213,39 +218,39 @@ def aggregate_taxonomy_files_by_database(w):
                 "all_sig": search_sigs}
     return db_files
 
-rule make_hit_list:
-    #input: unpack(aggregate_taxonomy_files)
-    input:
-        sample_list = config["sample_list"],
-        db_info = lambda w: config["database_info"][w.db_name]["info_csv"],
-        all_json = expand(os.path.join(out_dir, "classify/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.contigs-tax.json"), sample=sample_names),
-        all_sig = expand(os.path.join(out_dir, "search/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.matches.sig"), sample=sample_names),
-    output:
-        os.path.join(out_dir, "classify", "{basename}.x.{db_name}.{alphabet}-k{ksize}.hit_list_for_filtering.csv")
-    params:
-        output_dir = out_dir,
-        min_f_major = float(config["min_f_major"]),
-        min_f_ident = float(config["min_f_ident"]),
-        moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
-        ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
-    resources:
-        mem_mb=lambda wildcards, attempt: attempt *40000,
-        runtime=6000,
-    conda: 'envs/sourmash-dev.yml'
-    shell:
-        #    --provided-lineages {input.provided_lineages} \
-        """
-        python -m thumper.compare_taxonomy \
-            --input-directory {params.output_dir} \
-            --genome-list-file {input.sample_list} \
-            --database-name {wildcards.db_name} \
-            --lineages-csv {input.db_info} \
-            --alphabet {params.moltype} \
-            --ksize {params.ksize} \
-            --output {output} \
-            --min_f_ident={params.min_f_ident} \
-            --min_f_major={params.min_f_major}
-        """
+#rule make_hit_list:
+#    #input: unpack(aggregate_taxonomy_files)
+#    input:
+#        sample_list = config["sample_list"],
+#        db_info = lambda w: config["database_info"][w.db_name]["info_csv"],
+#        all_json = expand(os.path.join(out_dir, "classify/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.contigs-tax.json"), sample=sample_names),
+#        all_sig = expand(os.path.join(out_dir, "search/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.matches.sig"), sample=sample_names),
+#    output:
+#        os.path.join(out_dir, "classify", "{basename}.x.{db_name}.{alphabet}-k{ksize}.hit_list_for_filtering.csv")
+#    params:
+#        output_dir = out_dir,
+#        min_f_major = float(config["min_f_major"]),
+#        min_f_ident = float(config["min_f_ident"]),
+#        moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
+#        ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
+#    resources:
+#        mem_mb=lambda wildcards, attempt: attempt *40000,
+#        runtime=6000,
+#    conda: 'envs/sourmash-dev.yml'
+#    shell:
+#        #    --provided-lineages {input.provided_lineages} \
+#        """
+#        python -m thumper.compare_taxonomy \
+#            --input-directory {params.output_dir} \
+#            --genome-list-file {input.sample_list} \
+#            --database-name {wildcards.db_name} \
+#            --lineages-csv {input.db_info} \
+#            --alphabet {params.moltype} \
+#            --ksize {params.ksize} \
+#            --output {output} \
+#            --min_f_ident={params.min_f_ident} \
+#            --min_f_major={params.min_f_major}
+#        """
 
 
 

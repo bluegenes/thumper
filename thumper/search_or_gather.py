@@ -98,17 +98,17 @@ def main(args):
     unmatchedF = f"{out_prefix}.unmatched.fq"
     unmatched = open(unmatchedF, "w")
 
-
+    search_sigs, ranksearch_sigs = [],[]
     if not args.no_search:
         # set output filenames
         search_csvF = f"{out_prefix}.search.csv"
         search_matchesF = f"{out_prefix}.search.matches.sig"
-        ranksearch_csvF = f"{out_prefix}.search.rank.csv"
-        ranksearch_matchesF = f"{out_prefix}.search.rank.matches.sig"
+        ranksearch_csvF = f"{out_prefix}.ranksearch.csv"
+        ranksearch_matchesF = f"{out_prefix}.ranksearch.matches.sig"
 
         # open csvs, write headers
         search_csv = open(search_csvF, "w")
-        search_fieldnames = ['contig_name', 'length', 'similarity', 'name', 'md5', 'lineage']
+        search_fieldnames = ['contig_name', 'contig_length', 'similarity', 'name', 'filename', 'md5', 'lineage']
         #search_fieldnames = ['similarity', 'name', 'filename', 'md5', 'lineage']
         search_w =csv.DictWriter(search_csv, fieldnames=search_fieldnames)
         search_w.writeheader()
@@ -143,7 +143,7 @@ def main(args):
         mh.add_sequence(record.sequence, force=True)
         # search, optionally aggregate matched hashes to get containment at rank
 
-        contig_len = len(record.sequence)
+        seq_len = len(record.sequence)
         num_hashes = len(mh.hashes)
 
         if not args.no_search:
@@ -151,29 +151,31 @@ def main(args):
 
             if not search_results:
                 # write to unclassified
-                unmatched.write(record.name + "\n" + record.sequence + "\n")
+                unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
                 continue # if no search results, don't bother with gather
             else:
                 # first, print normal search --containment results --> functionize this!
                 for sr in search_results:
                     d = dict(sr._asdict())
                     # save match to output matches
-                    sourmash.signature.save_signatures([d['match']], search_matches)
+                    #sourmash.signature.save_signatures([d['match']], fp=search_matches)
+                    search_sigs.append(d['match'])
                     del d['match']
                     # better way to do this?
                     d["contig_name"] = record.name
-                    d["length"] = contig_len
+                    d["contig_length"] = seq_len
                     search_w.writerow(d)
 
                 # now, print containment at rank results
                 for sr in search_rank_results:
                     d = dict(sr._asdict())
                     # save match to output matches
-                    sig.save_signatures([d['match_sig']], rank_matches)
+                    #sourmash.signature.save_signatures([d['match_sig']], fp=rank_matches)
+                    ranksearch_sigs.append(d['match_sig'])
                     del d['match_sig']
-                    d["contig_name"] = contig_name
-                    d["length"] = contig_len
-                    d["rank"] = sr.lineage[-1]
+                    d["contig_name"] = record.name
+                    d["contig_length"] = seq_len
+                    d["match_rank"] = sr.lineage[-1]
                     rank_w.writerow(d)
                     #report_csv.write(res)
 
@@ -184,7 +186,7 @@ def main(args):
 
             if not gather_results:
                 # write to unclassified. should only get here if no search OR gather results
-                unmatched.write(record.name + "\n" + record.sequence + "\n")
+                unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
             else:
                 # next, summarize at higher ranks
                 gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
@@ -209,6 +211,8 @@ def main(args):
     # close files
     unmatched.close()
     if not args.no_search:
+        sourmash.signature.save_signatures(search_sigs, fp=search_matches)
+        sourmash.signature.save_signatures(ranksearch_sigs, fp=rank_matches)
         search_csv.close()
         rank_csv.close()
         search_matches.close()

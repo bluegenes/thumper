@@ -62,7 +62,7 @@ def calculate_containment_at_rank(lineage_hashD, query_sig, match_rank):
         # TODO; check this. just scaled_val, or scaled * ksize * num matched hashes?
         #intersect_bp = scaled_val * len(matched_hashes) * ksize
         intersect_bp = get_match_bp(scaled_val, ksize, num_matched_hashes=len(matched_hashes))
-        linmatch_sig = sourmash.SourmashSignature(matched_hashes)
+        linmatch_sig = sourmash.SourmashSignature(matched_hashes) #ADD MORE INFO (e.g. name/ident?) HERE IF KEEPING SIG?
         containment = query_sig.contained_by(linmatch_sig)
         summarized_results[rank].append((lin, containment, intersect_bp, linmatch_sig)) # optionally don't keep track of sig here
     return summarized_results

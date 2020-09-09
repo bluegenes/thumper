@@ -61,15 +61,19 @@ sourmash_search_containment:
   databases:
    - gtdb.rep_genus
 
-contigs_taxonomy:
-  output_dir: classify
+contigs_search:
+  output_dir: contig-search
   output_files:
-    - '{sample}.x.{database}.contigs-tax.json'
+    - "{sample}.x.{database}.search.csv"
+    - "{sample}.x.{database}.ranksearch.csv"
+    - "{sample}.x.{database}.search.matches.sig"
+    - "{sample}.x.{database}.ranksearch.matches.sig"
+    - "{sample}.x.{database}.unmatched.fq"
 
-make_hit_list:
-  output_dir: classify
-  output_files:
-    - "{basename}.x.{database}.hit_list_for_filtering.csv"
+#make_hit_list:
+#  output_dir: classify
+#  output_files:
+#    - "{basename}.x.{database}.hit_list_for_filtering.csv"
 
 #thumper_classify:
   # output_files:
