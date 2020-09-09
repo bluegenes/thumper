@@ -109,31 +109,28 @@ def main(args):
                 for sr in search_results:
                     d = dict(sr._asdict())
                     # save match to output matches
-                    #sourmash.signature.save_signatures([d['match']], fp=search_matches)
                     sf.search_sigs.append(d['match'])
                     del d['match']
                     # better way to do this?
-                    d["contig_name"] = record.name
-                    d["contig_length"] = seq_len
+                    d["name"] = record.name
+                    d["length"] = seq_len
                     sf.search_w.writerow(d)
 
                 # now, print containment at rank results
                 for sr in search_rank_results:
                     d = dict(sr._asdict())
                     # save match to output matches
-                    #sourmash.signature.save_signatures([d['match_sig']], fp=rank_matches)
-                    sf.ranksearch_sigs.append(d['match_sig'])
-                    del d['match_sig']
-                    d["contig_name"] = record.name
-                    d["contig_length"] = seq_len
+                    sf.ranksearch_sigs.append(d['match'])
+                    del d['match']
+                    d["name"] = record.name
+                    d["length"] = seq_len
                     d["match_rank"] = sr.lineage[-1]
                     sf.rank_w.writerow(d)
-                    #report_csv.write(res)
 
         if args.gather:
             # first, gather at match rank (default genus)
             gather_results = list(gather_at_rank(mh, lca_db, lin_db, match_rank))
-            # write gather_results??
+            # write standard gather_results?
 
             if not gather_results:
                 # write to unclassified. should only get here if no search OR gather results
@@ -150,7 +147,7 @@ def main(args):
                 for gr in gather_taxonomy_per_rank:
                     d = dict(gr._asdict())
                     # save match to output matches
-                    d["contig_name"] = contig_name
+                    d["name"] = contig_name
                     d["length"] = contig_len
                     d["rank"] = gr.lineage[-1]
                     d["major_bp"] = get_match_bp(float(gr.f_major))

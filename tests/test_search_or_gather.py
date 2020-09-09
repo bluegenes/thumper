@@ -36,11 +36,11 @@ def test_empty_1(location):
     with open(search_csv) as fp:
         sr = csv.reader(fp)
         firstline = sr.__next__()
-        assert firstline == ['contig_name', 'contig_length', 'similarity', 'name', 'filename', 'md5', 'lineage']
+        assert firstline == ['name', 'length', 'similarity', 'name', 'filename', 'md5', 'lineage']
     with open(ranksearch_csv) as rp:
         sr = csv.reader(rp)
         firstline = sr.__next__()
-        assert firstline == ['contig_name', 'contig_length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
+        assert firstline == ['name', 'length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
 
 
 def get_csv_set(f):

@@ -19,7 +19,7 @@ SearchResultLin = namedtuple('SearchResult',
 # generic RankSearchResult = summarized containment at rank
 RankSumSearchResult = namedtuple('RankSumSearchResult',
                                  #'lineage, containment, intersect_bp, match_sig')
-                                 'lineage, contained_at_rank, contained_bp, match_sig')
+                                 'lineage, contained_at_rank, contained_bp, match')
 
 RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
 
@@ -30,7 +30,7 @@ RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_maj
 #ContigSearchInfo = namedtuple('ContigSearchInfo',
 #                              ['length', 'num_hashes', 'contained_at_rank', 'bp_contained'])
 
-# for rank results: contig_name,length,num_hashes,match_rank,lineage,contained_at_rank,bp_contained
+# for rank results: name,length,num_hashes,match_rank,lineage,contained_at_rank,bp_contained
 
 
 def add_hashes_at_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
@@ -75,7 +75,7 @@ def sort_by_rank_and_containment(summarized_results, match_rank):
         rank_res = summarized_results[rank]
         rank_res.sort(key=itemgetter(1), reverse=True)  # sort by containment
         for (lin, containment, intersect_bp, match_sig) in rank_res:
-            sorted_results.append(RankSumSearchResult(lineage=lin, contained_at_rank=containment, contained_bp=intersect_bp, match_sig=match_sig))
+            sorted_results.append(RankSumSearchResult(lineage=lin, contained_at_rank=containment, contained_bp=intersect_bp, match=match_sig))
         if rank == match_rank:
             break
     return sorted_results
@@ -188,6 +188,8 @@ def gather_guess_tax_at_each_rank(gather_results, num_hashes, taxlist=lca_utils.
     return rank_results
 
 
+#def write_search_results(sr, )
+
 
 class SearchFiles:
     """
@@ -205,19 +207,19 @@ class SearchFiles:
             self.search_sigs = []
             self.ranksearch_sigs = []
 
-            search_fieldnames = ['contig_name', 'contig_length', 'similarity', 'name', 'filename', 'md5', 'lineage']
+            search_fieldnames = ['name', 'length', 'similarity', 'name', 'filename', 'md5', 'lineage']
             #search_fieldnames = ['similarity', 'name', 'filename', 'md5', 'lineage']
             self.search_w = csv.DictWriter(self.search_csv, fieldnames=search_fieldnames)
             self.search_w.writeheader()
 
-            rank_fieldnames = ['contig_name', 'contig_length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
+            rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
             self.rank_w = csv.DictWriter(self.ranksearch_csv, fieldnames=rank_fieldnames)
             self.rank_w.writeheader()
 
         if gather:
             #gather_csv = open(gather_csvF, "w")
             self.rankgather_csv = open(f"{out_prefix}.rankgather.csv", "w")
-            gather_rank_fieldnames = ['contig_name', 'contig_length', 'match_rank', 'lineage', 'f_ident', 'f_major']
+            gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major']
             self.gather_rank_w = csv.DictWriter(self.rankgather_csv, fieldnames=gather_rank_fieldnames)
             self.gather_rank_w.writeheader()
 
