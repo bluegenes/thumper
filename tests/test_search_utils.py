@@ -1,6 +1,7 @@
 """
 test thumper/search_utils.py
 """
+import os
 import json
 from collections import defaultdict, Counter, namedtuple
 from operator import itemgetter
@@ -12,6 +13,7 @@ from thumper.lineage_db import LineageDB
 from thumper.charcoal_utils import get_ident, pop_to_rank, gather_at_rank
 # to do: specific imports!
 from thumper.search_utils import *
+from . import pytest_utils as utils
 
 
 def make_mh(hashvals, ksize=3, scaled=1):
@@ -727,3 +729,17 @@ def test_get_match_bp_3():
     ksize=3
     match_bp = get_match_bp(scaled, ksize, match_percent=f_major)
     assert match_bp == "NA"
+
+@utils.in_tempdir
+def test_searchfiles_1(location):
+    prefix = os.path.join(location, "pref")
+    filelist = [f"{prefix}.ranksearch.csv",
+                f"{prefix}.ranksearch.matches.sig",
+                f"{prefix}.search.csv",
+                f"{prefix}.search.matches.sig",
+                f"{prefix}.unmatched.fq"]
+
+    sf = SearchFiles(prefix)
+    sf.close()
+    for f in filelist:
+        assert os.path.exists(f)

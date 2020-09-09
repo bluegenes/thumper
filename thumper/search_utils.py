@@ -189,3 +189,48 @@ def gather_guess_tax_at_each_rank(gather_results, num_hashes, taxlist=lca_utils.
 
 
 
+class SearchFiles:
+    """
+    Class to handle all the files created during search or gather
+    """
+    def __init__(self, out_prefix, search=True, gather=False):
+
+        self.unmatched = open(f"{out_prefix}.unmatched.fq", "w")
+
+        if search:
+            self.search_csv = open(f"{out_prefix}.search.csv", "w")
+            self.search_matches = open(f"{out_prefix}.search.matches.sig", "w")
+            self.ranksearch_csv = open(f"{out_prefix}.ranksearch.csv", "w")
+            self.ranksearch_matches = open(f"{out_prefix}.ranksearch.matches.sig", "w")
+            self.search_sigs = []
+            self.ranksearch_sigs = []
+
+            search_fieldnames = ['contig_name', 'contig_length', 'similarity', 'name', 'filename', 'md5', 'lineage']
+            #search_fieldnames = ['similarity', 'name', 'filename', 'md5', 'lineage']
+            self.search_w = csv.DictWriter(self.search_csv, fieldnames=search_fieldnames)
+            self.search_w.writeheader()
+
+            rank_fieldnames = ['contig_name', 'contig_length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
+            self.rank_w = csv.DictWriter(self.ranksearch_csv, fieldnames=rank_fieldnames)
+            self.rank_w.writeheader()
+
+        if gather:
+            #gather_csv = open(gather_csvF, "w")
+            self.rankgather_csv = open(f"{out_prefix}.rankgather.csv", "w")
+            gather_rank_fieldnames = ['contig_name', 'contig_length', 'match_rank', 'lineage', 'f_ident', 'f_major']
+            self.gather_rank_w = csv.DictWriter(self.rankgather_csv, fieldnames=gather_rank_fieldnames)
+            self.gather_rank_w.writeheader()
+
+    def close(self, search=True, gather=False):
+        # close files
+        self.unmatched.close()
+        if search:
+            self.search_csv.close()
+            self.ranksearch_csv.close()
+            sourmash.signature.save_signatures(self.search_sigs, fp=self.search_matches)
+            sourmash.signature.save_signatures(self.ranksearch_sigs, fp=self.ranksearch_matches)
+            self.search_matches.close()
+            self.ranksearch_matches.close()
+        if gather:
+            self.gather_csv.close()
+            self.rankgather_csv.close()

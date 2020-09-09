@@ -3,9 +3,9 @@
 At whole-MAG or contig-level:
 1. do search w/containment
 2. aggregate matched hashes to taxonomic rank (optional)
-3. save matched hashes to JSON, annotation info to CSV
+3. save matched annotation info to CSV, signatures to matches sigfiles
 
-started from charcoal contigs_search.py c7fd192
+modified from charcoal contigs_search.py c7fd192
 """
 import sys
 import argparse
@@ -22,8 +22,7 @@ from sourmash.lca import LCA_Database
 from .lineage_db import LineageDB
 from .version import version
 from thumper.charcoal_utils import (gather_at_rank, get_ident)
-from .search_utils import (gather_guess_tax_at_each_rank, search_containment_at_rank)
-
+from .search_utils import (gather_guess_tax_at_each_rank, search_containment_at_rank, SearchFiles)
 
 def main(args):
     "Main entry point for scripting. Use cmdline for command line entry."
@@ -56,15 +55,13 @@ def main(args):
             new_siglist.append(ss)
     siglist = new_siglist
 
-    # if, after removing exact match(es), there is nothing left, quit.
-    # (but write an empty JSON file so that snakemake workflows don't
-    # complain.)
+    # init files here, close immediately if no sigs in siglist
+    # (writes empty files so snakemake workflows don't complain)
+    sf = SearchFiles(args.output_prefix, not args.no_search, args.gather)
+
     if not siglist:
         print('no non-identical matches for this genome, exiting.')
-        contigs_tax = {}
-        # TO DO - need to modify this
-        with open(args.json_out, 'wt') as fp:
-            fp.write(json.dumps(contigs_tax))
+        sf.close(not args.no_search, args.gather)
         return 0
 
     # construct a template minhash object that we can use to create new 'uns
@@ -86,56 +83,10 @@ def main(args):
         lin_db.insert(ident, lineage)
 
     print(f'loaded {len(siglist)} signatures & created LCA Database')
-
     print('')
-
     print(f'reading contigs from {genomebase}')
 
     screed_iter = screed.open(args.genome)
-
-    out_prefix = args.output_prefix
-    # contigs with no matches
-    unmatchedF = f"{out_prefix}.unmatched.fq"
-    unmatched = open(unmatchedF, "w")
-
-    search_sigs, ranksearch_sigs = [],[]
-    if not args.no_search:
-        # set output filenames
-        search_csvF = f"{out_prefix}.search.csv"
-        search_matchesF = f"{out_prefix}.search.matches.sig"
-        ranksearch_csvF = f"{out_prefix}.ranksearch.csv"
-        ranksearch_matchesF = f"{out_prefix}.ranksearch.matches.sig"
-
-        # open csvs, write headers
-        search_csv = open(search_csvF, "w")
-        search_fieldnames = ['contig_name', 'contig_length', 'similarity', 'name', 'filename', 'md5', 'lineage']
-        #search_fieldnames = ['similarity', 'name', 'filename', 'md5', 'lineage']
-        search_w =csv.DictWriter(search_csv, fieldnames=search_fieldnames)
-        search_w.writeheader()
-
-        rank_csv = open(ranksearch_csvF, "w")
-        rank_fieldnames = ['contig_name', 'contig_length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
-        rank_w = csv.DictWriter(rank_csv, fieldnames=rank_fieldnames)
-        rank_w.writeheader()
-        #'similarity, match, md5, filename, name, lineage')
-        #'lineage, containment, intersect_bp, match_sig')
-        # for rank results: contig_name,contig_length,match_rank,lineage,contained_at_rank,bp_contained #also num_hashes?
-
-       # open matches sig files
-        search_matches = open(search_matchesF, "w")
-        rank_matches = open(ranksearch_matchesF, "w")
-
-    if args.gather:
-        #set output filenames
-        contigs_tax = {} # dict for gather results
-        gather_csvF = f"{out_prefix}.gather.csv"
-        rankgather_csvF = f"{out_prefix}.gather.rank.csv"
-        # open gather files
-        gather_csv = open(gather_csvF, "w")
-        rankgather_csv = open(rankgather_csvF, "w")
-        # use csv dictwriter?
-        gather_rank_fieldnames = ['contig_name', 'contig_length', 'match_rank', 'lineage', 'f_ident', 'f_major']
-        gather_rank_w = csv.DictWriter(rank_csv, fieldnames=gather_rank_fieldnames)
 
     for n, record in enumerate(screed_iter):
         # look at each contig individually
@@ -151,7 +102,7 @@ def main(args):
 
             if not search_results:
                 # write to unclassified
-                unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
+                sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
                 continue # if no search results, don't bother with gather
             else:
                 # first, print normal search --containment results --> functionize this!
@@ -159,24 +110,24 @@ def main(args):
                     d = dict(sr._asdict())
                     # save match to output matches
                     #sourmash.signature.save_signatures([d['match']], fp=search_matches)
-                    search_sigs.append(d['match'])
+                    sf.search_sigs.append(d['match'])
                     del d['match']
                     # better way to do this?
                     d["contig_name"] = record.name
                     d["contig_length"] = seq_len
-                    search_w.writerow(d)
+                    sf.search_w.writerow(d)
 
                 # now, print containment at rank results
                 for sr in search_rank_results:
                     d = dict(sr._asdict())
                     # save match to output matches
                     #sourmash.signature.save_signatures([d['match_sig']], fp=rank_matches)
-                    ranksearch_sigs.append(d['match_sig'])
+                    sf.ranksearch_sigs.append(d['match_sig'])
                     del d['match_sig']
                     d["contig_name"] = record.name
                     d["contig_length"] = seq_len
                     d["match_rank"] = sr.lineage[-1]
-                    rank_w.writerow(d)
+                    sf.rank_w.writerow(d)
                     #report_csv.write(res)
 
         if args.gather:
@@ -186,7 +137,7 @@ def main(args):
 
             if not gather_results:
                 # write to unclassified. should only get here if no search OR gather results
-                unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
+                sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
             else:
                 # next, summarize at higher ranks
                 gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
@@ -203,24 +154,13 @@ def main(args):
                     d["length"] = contig_len
                     d["rank"] = gr.lineage[-1]
                     d["major_bp"] = get_match_bp(float(gr.f_major))
-                    gather_rank_w.writerow(d)
+                    sf.gather_rank_w.writerow(d)
                     #report_csv.write(res)
 
     print(f"Processed {n} contigs.")
 
     # close files
-    unmatched.close()
-    if not args.no_search:
-        sourmash.signature.save_signatures(search_sigs, fp=search_matches)
-        sourmash.signature.save_signatures(ranksearch_sigs, fp=rank_matches)
-        search_csv.close()
-        rank_csv.close()
-        search_matches.close()
-        rank_matches.close()
-    if args.gather:
-        gather_csv.close()
-        rankgather_csv.close()
-
+    sf.close(not args.no_search, args.gather)
     return 0
 
 
