@@ -178,6 +178,7 @@ rule contigs_search:
         search_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.matches.sig'),
         ranksearch_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.csv'),
         ranksearch_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.matches.sig'),
+        rankgather_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.rankgather.csv'),
         unmatched=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.unmatched.fq'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
@@ -198,6 +199,7 @@ rule contigs_search:
             --lineages-csv {input.db_info} \
             --alphabet {params.moltype} \
             --ksize {params.ksize} \
+            --gather \
             --output-prefix {params.out_prefix}
         """
 

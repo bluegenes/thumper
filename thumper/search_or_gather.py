@@ -17,7 +17,7 @@ import screed
 
 import sourmash
 from sourmash.lca.command_index import load_taxonomy_assignments
-from sourmash.lca import LCA_Database
+from sourmash.lca import LCA_Database, lca_utils
 
 from .lineage_db import LineageDB
 from .version import version
@@ -130,7 +130,7 @@ def main(args):
 
                 # write taxonomy out
                 for gr in gather_taxonomy_per_rank:
-                    sf.write_result(sr, record.name, seq_len, result_type="rankgather")
+                    sf.write_result(gr, record.name, seq_len, result_type="rankgather")
 
     print(f"Processed {n} contigs.")
 
