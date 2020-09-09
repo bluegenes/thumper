@@ -743,3 +743,217 @@ def test_searchfiles_1(location):
     sf.close()
     for f in filelist:
         assert os.path.exists(f)
+
+
+@utils.in_tempdir
+def test_searchfiles_2(location):
+    prefix = os.path.join(location, "pref")
+    filelist = [f"{prefix}.rankgather.csv",
+                f"{prefix}.unmatched.fq"]
+
+    sf = SearchFiles(prefix, search=True, gather=True)
+    sf.close()
+    for f in filelist:
+        assert os.path.exists(f)
+
+
+@utils.in_tempdir
+def test_searchfiles_3(location):
+    prefix = os.path.join(location, "prefix")
+    filelist = [f"{prefix}.ranksearch.csv",
+                f"{prefix}.ranksearch.matches.sig",
+                f"{prefix}.search.csv",
+                f"{prefix}.search.matches.sig",
+                f"{prefix}.rankgather.csv",
+                f"{prefix}.unmatched.fq"]
+
+    sf = SearchFiles(prefix, search=True, gather=True)
+    sf.close()
+    for f in filelist:
+        assert os.path.exists(f)
+
+
+def get_csv_set(f):
+    return set(map(tuple, csv.reader(f)))
+
+
+@utils.in_tempdir
+def test_searchfiles_just_search(location):
+    prefix = os.path.join(location, "pref")
+    filelist = [f"{prefix}.ranksearch.csv",
+                f"{prefix}.ranksearch.matches.sig",
+                f"{prefix}.search.csv",
+                f"{prefix}.search.matches.sig",
+                f"{prefix}.unmatched.fq"]
+
+    sf = SearchFiles(prefix, search=True, gather=True)
+
+    # two minhashes, share ranks at phylum level
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;f')
+    # create lca_db w sigs
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+    num_hashes = 2
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    results, rank_results=search_containment_at_rank(search_mh, lca_db, lin_db, "class")
+    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+
+
+    #write search results
+    name = 'name'
+    seq_len = 6
+    for res in results:
+        sf.write_result(res, name, seq_len, result_type="search")
+    for res in rank_results:
+        sf.write_result(res, name, seq_len, result_type="ranksearch")
+
+    sf.close()
+
+    # check results are in files
+    for f in filelist:
+        assert os.path.exists(f)
+
+    with open(f"{prefix}.search.csv", "r") as searchres:
+         this_search_csvset = get_csv_set(searchres)
+    with open(utils.test_file("test-data/test.search.csv"), "r") as searchres:
+         saved_search_csvset = get_csv_set(searchres)
+    assert saved_search_csvset == this_search_csvset
+
+    with open(f"{prefix}.ranksearch.csv", "r") as searchres:
+         this_ranksearch_csvset = get_csv_set(searchres)
+    with open(utils.test_file("test-data/test.ranksearch.csv"), "r") as searchres:
+         saved_ranksearch_csvset = get_csv_set(searchres)
+    assert saved_ranksearch_csvset == this_ranksearch_csvset
+
+@utils.in_tempdir
+def test_searchfiles_just_gather(location):
+    prefix = os.path.join(location, "pref")
+    filelist = [f"{prefix}.rankgather.csv",
+                f"{prefix}.unmatched.fq"]
+
+    sf = SearchFiles(prefix, search=True, gather=True)
+
+    # two minhashes, share ranks at phylum level
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;f')
+    # create lca_db w sigs
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+    num_hashes = 2
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+
+    gather_rank_results=gather_guess_tax_at_each_rank(gather_results, num_hashes, minimum_matches=1, \
+                                                      lowest_rank="class", \
+                                                      taxlist=lca_utils.taxlist(include_strain=False))
+
+    #write search results
+    name = 'name'
+    seq_len = 6
+    for gres in gather_rank_results:
+        sf.write_result(gres, name, seq_len, result_type="rankgather")
+
+    sf.close()
+
+    # check results are in files
+    for f in filelist:
+        assert os.path.exists(f)
+
+    with open(f"{prefix}.rankgather.csv", "r") as gatherres:
+         this_gather_csvset = get_csv_set(gatherres)
+    with open(utils.test_file("test-data/test.rankgather.csv"), "r") as searchres:
+         saved_gather_csvset = get_csv_set(searchres)
+    assert saved_gather_csvset == this_gather_csvset
+
+
+@utils.in_tempdir
+def test_searchfiles_search_and_gather(location):
+    prefix = os.path.join(location, "pref")
+    filelist = [f"{prefix}.ranksearch.csv",
+                f"{prefix}.ranksearch.matches.sig",
+                f"{prefix}.search.csv",
+                f"{prefix}.search.matches.sig",
+                f"{prefix}.rankgather.csv",
+                f"{prefix}.unmatched.fq"]
+
+    sf = SearchFiles(prefix, search=True, gather=True)
+
+    # two minhashes, share ranks at phylum level
+    hashval  = 12345678
+    ident1 = 'first'
+    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
+    hashval2 = 87654321
+    ident2 = 'second'
+    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;f')
+    # create lca_db w sigs
+    lca_db = LCA_Database(scaled=1, ksize=3)
+    lca_db.insert(sig1, ident=ident1)
+    lca_db.insert(sig2, ident=ident2)
+    # make lin_db
+    lin_db = LineageDB()
+    lin_db.insert(ident1, lin1)
+    lin_db.insert(ident2, lin2)
+    num_hashes = 2
+    # search with combined hashvals
+    search_mh = make_mh([hashval, hashval2])
+    results, rank_results=search_containment_at_rank(search_mh, lca_db, lin_db, "class")
+    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+
+    gather_rank_results=gather_guess_tax_at_each_rank(gather_results, num_hashes, minimum_matches=1, \
+                                                      lowest_rank="class", \
+                                                      taxlist=lca_utils.taxlist(include_strain=False))
+
+    #write search results
+    name = 'name'
+    seq_len = 6
+    for res in results:
+        sf.write_result(res, name, seq_len, result_type="search")
+    for res in rank_results:
+        sf.write_result(res, name, seq_len, result_type="ranksearch")
+    for gres in gather_rank_results:
+        sf.write_result(gres, name, seq_len, result_type="rankgather")
+
+    sf.close()
+
+    # check results are in files
+    for f in filelist:
+        assert os.path.exists(f)
+
+    with open(f"{prefix}.search.csv", "r") as searchres:
+         this_search_csvset = get_csv_set(searchres)
+    with open(utils.test_file("test-data/test.search.csv"), "r") as searchres:
+         saved_search_csvset = get_csv_set(searchres)
+    assert saved_search_csvset == this_search_csvset
+
+    with open(f"{prefix}.ranksearch.csv", "r") as searchres:
+         this_ranksearch_csvset = get_csv_set(searchres)
+    with open(utils.test_file("test-data/test.ranksearch.csv"), "r") as searchres:
+         saved_ranksearch_csvset = get_csv_set(searchres)
+    assert saved_ranksearch_csvset == this_ranksearch_csvset
+
+    with open(f"{prefix}.rankgather.csv", "r") as gatherres:
+         this_gather_csvset = get_csv_set(gatherres)
+    with open(utils.test_file("test-data/test.rankgather.csv"), "r") as searchres:
+         saved_gather_csvset = get_csv_set(searchres)
+    assert saved_gather_csvset == this_gather_csvset

@@ -188,18 +188,18 @@ def gather_guess_tax_at_each_rank(gather_results, num_hashes, taxlist=lca_utils.
     return rank_results
 
 
-#def write_search_results(sr, )
-
-
 class SearchFiles:
     """
     Class to handle all the files created during search or gather
     """
     def __init__(self, out_prefix, search=True, gather=False):
 
+        self.gather = gather
+        self.search = search
+
         self.unmatched = open(f"{out_prefix}.unmatched.fq", "w")
 
-        if search:
+        if self.search:
             self.search_csv = open(f"{out_prefix}.search.csv", "w")
             self.search_matches = open(f"{out_prefix}.search.matches.sig", "w")
             self.ranksearch_csv = open(f"{out_prefix}.ranksearch.csv", "w")
@@ -216,23 +216,42 @@ class SearchFiles:
             self.rank_w = csv.DictWriter(self.ranksearch_csv, fieldnames=rank_fieldnames)
             self.rank_w.writeheader()
 
-        if gather:
-            #gather_csv = open(gather_csvF, "w")
+        if self.gather:
             self.rankgather_csv = open(f"{out_prefix}.rankgather.csv", "w")
             gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major']
             self.gather_rank_w = csv.DictWriter(self.rankgather_csv, fieldnames=gather_rank_fieldnames)
             self.gather_rank_w.writeheader()
 
-    def close(self, search=True, gather=False):
+    def write_result(self, result, name, length, result_type="search"):
+        # write single result
+        d = dict(result._asdict())
+        d["name"] = name
+        d["length"] = length
+
+        if self.search and result_type == "search":
+            self.search_sigs.append(d['match'])
+            del d['match']
+            self.search_w.writerow(d)
+        elif self.search and result_type == "ranksearch":
+            self.ranksearch_sigs.append(d['match'])
+            del d['match']
+            d["match_rank"] = result.lineage[-1]
+            self.rank_w.writerow(d)
+        elif self.gather and result_type == "rankgather":
+            d["match_rank"] = result.lineage[-1]
+            #d["major_bp"] = get_match_bp(float(gr.f_major))
+            self.gather_rank_w.writerow(d)
+
+
+    def close(self):
         # close files
         self.unmatched.close()
-        if search:
+        if self.search:
             self.search_csv.close()
             self.ranksearch_csv.close()
             sourmash.signature.save_signatures(self.search_sigs, fp=self.search_matches)
             sourmash.signature.save_signatures(self.ranksearch_sigs, fp=self.ranksearch_matches)
             self.search_matches.close()
             self.ranksearch_matches.close()
-        if gather:
-            self.gather_csv.close()
+        if self.gather:
             self.rankgather_csv.close()

@@ -105,27 +105,12 @@ def main(args):
                 sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
                 continue # if no search results, don't bother with gather
             else:
-                # first, print normal search --containment results --> functionize this!
+                # first, print normal search --containment results
                 for sr in search_results:
-                    d = dict(sr._asdict())
-                    # save match to output matches
-                    sf.search_sigs.append(d['match'])
-                    del d['match']
-                    # better way to do this?
-                    d["name"] = record.name
-                    d["length"] = seq_len
-                    sf.search_w.writerow(d)
-
+                    sf.write_result(sr, record.name, seq_len, result_type="search")
                 # now, print containment at rank results
                 for sr in search_rank_results:
-                    d = dict(sr._asdict())
-                    # save match to output matches
-                    sf.ranksearch_sigs.append(d['match'])
-                    del d['match']
-                    d["name"] = record.name
-                    d["length"] = seq_len
-                    d["match_rank"] = sr.lineage[-1]
-                    sf.rank_w.writerow(d)
+                    sf.write_result(sr, record.name, seq_len, result_type="ranksearch")
 
         if args.gather:
             # first, gather at match rank (default genus)
@@ -145,19 +130,12 @@ def main(args):
 
                 # write taxonomy out
                 for gr in gather_taxonomy_per_rank:
-                    d = dict(gr._asdict())
-                    # save match to output matches
-                    d["name"] = contig_name
-                    d["length"] = contig_len
-                    d["rank"] = gr.lineage[-1]
-                    d["major_bp"] = get_match_bp(float(gr.f_major))
-                    sf.gather_rank_w.writerow(d)
-                    #report_csv.write(res)
+                    sf.write_result(sr, record.name, seq_len, result_type="rankgather")
 
     print(f"Processed {n} contigs.")
 
     # close files
-    sf.close(not args.no_search, args.gather)
+    sf.close()
     return 0
 
 
