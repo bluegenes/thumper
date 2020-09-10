@@ -32,7 +32,7 @@ def teardown_module(m):
 
 
 def _run_snakemake_test(conf, target, extra_args=[]):
-    conf = utils.test_file(conf)
+    conf = utils.get_testfile(conf)
     target = os.path.join(_tempdir, target)
     conda_args = [] #["--conda-prefix", _tempdir]
 

@@ -10,10 +10,10 @@ from thumper import search_or_gather
 def test_empty_contig_search(location):
     # test an empty set of matches (once self is removed)
     args = utils.Args()
-    args.genome = utils.test_file("test-data/proteomes/GB_GCA_000384615.1_protein.100contigs.faa.gz")
-    args.genome_sig = utils.test_file("test-data/intermediate/signatures/GB_GCA_000384615.1_protein.100contigs.faa.gz.sig")
-    args.matches_sig = utils.test_file("test-data/intermediate/search/GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.test_file("test-data/databases/gtdb-nine.lineages.csv")
+    args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_000384615.1_protein.100contigs.faa.gz")
+    args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_000384615.1_protein.100contigs.faa.gz.sig")
+    args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -47,10 +47,10 @@ def test_empty_contig_search(location):
 def test_empty_genome_search(location):
     # test an empty set of matches (once self is removed)
     args = utils.Args()
-    args.genome = utils.test_file("test-data/proteomes/GB_GCA_000384615.1_protein.100contigs.faa.gz")
-    args.genome_sig = utils.test_file("test-data/intermediate/signatures/GB_GCA_000384615.1_protein.100contigs.faa.gz.sig")
-    args.matches_sig = utils.test_file("test-data/intermediate/search/GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.test_file("test-data/databases/gtdb-nine.lineages.csv")
+    args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_000384615.1_protein.100contigs.faa.gz")
+    args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_000384615.1_protein.100contigs.faa.gz.sig")
+    args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -88,10 +88,10 @@ def get_csv_set(f):
 def test_contig_search(location):
     # test for same results
     args = utils.Args()
-    args.genome = utils.test_file("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
-    args.genome_sig = utils.test_file("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
-    args.matches_sig = utils.test_file("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.test_file("test-data/databases/gtdb-nine.lineages.csv")
+    args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
+    args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
+    args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -112,7 +112,7 @@ def test_contig_search(location):
         assert os.path.exists(outF)
 
     saved_search_csv = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.search.csv")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.search.csv")
     with open(saved_search_csv) as fp:
         saved_search_csvset = get_csv_set(fp)
     with open(search_csv) as fp:
@@ -120,7 +120,7 @@ def test_contig_search(location):
     assert saved_search_csvset == this_search_csvset
 
     saved_ranksearch_csv = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.ranksearch.csv")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.ranksearch.csv")
     with open(saved_ranksearch_csv) as fp:
         saved_ranksearch_csvset = get_csv_set(fp)
     with open(ranksearch_csv) as fp:
@@ -128,7 +128,7 @@ def test_contig_search(location):
     assert saved_ranksearch_csvset == this_ranksearch_csvset
 
     saved_search_matches = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.search.matches.sig")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.search.matches.sig")
     with open(saved_search_matches) as sm:
         saved_search_sigs = set(sig.load_signatures(sm))
     with open(search_matches) as sm:
@@ -136,7 +136,7 @@ def test_contig_search(location):
     assert saved_search_sigs == this_search_sigs
 
     saved_ranksearch_matches = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.ranksearch.matches.sig")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.ranksearch.matches.sig")
     with open(saved_ranksearch_matches) as rm:
         saved_ranksearch_sigs = set(sig.load_signatures(rm))
 
@@ -151,10 +151,10 @@ def test_contig_search(location):
 def test_contig_search_and_gather(location):
     # test for same results
     args = utils.Args()
-    args.genome = utils.test_file("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
-    args.genome_sig = utils.test_file("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
-    args.matches_sig = utils.test_file("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.test_file("test-data/databases/gtdb-nine.lineages.csv")
+    args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
+    args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
+    args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -177,7 +177,7 @@ def test_contig_search_and_gather(location):
         assert os.path.exists(outF)
 
     saved_search_csv = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.search.csv")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.search.csv")
     with open(saved_search_csv) as fp:
         saved_search_csvset = get_csv_set(fp)
     with open(search_csv) as fp:
@@ -185,7 +185,7 @@ def test_contig_search_and_gather(location):
     assert saved_search_csvset == this_search_csvset
 
     saved_ranksearch_csv = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.ranksearch.csv")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.ranksearch.csv")
     with open(saved_ranksearch_csv) as fp:
         saved_ranksearch_csvset = get_csv_set(fp)
     with open(ranksearch_csv) as fp:
@@ -193,7 +193,7 @@ def test_contig_search_and_gather(location):
     assert saved_ranksearch_csvset == this_ranksearch_csvset
 
     saved_search_matches = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.search.matches.sig")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.search.matches.sig")
     with open(saved_search_matches) as sm:
         saved_search_sigs = set(sig.load_signatures(sm))
     with open(search_matches) as sm:
@@ -201,7 +201,7 @@ def test_contig_search_and_gather(location):
     assert saved_search_sigs == this_search_sigs
 
     saved_ranksearch_matches = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.ranksearch.matches.sig")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.ranksearch.matches.sig")
     with open(saved_ranksearch_matches) as rm:
         saved_ranksearch_sigs = set(sig.load_signatures(rm))
 
@@ -210,7 +210,7 @@ def test_contig_search_and_gather(location):
     assert saved_ranksearch_sigs == this_ranksearch_sigs
 
     saved_rankgather_csv = \
-    utils.test_file("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.rankgather.csv")
+    utils.get_testfile("test-data/intermediate/contig-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.contigs.rankgather.csv")
     with open(saved_rankgather_csv) as fp:
         saved_rankgather_csvset = get_csv_set(fp)
     with open(rankgather_csv) as fp:
@@ -223,10 +223,10 @@ def test_genome_search_and_gather(location):
 # test MAG search + gather
     # test for same results
     args = utils.Args()
-    args.genome = utils.test_file("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
-    args.genome_sig = utils.test_file("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
-    args.matches_sig = utils.test_file("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.test_file("test-data/databases/gtdb-nine.lineages.csv")
+    args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
+    args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
+    args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -249,7 +249,7 @@ def test_genome_search_and_gather(location):
         assert os.path.exists(outF)
 
     saved_search_csv = \
-    utils.test_file("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.search.csv")
+    utils.get_testfile("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.search.csv")
     with open(saved_search_csv) as fp:
         saved_search_csvset = get_csv_set(fp)
     with open(search_csv) as fp:
@@ -257,7 +257,7 @@ def test_genome_search_and_gather(location):
     assert saved_search_csvset == this_search_csvset
 
     saved_ranksearch_csv = \
-    utils.test_file("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.ranksearch.csv")
+    utils.get_testfile("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.ranksearch.csv")
     with open(saved_ranksearch_csv) as fp:
         saved_ranksearch_csvset = get_csv_set(fp)
     with open(ranksearch_csv) as fp:
@@ -265,7 +265,7 @@ def test_genome_search_and_gather(location):
     assert saved_ranksearch_csvset == this_ranksearch_csvset
 
     saved_search_matches = \
-    utils.test_file("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.search.matches.sig")
+    utils.get_testfile("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.search.matches.sig")
     with open(saved_search_matches) as sm:
         saved_search_sigs = set(sig.load_signatures(sm))
     with open(search_matches) as sm:
@@ -273,7 +273,7 @@ def test_genome_search_and_gather(location):
     assert saved_search_sigs == this_search_sigs
 
     saved_ranksearch_matches = \
-    utils.test_file("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.ranksearch.matches.sig")
+    utils.get_testfile("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.ranksearch.matches.sig")
     with open(saved_ranksearch_matches) as rm:
         saved_ranksearch_sigs = set(sig.load_signatures(rm))
 
@@ -282,7 +282,7 @@ def test_genome_search_and_gather(location):
     assert saved_ranksearch_sigs == this_ranksearch_sigs
 
     saved_rankgather_csv = \
-    utils.test_file("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.rankgather.csv")
+    utils.get_testfile("test-data/intermediate/genome-search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.rankgather.csv")
     with open(saved_rankgather_csv) as fp:
         saved_rankgather_csvset = get_csv_set(fp)
     with open(rankgather_csv) as fp:

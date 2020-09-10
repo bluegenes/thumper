@@ -812,13 +812,13 @@ def test_searchfiles_contigs_just_search(location):
 
     with open(f"{prefix}.contigs.search.csv", "r") as searchres:
          this_search_csvset = get_csv_set(searchres)
-    with open(utils.test_file("test-data/test.contigs.search.csv"), "r") as searchres:
+    with open(utils.get_testfile("test-data/test.contigs.search.csv"), "r") as searchres:
          saved_search_csvset = get_csv_set(searchres)
     assert saved_search_csvset == this_search_csvset
 
     with open(f"{prefix}.contigs.ranksearch.csv", "r") as searchres:
          this_ranksearch_csvset = get_csv_set(searchres)
-    with open(utils.test_file("test-data/test.contigs.ranksearch.csv"), "r") as searchres:
+    with open(utils.get_testfile("test-data/test.contigs.ranksearch.csv"), "r") as searchres:
          saved_ranksearch_csvset = get_csv_set(searchres)
     assert saved_ranksearch_csvset == this_ranksearch_csvset
 
@@ -868,7 +868,7 @@ def test_searchfiles_contigs_just_gather(location):
 
     with open(f"{prefix}.contigs.rankgather.csv", "r") as gatherres:
          this_gather_csvset = get_csv_set(gatherres)
-    with open(utils.test_file("test-data/test.contigs.rankgather.csv"), "r") as searchres:
+    with open(utils.get_testfile("test-data/test.contigs.rankgather.csv"), "r") as searchres:
          saved_gather_csvset = get_csv_set(searchres)
     assert saved_gather_csvset == this_gather_csvset
 
@@ -928,19 +928,19 @@ def test_searchfiles_contigs_search_and_gather(location):
 
     with open(f"{prefix}.contigs.search.csv", "r") as searchres:
          this_search_csvset = get_csv_set(searchres)
-    with open(utils.test_file("test-data/test.contigs.search.csv"), "r") as searchres:
+    with open(utils.get_testfile("test-data/test.contigs.search.csv"), "r") as searchres:
          saved_search_csvset = get_csv_set(searchres)
     assert saved_search_csvset == this_search_csvset
 
     with open(f"{prefix}.contigs.ranksearch.csv", "r") as searchres:
          this_ranksearch_csvset = get_csv_set(searchres)
-    with open(utils.test_file("test-data/test.contigs.ranksearch.csv"), "r") as searchres:
+    with open(utils.get_testfile("test-data/test.contigs.ranksearch.csv"), "r") as searchres:
          saved_ranksearch_csvset = get_csv_set(searchres)
     assert saved_ranksearch_csvset == this_ranksearch_csvset
 
     with open(f"{prefix}.contigs.rankgather.csv", "r") as gatherres:
          this_gather_csvset = get_csv_set(gatherres)
-    with open(utils.test_file("test-data/test.contigs.rankgather.csv"), "r") as searchres:
+    with open(utils.get_testfile("test-data/test.contigs.rankgather.csv"), "r") as searchres:
          saved_gather_csvset = get_csv_set(searchres)
     assert saved_gather_csvset == this_gather_csvset
 
