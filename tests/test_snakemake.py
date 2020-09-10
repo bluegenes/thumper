@@ -121,9 +121,7 @@ def test_protein_search_containment(request, genome_file, database_name):
 @pytest.mark.parametrize("database_name", nucl_databases)
 def test_nucleotide_contigs_taxonomy(request, genome_file, database_name):
     depends(request, [f"test_nucleotide_search_containment[{database_name}-{genome_file}]"])
-    target = f"classify/{genome_file}.x.{database_name}.contigs-tax.json"
-    print(str)
-    return
+    target = f"contig-search/{genome_file}.x.{database_name}.contigs.ranksearch.csv"
     status, out, err = _run_snakemake_test('config/test-nucl.yaml', target)
 
     assert status == 0
@@ -133,9 +131,7 @@ def test_nucleotide_contigs_taxonomy(request, genome_file, database_name):
 @pytest.mark.parametrize("database_name", prot_databases)
 def test_translate_contigs_taxonomy(request, genome_file, database_name):
     depends(request, [f"test_translate_search_containment[{database_name}-{genome_file}]"])
-    target = f"classify/{genome_file}.x.{database_name}.contigs-tax.json"
-    print(str)
-    return
+    target = f"contig-search/{genome_file}.x.{database_name}.contigs.ranksearch.csv"
     status, out, err = _run_snakemake_test('config/test-nucl.yaml', target)
 
     assert status == 0
@@ -147,10 +143,10 @@ def test_translate_contigs_taxonomy(request, genome_file, database_name):
 @pytest.mark.parametrize("database_name", prot_databases)
 def test_protein_contigs_taxonomy(request, genome_file, database_name):
     depends(request, [f"test_protein_search_containment[{database_name}-{genome_file}]"])
-    target = f"classify/{genome_file}.x.{database_name}.contigs-tax.json"
-    str = f"test_protein_search_containment[{database_name}-{genome_file}]"
-    print(str)
-    return
+    target = f"contig-search/{genome_file}.x.{database_name}.contigs.ranksearch.csv"
+    #str = f"test_protein_search_containment[{database_name}-{genome_file}]"
+    #print(str)
+    #return
     status, out, err = _run_snakemake_test('config/test-prot.yaml', target)
 
     assert status == 0
