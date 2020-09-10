@@ -2,14 +2,23 @@
 ## maybe split nucl and protein into separate pipelines and/or snakefiles
 
 pipelines:
-  taxonomic_classification_gtdb:
+  gtdb_classification_mag:
     databases_required: True
     steps:
       - sourmash_sketch
       - sourmash_search_containment
+      - genome_search
+    databases:
+      - gtdb.rep_genus
+      #- gtdb-r89
+  gtdb_classification_contig:
+    databases_required: True
+    steps:
+      - sourmash_sketch
+      - sourmash_search_containment
+      - genome_search # for now, just run both
       - contigs_search
      # - make_hit_list
-        #- contig_classify
     databases:
       - gtdb.rep_genus
       #- gtdb-r89

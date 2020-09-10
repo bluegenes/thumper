@@ -4,7 +4,7 @@ basename: thumper-output
 logs_dir: logs
 #sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir?
 
-pipeline: taxonomic_classification_gtdb
+pipeline: gtdb_classification_contig
 
 ### default settings 
 default_input_type: protein
@@ -64,11 +64,19 @@ sourmash_search_containment:
 contigs_search:
   output_dir: contig-search
   output_files:
+    - "{sample}.x.{database}.contigs.search.csv"
+    - "{sample}.x.{database}.contigs.ranksearch.csv"
+    - "{sample}.x.{database}.contigs.search.matches.sig"
+    - "{sample}.x.{database}.contigs.ranksearch.matches.sig"
+    - "{sample}.x.{database}.contigs.unmatched.fq"
+
+genome_search:
+  output_dir: genome-search
+  output_files:
     - "{sample}.x.{database}.search.csv"
     - "{sample}.x.{database}.ranksearch.csv"
     - "{sample}.x.{database}.search.matches.sig"
     - "{sample}.x.{database}.ranksearch.matches.sig"
-    - "{sample}.x.{database}.unmatched.fq"
 
 #make_hit_list:
 #  output_dir: classify

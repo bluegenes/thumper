@@ -134,10 +134,11 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
 
 
 def get_match_bp(scaled, ksize, num_matched_hashes=None, match_percent=None, total_num_hashes=None):
+    # TO DO: Check this.
     if match_percent and total_num_hashes:
-        return (float(match_percent)*int(total_num_hashes) * int(scaled) * int(ksize))
+        return (float(match_percent)*int(total_num_hashes) * int(scaled))
     elif num_matched_hashes:
-        return (float(num_matched_hashes) * int(scaled) * int(ksize) )
+        return (float(num_matched_hashes) * int(scaled))
     else:
         # to be safe, should probably return something useful if we don't have these...
         print("Can't calculate matched bp. Please make sure you've provided all the right info.")
@@ -192,12 +193,16 @@ class SearchFiles:
     """
     Class to handle all the files created during search or gather
     """
-    def __init__(self, out_prefix, search=True, gather=False):
+    def __init__(self, out_prefix, search=True, gather=False, contigs=True):
 
         self.gather = gather
         self.search = search
+        self.contigs = contigs
 
-        self.unmatched = open(f"{out_prefix}.unmatched.fq", "w")
+        if self.contigs:
+            out_prefix = out_prefix + ".contigs"
+
+            self.unmatched = open(f"{out_prefix}.unmatched.fq", "w")
 
         if self.search:
             self.search_csv = open(f"{out_prefix}.search.csv", "w")
@@ -227,6 +232,7 @@ class SearchFiles:
         d = dict(result._asdict())
         d["name"] = name
         d["length"] = length
+        d["lineage"] = lca_utils.display_lineage(result.lineage)
 
         if self.search and result_type == "search":
             self.search_sigs.append(d['match'])
@@ -235,17 +241,18 @@ class SearchFiles:
         elif self.search and result_type == "ranksearch":
             self.ranksearch_sigs.append(d['match'])
             del d['match']
-            d["match_rank"] = result.lineage[-1]
+            d["match_rank"] = result.lineage[-1].rank
             self.rank_w.writerow(d)
         elif self.gather and result_type == "rankgather":
-            d["match_rank"] = result.lineage[-1]
+            d["match_rank"] = result.lineage[-1].rank
             #d["major_bp"] = get_match_bp(float(gr.f_major))
             self.gather_rank_w.writerow(d)
 
 
     def close(self):
         # close files
-        self.unmatched.close()
+        if self.contigs:
+            self.unmatched.close()
         if self.search:
             self.search_csv.close()
             self.ranksearch_csv.close()

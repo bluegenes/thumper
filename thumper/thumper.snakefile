@@ -174,12 +174,12 @@ rule contigs_search:
         matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.sig"),
         db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
     output:
-        search_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.csv'),
-        search_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.matches.sig'),
-        ranksearch_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.csv'),
-        ranksearch_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.matches.sig'),
-        rankgather_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.rankgather.csv'),
-        unmatched=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.unmatched.fq'),
+        search_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.search.csv'),
+        search_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.search.matches.sig'),
+        ranksearch_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.ranksearch.csv'),
+        ranksearch_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.ranksearch.matches.sig'),
+        rankgather_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.rankgather.csv'),
+        unmatched=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.unmatched.fq'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
         moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
@@ -200,6 +200,41 @@ rule contigs_search:
             --alphabet {params.moltype} \
             --ksize {params.ksize} \
             --gather \
+            --output-prefix {params.out_prefix}
+        """
+
+rule genome_search:
+    input:
+        sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
+        sample_sig=os.path.join(out_dir, "signatures", "{sample}.sig"),
+        matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.sig"),
+        db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
+    output:
+        search_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.csv'),
+        search_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.matches.sig'),
+        ranksearch_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.csv'),
+        ranksearch_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.matches.sig'),
+        rankgather_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.rankgather.csv'),
+    params:
+        ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
+        moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
+        out_prefix = lambda w: os.path.join(out_dir, 'genome-search', f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}"),
+    conda: 'envs/sourmash-dev.yml'
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *100000,
+        runtime=6000,
+    log: os.path.join(logs_dir, "genome-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.genome-search.log")
+    benchmark: os.path.join(benchmarks_dir, "genome-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.genome-search.benchmark")
+    shell:
+        """
+        python -m thumper.search_or_gather \
+            --genome {input.sample_file} \
+            --genome-sig {input.sample_sig} \
+            --matches-sig {input.matches} \
+            --lineages-csv {input.db_info} \
+            --alphabet {params.moltype} \
+            --ksize {params.ksize} \
+            --search-genome --gather --no-search-contigs \
             --output-prefix {params.out_prefix}
         """
 

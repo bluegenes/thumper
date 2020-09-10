@@ -55,13 +55,15 @@ def main(args):
             new_siglist.append(ss)
     siglist = new_siglist
 
-    # init files here, close immediately if no sigs in siglist
-    # (writes empty files so snakemake workflows don't complain)
-    sf = SearchFiles(args.output_prefix, not args.no_search, args.gather)
-
     if not siglist:
+        # write empty files so snakemake workflows don't complain; exit.
         print('no non-identical matches for this genome, exiting.')
-        sf.close(not args.no_search, args.gather)
+        if not args.no_search_contigs:
+            sf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=True)
+            sf.close()
+        if args.search_genome:
+            gf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=False)
+            gf.close()
         return 0
 
     # construct a template minhash object that we can use to create new 'uns
@@ -87,55 +89,89 @@ def main(args):
     print(f'reading contigs from {genomebase}')
 
     screed_iter = screed.open(args.genome)
+    genome_len = 0
 
-    for n, record in enumerate(screed_iter):
-        # look at each contig individually
-        mh = empty_mh.copy_and_clear()
-        mh.add_sequence(record.sequence, force=True)
-        # search, optionally aggregate matched hashes to get containment at rank
+    if not args.no_search_contigs:
+        sf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=True)
 
-        seq_len = len(record.sequence)
-        num_hashes = len(mh.hashes)
+        for n, record in enumerate(screed_iter):
+            # look at each contig individually
+            mh = empty_mh.copy_and_clear()
+            mh.add_sequence(record.sequence, force=True)
+            # search, optionally aggregate matched hashes to get containment at rank
 
+            seq_len = len(record.sequence)
+            genome_len+=seq_len
+            num_hashes = len(mh.hashes)
+
+            if not args.no_search:
+                search_results, search_rank_results = search_containment_at_rank(mh, lca_db, lin_db, match_rank)
+
+                if not search_results:
+                    # write to unclassified
+                    sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
+                    continue # if no search results, don't bother with gather
+                else:
+                    # first, print normal search --containment results
+                    for sr in search_results:
+                        sf.write_result(sr, record.name, seq_len, result_type="search")
+                    # now, print containment at rank results
+                    for sr in search_rank_results:
+                        sf.write_result(sr, record.name, seq_len, result_type="ranksearch")
+
+            if args.gather:
+                # first, gather at match rank (default genus)
+                gather_results = list(gather_at_rank(mh, lca_db, lin_db, match_rank))
+                # write standard gather_results?
+
+                if not gather_results:
+                    # write to unclassified. should only get here if no search OR gather results
+                    sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
+                else:
+                    # next, summarize at higher ranks
+                    gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
+                                                                             minimum_matches=args.gather_min_matches, \
+
+            lowest_rank=match_rank, \
+                                                                             taxlist=lca_utils.taxlist(include_strain=False))
+                    #results = list of RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
+
+                    # write taxonomy out
+                    for gr in gather_taxonomy_per_rank:
+                        sf.write_result(gr, record.name, seq_len, result_type="rankgather")
+
+        print(f"Processed {n+1} contigs.")
+        # close contig files
+        sf.close()
+
+    if args.search_genome:
+        gf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=False)
+        # MAG workflow
+        entire_mh = genome_sig.minhash
+        genome_name = genome_sig.name()
+        num_hashes = len(entire_mh.hashes)
+        if not genome_len:
+            for record in screed_iter:
+                genome_len+=len(record.sequence)
         if not args.no_search:
-            search_results, search_rank_results = search_containment_at_rank(mh, lca_db, lin_db, match_rank)
-
-            if not search_results:
-                # write to unclassified
-                sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
-                continue # if no search results, don't bother with gather
-            else:
-                # first, print normal search --containment results
-                for sr in search_results:
-                    sf.write_result(sr, record.name, seq_len, result_type="search")
-                # now, print containment at rank results
-                for sr in search_rank_results:
-                    sf.write_result(sr, record.name, seq_len, result_type="ranksearch")
-
+            #results are guaranteed, otherwise would have exited before searching
+            search_results, search_rank_results = search_containment_at_rank(entire_mh, lca_db, lin_db, match_rank)
+            for sr in search_results:
+                gf.write_result(sr, genome_name, genome_len, result_type="search")
+            for sr in search_rank_results:
+                gf.write_result(sr, genome_name, genome_len, result_type="ranksearch")
         if args.gather:
-            # first, gather at match rank (default genus)
-            gather_results = list(gather_at_rank(mh, lca_db, lin_db, match_rank))
-            # write standard gather_results?
+            gather_results = list(gather_at_rank(entire_mh, lca_db, lin_db, match_rank))
+            # next, summarize at higher ranks
+            gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
+                                                                     minimum_matches=args.gather_min_matches, \
+                                                                     lowest_rank=match_rank, \
+                                                                     taxlist=lca_utils.taxlist(include_strain=False))
+            for gather_res in gather_taxonomy_per_rank:
+                gf.write_result(gather_res, genome_name, genome_len, result_type="rankgather")
+        # close genome files
+        gf.close()
 
-            if not gather_results:
-                # write to unclassified. should only get here if no search OR gather results
-                sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
-            else:
-                # next, summarize at higher ranks
-                gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
-                                                                         minimum_matches=args.gather_min_matches, \
-                                                                         lowest_rank=match_rank, \
-                                                                         taxlist=lca_utils.taxlist(include_strain=False))
-                #results = list of RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
-
-                # write taxonomy out
-                for gr in gather_taxonomy_per_rank:
-                    sf.write_result(gr, record.name, seq_len, result_type="rankgather")
-
-    print(f"Processed {n} contigs.")
-
-    # close files
-    sf.close()
     return 0
 
 
@@ -151,12 +187,15 @@ def cmdline(sys_args):
 
     p.add_argument('--force', help='continue past survivable errors',
                    action='store_true')
-    # switch search types
+
+    # search type switches
     p.add_argument('--no-search', help='do not run search with containment',
-                   action='store_true', default=False)
+                   action='store_true')
     p.add_argument('--gather', help='run sourmash gather',
-                   action='store_true', default=False)
+                   action='store_true')
     p.add_argument('--gather-min-matches', type=int, default=3)
+    p.add_argument('--no-search-contigs', action="store_true")
+    p.add_argument('--search-genome', action="store_true")
 
     # output options:
     # build outputs based on the options above.
