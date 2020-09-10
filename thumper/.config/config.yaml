@@ -46,6 +46,22 @@ alphabet_defaults:
     moltype: "hp"
     ksize_multiplier: 3
 
+## database info ##
+database_dir: databases
+default_database_info: ".config/databases.csv"
+
+database_suffixes:
+  sbt: zip
+  lca: json.gz
+
+database_target_template:
+  info_csv:
+    - "{db_name}.info.csv"
+  database:
+    - "{db_name}.{alphabet}-{ksize}.{db_type}.{suffix}"
+    #- "{database}.{db_type}.{suffix}" --> use db_fullname instead?
+
+
 ## rule params ##
 sourmash_sketch:
   output_dir: signatures

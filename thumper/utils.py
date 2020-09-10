@@ -2,6 +2,7 @@ import os
 import sys
 import pandas as pd
 from snakemake.io import expand
+from snakemake.workflow import srcdir
 
 
 def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml', '.yml'], verbose = False):
@@ -24,6 +25,7 @@ def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml
     if verbose:
         sys.stderr.write(f'\tFound {name} at {found_file}\n')
     return found_file
+
 
 def read_samples(samples_file, data_dir, strict_mode=False):
     samples_file = find_input_file(samples_file)
@@ -64,8 +66,8 @@ def read_samples(samples_file, data_dir, strict_mode=False):
     return samples
 
 
-def check_params(config):
-    pass
+#def check_params(config):
+#    pass
     # to do: check that scaled, ksizes, etc make sense for sourmash / for each alpha
     #ksize = config['ksize']
     #try:
@@ -138,7 +140,6 @@ def check_and_set_alphabets(config, strict_mode=False):
     return config
 
 
-
 def sanitize_path(path):
     # expand `~`, get absolute path
     path = os.path.expanduser(path)
@@ -146,10 +147,48 @@ def sanitize_path(path):
     return path
 
 
+def make_db_fullname(db_row):
+    row["db_fullname"] = row["db_basename"] + "." + row["alphabet"] + "-k" +  str(row["ksize"]) + ".scaled" + str(row["scaled"])
+    return row
 
-def check_dbinfo_exists(db_name, all_dbinfo, strict_mode=False):
+
+def load_database_info(databases_file, existing_db_info=None,strict_mode=False):
+    db_file = find_input_file(databases_file)
+    if '.tsv' in db_file or '.csv' in db_file:
+        separator = '\t'
+        if '.csv' in db_file:
+            separator = ','
+        try:
+            db_info = pd.read_csv(db_file, sep=separator, index_col=False)
+            assert db_info.columns = ["db_basename","alphabet","ksize","scaled","path","info_path"]
+            db_info = db_info.apply(make_db_fullname, axis=1)
+            # verify_integrity checks the new index for duplicates.
+            db_info.set_index("db_fullname", inplace=True, verify_integrity=True)
+            if existing_db_info:
+                db_info = pd.concat(existing_db_info, db_info, verify_integrity=True)
+        except Exception as e:
+            sys.stderr.write(f"\n\tError: {db_file} file is not properly formatted. Please fix.\n\n")
+            print(e)
+    elif '.xls' in db_file:
+        try:
+            db_info = pd.read_excel(db_file, index_col=False)
+            assert db_info.columns = ["db_basename","alphabet","ksize","scaled","path","info_path"]
+            db_info = db_info.apply(make_db_fullname, axis=1)
+            db_info.set_index("db_fullname", inplace=True, verify_integrity=True)
+            if existing_db_info:
+                db_info = pd.concat(existing_db_info, db_info, verify_integrity=True)
+        except Exception as e:
+            sys.stderr.write(f"\n\tError: {db_file} file is not a properly formatted excel file. Please fix.\n\n")
+            print(e)
+    return db_info
+
+
+def check_dbinfo_exists(db_names, dbinfo, strict_mode=False):
     dbinfo_exists = False
-    available_databases = all_dbinfo.keys()
+    available_databases =  all_dbinfo.keys()
+    ## working here - should already have alphabet info. can use it here to check db's!
+    # config["alphabet_info"]
+    #  alphaInfo[alpha]["ksizes"]
     if db_name in available_databases:
         # maybe check alphas and ksizes here?
         dbinfo_exists=True
@@ -167,12 +206,15 @@ def check_user_databases_and_set_info(config, strict_mode=False):
     databases=[]
 
     # get information for available databases (ksizes, file dl info, etc)
-    db_info = config["database_info"]
+    default_db_file = os.path.join(srcdir, config["default_database_info"])
+    db_info = load_database_info(default_db_file)
+    # integrate user database info
+    if config.get("user_database_info"):
+        db_info = load_database_info(config["user_database_info"], existing_db_info=db_info)
 
     # find the default databases for this pipeline
     pipeline = config["pipeline"]
     default_databases = config["pipelines"][pipeline].get("databases", [])
-
     # use pipeline dbs unless user turns them off
     no_use_defaults = config.get("turn_off_default_databases", False)
     if not no_use_defaults:
