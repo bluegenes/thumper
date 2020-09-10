@@ -11,7 +11,7 @@ db_benchmarks = os.path.join(database_dir, "benchmarks")
 
 urls_begin = ["http", "ftp"]
 
-database_info=config["databases"]
+database_info=config["database_info"]
 
 
 # if running as standalone, use this as rule all
@@ -24,6 +24,10 @@ rule get_dbinfo:
     params:
          csv_info= lambda w: database_info[w.db_name]["info_csv"]
     log: os.path.join(db_logs, "get_dbs", "{db_name}.info.get")
+    threads: 1
+    resources:
+        mem_mb=1000,
+        runtime=600
     run:
         if params.csv_info.startswith(tuple(urls_begin)):
             shell("curl -L {params.csv_info}  > {output}")
@@ -36,9 +40,12 @@ rule get_sbt:
     output:
         os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}.sbt.zip")
     params:
-        #sbt_info = lambda w: database_links[w.db_name]["sbt"]
-        sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + w.ksize]["sbt"]
+        sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["sbt"]
     log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.sbt.zip.get")
+    threads: 1
+    resources:
+        mem_mb=1000,
+        runtime=600
     run:
         if params.sbt_info.startswith(tuple(urls_begin)):
             shell("curl -L {params.sbt_info}  > {output}")
@@ -51,8 +58,12 @@ rule get_lca:
     output:
         os.path.join(database_dir, "{db_name}.{alphabet}.k{ksize}.lca.json.gz")
     params:
-        lca_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + w.ksize]["lca"]
+        lca_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["lca"]
     log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.lca.json.gz.get")
+    threads: 1
+    resources:
+        mem_mb=1000,
+        runtime=600
     run:
         if params.lca_info.startswith(tuple(urls_begin)):
             shell("curl -L {params.lca_info}  > {output}")

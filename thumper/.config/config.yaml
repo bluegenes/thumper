@@ -1,51 +1,105 @@
 output_dir: output.thumper
+basename: thumper-output
 #experiment_suffix: ""
 logs_dir: logs
 #sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir?
 
-pipeline: taxonomic_classification_gtdb
-
+pipeline: gtdb_classification_contig
 
 ### default settings 
 default_input_type: protein
 
-gather_scaled: 1000
+#protein_scaled: 10
+#nucleotide_scaled: 1000
+search_threshold: 0.001
+
+# minimum fraction of hashes that must be identified to classify a genome
+min_f_ident: 0.01
+
+# minimum fraction of hashes that must be classified as lineage to -> genome
+min_f_major: 0.01
 
 # defaults for each alphabet 
 alphabet_defaults:
   nucleotide: 
     ksizes: [21,31,51]
     scaled: 1000
+    alpha_cmd: "--dna"
+    moltype: "dna"
+    ksize_multiplier: 1
   protein:
     ksizes: [11]
     scaled: 100
+    alpha_cmd: "--protein"
+    moltype: "protein"
+    ksize_multiplier: 3
   dayhoff:
     ksizes: [19]
     scaled: 100
+    alpha_cmd: "--dayhoff"
+    moltype: "dayhoff"
+    ksize_multiplier: 3
   hp:
-    ksizes: [33, 42]
+    ksizes: [33] #, 42]
     scaled: 100
+    alpha_cmd: "--hp"
+    moltype: "hp"
+    ksize_multiplier: 3
 
-## program params ##
-sourmash_sketch_nucleotide:
+## rule params ##
+sourmash_sketch:
   output_dir: signatures
   output_files:
-    - "{sample}.nucleotide.sig"
-  params:
-    scaled: [100]
-    # ksize --> don't set here. instead, get this from alpha defaults + user input!?
+    - "{sample}.sig"
 
-sourmash_sketch_protein:
-  output_dir: signatures
+sourmash_search_containment:
+  output_dir: search
   output_files:
-    - "{sample}.protein.sig"
-  params:
-    # hmm. better to set universal defaults for all downstream steps.
-    # --> don't set here. instead, get this from alpha defaults + user input!?
-    scaled: [100]
-    ksize: [11]
+    - "{sample}.x.{database}.matches.csv"
+    - "{sample}.x.{database}.matches.sig"
+    - "{sample}.x.{database}.matches.txt"
+  databases:
+   - gtdb.rep_genus
 
-sourmash_gather_protein:
+contigs_search:
+  output_dir: contig-search
+  output_files:
+    - "{sample}.x.{database}.contigs.search.csv"
+    - "{sample}.x.{database}.contigs.ranksearch.csv"
+    - "{sample}.x.{database}.contigs.search.matches.sig"
+    - "{sample}.x.{database}.contigs.ranksearch.matches.sig"
+    - "{sample}.x.{database}.contigs.unmatched.fq"
+
+genome_search:
+  output_dir: genome-search
+  output_files:
+    - "{sample}.x.{database}.search.csv"
+    - "{sample}.x.{database}.ranksearch.csv"
+    - "{sample}.x.{database}.search.matches.sig"
+    - "{sample}.x.{database}.ranksearch.matches.sig"
+
+#make_hit_list:
+#  output_dir: classify
+#  output_files:
+#    - "{basename}.x.{database}.hit_list_for_filtering.csv"
+
+#thumper_classify:
+  # output_files:
+    #- "{basename}.x.{database}.classified.csv" --> final classification summary
+
+## index snakefile ##
+signames_to_file:
+  output_dir: index
+  output_files:
+    - "{basename}.signatures.txt"
+
+index_sbt:
+  output_dir: index
+  output_files:
+    - "{index}.sbt.zip" # "index name" needs to include alphabet, ksize, scaled
+
+## not currently in use ##
+sourmash_gather:
   output_dir: gather
   output_files:
     - "{sample}.x.{database}.gather-matches.csv"
@@ -54,69 +108,15 @@ sourmash_gather_protein:
     - "{sample}.x.{database}.gather-unassigned.sig"
   databases:
    - gtdb.rep_genus
-  #params:
-    #gather_scaled: 1000
-    #extra: ""
 
-sourmash_search_containment_protein:
-  output_dir: search-containment
-  output_files:
-    - "{sample}.x.{database}.search-contain-matches.csv"
-    - "{sample}.x.{database}.search-contain-matches.sig"
-    - "{sample}.x.{database}.search-contain-matches.txt"
-  databases:
-   - gtdb.rep_genus
-
-sourmash_gather_nucleotide:
-  output_dir: gather
-  output_files:
-    - "{sample}.x.{database}.gather-matches.csv"
-    - "{sample}.x.{database}.gather-matches.sig"
-    - "{sample}.x.{database}.gather-matches.txt"
-    - "{sample}.x.{database}.gather-unassigned.sig"
-  databases:
-   - gtdb.rep_genus
-  #params:
-    #gather_scaled: 1000
-    #extra: ""
-
-sourmash_search_containment_nucleotide:
-  output_dir: search-containment
-  output_files:
-    - "{sample}.x.{database}.search-contain-matches.csv"
-    - "{sample}.x.{database}.search-contain-matches.sig"
-    - "{sample}.x.{database}.search-contain-matches.txt"
-  databases:
-   - gtdb.rep_genus
-
-protein_signames_to_file:
-  output_dir: index
-  output_files:
-    - "{basename}.protein-signatures.txt"
-
-nucleotide_signames_to_file:
-  output_dir: index
-  output_files:
-    - "{basename}.nucleotide-signatures.txt"
-
-# "index name" needs to include alphabet, ksize
-sourmash_index_sbt_protein:
-  output_dir: index
-  output_files:
-    - "{basename}.{index-name}.sbt.zip"
-
-sourmash_index_sbt_nucleotide:
-  output_dir: index
-  output_files:
-    - "{basename}.{index-name}.sbt.zip"
-
-
-thumper_classify:
+contig_classify:
   output_dir: classify
   output_files:
-    - "{basename}.x.{database}.classified.csv"
-  params:
-    threshold: .5 # potentially: the threshold for a gather tophit to be used for classification?
-    tophit: True
-    lca: True
-    #extra: ""
+    - "{sample}.x.{database}.clean.fa.gz" 
+    - "{sample}.x.{database}.dirty.fa.gz" 
+    - "{sample}.x.{database}.report.txt" 
+    - "{sample}.x.{database}.contigs.csv" 
+    - "{sample}.x.{database}.summary.csv"
+  databases:
+   - gtdb.rep_genus
+

@@ -25,3 +25,13 @@ sample_list: tests/config/nucl-samplelist.txt
 
 # directory in which genome filenames live
 data_dir: tests/test-data/genomes
+
+alphabets:
+  nucleotide:
+    scaled: 1000
+  protein:
+    scaled: 10
+  dayhoff:
+    scaled: 10
+  hp:
+    scaled: 10

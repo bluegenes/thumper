@@ -37,7 +37,7 @@ def relative_file(filename):
     return os.path.abspath(newpath)
 
 
-def test_file(filename):
+def get_testfile(filename):
     "Return the filename relative to the top level directory of this repo."
     thisdir = os.path.dirname(__file__)
     pkgdir = os.path.join(thisdir, "..")

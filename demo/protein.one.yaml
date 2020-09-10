@@ -1,0 +1,36 @@
+# location for all generated files
+basename: protein-one
+
+output_dir: output.protein-one #.xr89
+
+# type of input data (protein or nucleotide)
+input_type: protein
+
+# list of genome filenames to decontaminate
+sample_list: demo/gtdb-protein-test-set_1.txt
+
+# directory in which genome filenames live
+data_dir: demo/genomes 
+
+# check and validate config settings & filenames strictly.
+strict: 1
+
+# continue past survivable errors in classification
+force: 0
+
+# try using the gtdb-nine test set
+turn_off_default_databases: True
+search_databases:
+  - gtdb-nine
+ # - gtdb-r89
+
+alphabets:
+  protein:
+    ksizes: [11] #[5,7,10,11]
+    scaled: 10 #1
+  dayhoff:
+    ksizes: [19] #15 
+    scaled: 10 # 1
+  hp:
+    ksizes: [33] #30
+    scaled: 10 #1

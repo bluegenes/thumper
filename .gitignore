@@ -1,7 +1,9 @@
 *~
+*pyc
 .snakemake
-output.test
+output.*
 __pycache__
 thumper/version.py
 .eggs
 thumper_bio.egg-info/
+demo/*

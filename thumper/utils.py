@@ -25,22 +25,6 @@ def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml
         sys.stderr.write(f'\tFound {name} at {found_file}\n')
     return found_file
 
-
-#def read_samples(samples_file, data_dir, strict_mode=False):
-#    samples_file = find_input_file(samples_file)
-#    sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
-#    sample_list = [ line for line in sample_list if line ]   # remove empty lines
-#    # verify that all genome files exist -
-#    data_dir = sanitize_path(data_dir)
-#    for filename in sample_list:
-#        fullpath = os.path.join(data_dir, filename)
-#        if not os.path.exists(fullpath):
-#            print(f'** ERROR: genome file {filename} does not exist in {data_dir}')
-#            if strict_mode:
-#                print('** exiting.')
-#                sys.exit(-1)
-#    return sample_list
-
 def read_samples(samples_file, data_dir, strict_mode=False):
     samples_file = find_input_file(samples_file)
     if '.tsv' in samples_file or '.csv' in samples_file:
@@ -114,11 +98,8 @@ def check_input_type(config, strict_mode=False):
                 sys.exit(-1)
     else:
         print(f'** ERROR: "input_type: protein" or "input_type: nucleotide" must be specified in the config file')
-        #if strict_mode:
         print('** exiting.')
         sys.exit(-1)
-        #else:
-            #input_type = config["default_input_type"]
     return config
 
 def check_and_set_alphabets(config, strict_mode=False):
@@ -140,11 +121,15 @@ def check_and_set_alphabets(config, strict_mode=False):
                 print(f'Strict mode is off: attempting to continue. Removing {alpha} from alphabet list.')
                 alphabets.remove(alpha)
         else:
-            #for now, just transfer over defaults. later, enable ksize, scaled param setting?
+            # first, set defaults
             alphaInfo[alpha] = default_alphabets[alpha]
+            # if override values are provided in the config, replace defaults
+            if isinstance(alphabets, dict):
+                alphaInfo[alpha]["ksizes"] = alphabets[alpha].get("ksizes", default_alphabets[alpha]["ksizes"])
+                alphaInfo[alpha]["scaled"] = alphabets[alpha].get("scaled", default_alphabets[alpha]["scaled"])
     if alphaInfo:
         config["alphabet_info"] = alphaInfo
-        alphabets = check_input_type(config)
+        config = check_input_type(config)
     else:
         print(f'** ERROR: no valid alphabets remain')
         print('** exiting.')
@@ -209,6 +194,9 @@ def check_user_databases_and_set_info(config, strict_mode=False):
         print('** exiting.')
         sys.exit(-1)
 
+    ## TO DO: ##
+    # check for alpha-ksize for each db; only run alpha-ksizes that exist in dbs
+
     config["databases"] = databases
 
     # sanitize database directory path
@@ -246,10 +234,7 @@ def generate_database_targets(config, also_return_database_names=False):
     info_templates = db_target_templates["info_csv"]
     db_templates = db_target_templates["database"]
 
-    # iterate through dbinfo and build targets for the alphabet's we're using
-    # later, could enable ksize choice here too.
-    ## OR, maybe figure out cleaner/clearer/better db specification in yaml file! Not so much nesting?
-    ## instead of nesting protein - name them uniquely? handier for matching exact db in config.yaml
+    # iterate through dbinfo and build targets for the alphabets we're using
     for db in databases:
         db_targs,db_names=[],[]
         db_info = config["database_info"][db]
@@ -257,7 +242,10 @@ def generate_database_targets(config, also_return_database_names=False):
             if db_alphabet in alphabet_info.keys():
                 for db_ksize, dbs in db_alpha_info.items():
                     ksize_int = int(db_ksize[1:]) # db_ksize is string w/format: k{ksize}
+                    # only build target if db has matching ksize available.
+                    # todo: also handle scaled here???
                     if ksize_int in alphabet_info[db_alphabet]["ksizes"]:
+
                         for db_type in dbs.keys():
                             suffix = config["database_suffixes"][db_type]
                             db_filenames = expand(db_templates, db_name=db,alphabet=db_alphabet, ksize=db_ksize, db_type=db_type, suffix=suffix)
@@ -301,22 +289,20 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     else:
         generate_db_targets=False
         database_targets,database_names=[],[]
-    steps = []
-    # if nucleotide input, run both protein and nucl steps, else just run protein steps
-    if "nucleotide" in alphabet_info.keys():
-        steps  = config["pipelines"][pipeline]["steps"]["nucleotide"]
-    protein_alphas = ["protein", "dayhoff", "hp"]
-    # assume we always want to run protein steps (if there are any in the pipeline)
-    steps += config["pipelines"][pipeline]["steps"].get("protein", [])
+    index_names = []
+    if pipeline == "generate_index":
+        for alpha, alphaInfo in alphabet_info.items():
+            index_names+=expand("{basename}.{alpha}-k{ksize}.scaled{scaled}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
 
     # generate targets for each step
+    steps = config["pipelines"][pipeline]["steps"]
     for step in steps:
         step_outdir = config[step]["output_dir"]
         step_files = config[step]["output_files"]
 
         # fill variables in the output filenames
         for stepF in step_files:
-            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename)
+            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename, db_name=config.get("databases", []), index=index_names)
 
     if generate_db_targets:
         targets = database_targets + pipeline_targets

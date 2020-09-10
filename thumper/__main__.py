@@ -21,7 +21,7 @@ def get_package_configfile(filename):
 
 
 def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
-                  snakefile_name='classify.snakefile',
+                  snakefile_name='thumper.snakefile',
                   outdir=None, verbose=False, extra_args=[]):
     # find the Snakefile relative to package path
     snakefile = get_snakefile_path(snakefile_name)
@@ -59,7 +59,7 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
         configfiles+= [configfile]
 
 
-    cmd += ["--configfile"] + configfiles
+    cmd += ["--configfiles"] + configfiles
 
     if verbose:
         print('final command:', cmd)
@@ -93,7 +93,7 @@ def cli():
 @click.argument('snakemake_args', nargs=-1)
 def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose, outdir):
     "execute thumper workflow (using snakemake underneath)"
-    run_snakemake(configfile, snakefile_name='classify.snakefile',
+    run_snakemake(configfile, snakefile_name='thumper.snakefile',
                   no_use_conda=no_use_conda, no_use_mamba=no_use_mamba,
                   verbose=verbose,outdir=outdir,
                   extra_args=snakemake_args)
@@ -134,7 +134,7 @@ This is thumper version v{version}
 
 Package install path: {os.path.dirname(__file__)}
 Install-wide config file: {get_package_configfile('config.yaml')}
-snakemake Snakefile: {get_snakefile_path('classify.snakefile')}
+snakemake Snakefile: {get_snakefile_path('thumper.snakefile')}
 """)
 
 # 'init' command

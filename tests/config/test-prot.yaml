@@ -26,3 +26,11 @@ sample_list: tests/config/prot-samplelist.txt
 
 # directory in which genome filenames live
 data_dir: tests/test-data/proteomes
+
+alphabets:
+  protein:
+    scaled: 10
+  dayhoff:
+    scaled: 10
+  hp:
+    scaled: 10
