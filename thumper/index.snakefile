@@ -1,15 +1,14 @@
 ## indexing rules 
+
+localrules: signames_to_file
+
 rule signames_to_file:
     input:  expand(os.path.join(out_dir, "signatures", "{sample}.sig"), sample=sample_names),
     output: os.path.join(out_dir, "index", "{basename}.signatures.txt")
-    log: os.path.join(logs_dir, "index", "{basename}.build-siglist-for-index.txt")
-    shell:
-        """
-        for item in {input}
-          do
-            echo $item >> {output} 2> {log}
-          done
-        """
+    run:
+        with open(str(output), "w") as outF:
+            for inF in input:
+                outF.write(str(inF) + "\n")
 
 rule index_sbt:
     input: os.path.join(out_dir, "index", "{basename}.signatures.txt")
