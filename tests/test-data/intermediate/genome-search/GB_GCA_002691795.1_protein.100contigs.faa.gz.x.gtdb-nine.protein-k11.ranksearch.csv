@@ -1,0 +1,11 @@
+name,length,match_rank,lineage,contained_at_rank,contained_bp
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,superkingdom,d__Bacteria,0.20748425342719526,5600.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,phylum,d__Bacteria;p__Proteobacteria,0.20748425342719526,5600.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,class,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria,0.20748425342719526,5600.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,order,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales,0.20748425342719526,5600.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,family,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__AAA536-G10,0.20637273064097814,5570.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,family,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__Puniceispirillaceae,0.023712486105965172,640.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,genus,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__AAA536-G10;g__TMED54,0.14894405335309374,4020.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,genus,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__AAA536-G10;g__AG-426-I14,0.09670248240088922,2610.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,genus,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__AAA536-G10;g__AAA536-G10,0.07298999629492404,1970.0
+GB_GCA_002691795.1_protein.100contigs.faa.gz,27994,genus,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__Puniceispirillaceae;g__UBA4588,0.023712486105965172,640.0
