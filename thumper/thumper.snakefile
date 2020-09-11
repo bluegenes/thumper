@@ -45,8 +45,8 @@ onstart:
     print("Perform taxonomic classification using protein k-mers")
     print("------------------------------")
 
-ascii_thumper = srcdir("utils/animals/thumper")
-failwhale = srcdir("utils/animals/failwhale")
+ascii_thumper = srcdir("animals/thumper")
+failwhale = srcdir("animals/failwhale")
 onsuccess:
     print("\n--- Workflow executed successfully! ---\n")
     shell('cat {ascii_thumper}')
@@ -60,7 +60,7 @@ rule all:
 
 # include the databases, index, common utility snakefiles
 if config["get_databases"]:
-    include: "download_databases.snakefile"
+    include: "get_databases.snakefile"
 include: "index.snakefile"
 include: "common.snakefile"
 alphabet_info = config["alphabet_info"]
@@ -71,8 +71,8 @@ def build_sketch_params(output_type):
     # if input is dna, build dna, translate sketches
     if input_type == "nucleotide":
         if output_type == "nucleotide":
-            ksizes = config["alphabet_info"]["nucleotide"]["ksizes"]
-            scaled = config["alphabet_info"]["nucleotide"]["scaled"]
+            ksizes = config["alphabet_info"]["nucleotide"].get("ksizes", config["alphabet_defaults"]["nucleotide"]["ksizes"])
+            scaled = config["alphabet_info"]["nucleotide"].get("scaled", config["alphabet_defaults"]["nucleotide"]["scaled"])
             # always track abund when sketching (?)
             sketch_cmd = "dna -p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
             return sketch_cmd
@@ -83,8 +83,8 @@ def build_sketch_params(output_type):
         sketch_cmd = "protein "
     for alpha in ["protein", "dayhoff", "hp"]:
         ## default build protein, dayhoff, hp sigs at the default ksizes from config
-        ksizes = config["alphabet_info"][alpha]["ksizes"]
-        scaled = config["alphabet_info"][alpha]["scaled"]
+        ksizes = config["alphabet_info"][alpha].get("ksizes", config["alphabet_defaults"][alpha]["ksizes"])
+        scaled = config["alphabet_info"][alpha].get("scaled", config["alphabet_defaults"][alpha]["scaled"])
         sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
     return sketch_cmd
 

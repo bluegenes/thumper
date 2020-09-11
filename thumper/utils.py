@@ -66,21 +66,6 @@ def read_samples(samples_file, data_dir, strict_mode=False):
     return samples
 
 
-#def check_params(config):
-#    pass
-    # to do: check that scaled, ksizes, etc make sense for sourmash / for each alpha
-    #ksize = config['ksize']
-    #try:
-    #    ksize = int(ksize)
-    #    if ksize < 15 or ksize > 101:
-    #        raise ValueError
-    #except ValueError:
-    #    print('** ERROR: ksize should be a number between 15 and 101.')
-    #    print('** (it must also match the query database ksize value)')
-    #    if strict_mode:
-    #        sys.exit(-1)
-
-
 def check_input_type(config, strict_mode=False):
     """
     Check the input type provided in the configfile
@@ -102,7 +87,7 @@ def check_input_type(config, strict_mode=False):
         print(f'** ERROR: "input_type: protein" or "input_type: nucleotide" must be specified in the config file')
         print('** exiting.')
         sys.exit(-1)
-    return config
+
 
 def check_and_set_alphabets(config, strict_mode=False):
     """
@@ -137,8 +122,6 @@ def check_and_set_alphabets(config, strict_mode=False):
         print('** exiting.')
         sys.exit(-1)
 
-    return config
-
 
 def sanitize_path(path):
     # expand `~`, get absolute path
@@ -147,7 +130,7 @@ def sanitize_path(path):
     return path
 
 
-def make_db_fullname(db_row):
+def make_db_fullname(row):
     row["db_fullname"] = row["db_basename"] + "." + row["alphabet"] + "-k" +  str(row["ksize"]) + "-scaled" + str(row["scaled"])
     return row
 
@@ -160,7 +143,7 @@ def load_database_info(databases_file, existing_db_info=None,strict_mode=False):
             separator = ','
         try:
             db_info = pd.read_csv(db_file, sep=separator, index_col=False)
-            assert db_info.columns = ["db_basename","alphabet","ksize","scaled","path","info_path"]
+            assert list(db_info.columns) == ["db_basename","alphabet","ksize","scaled","path","info_path"]
             db_info = db_info.apply(make_db_fullname, axis=1)
             # verify_integrity checks the new index for duplicates.
             db_info.set_index("db_fullname", inplace=True, verify_integrity=True)
@@ -172,7 +155,7 @@ def load_database_info(databases_file, existing_db_info=None,strict_mode=False):
     elif '.xls' in db_file:
         try:
             db_info = pd.read_excel(db_file, index_col=False)
-            assert db_info.columns = ["db_basename","alphabet","ksize","scaled","path","info_path"]
+            assert list(db_info.columns) == ["db_basename","alphabet","ksize","scaled","path","info_path"]
             db_info = db_info.apply(make_db_fullname, axis=1)
             db_info.set_index("db_fullname", inplace=True, verify_integrity=True)
             if existing_db_info:
@@ -183,24 +166,21 @@ def load_database_info(databases_file, existing_db_info=None,strict_mode=False):
     return db_info
 
 
-def check_dbinfo(db_basename, dbinfo, alphabet_info, db_input="default", strict_mode=False):
+def check_dbinfo(config, db_basename, dbinfo, alphabet_info, db_input="default", strict_mode=False):
     databases_to_use=[]
     db_targs, database_targets, info_targets=[],[],[]
     db_suffix = config["database_suffix"]
     info_suffix = config["database_info_suffix"]
 
     # get database fullnames
-    available_databases = list(dbinfo.columns)
+    available_databases = list(dbinfo.index)
 
     # construct fullnames that we want to make
     desired_db_fullnames = []
-    for alpha, alphaInfo in alphabet_info:
-        desired_dbfullnames = expand("{name}.{alpha}-k{ksize}-scaled{scaled}", \
-                               name=db_basename, alphabet=alpha, ksize=alphaInfo["ksizes"], \
-                               scaled=alphaInfo["scaled"])
-
+    for alpha, alphaInfo in alphabet_info.items():
+        desired_dbfullnames = expand("{name}.{alpha}-k{ksize}-scaled{scaled}", name=db_basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
         # this now checks alphas, ksizes, scaled!
-        for db in desired_db_fullnames:
+        for db in desired_dbfullnames:
             if db in available_databases:
                 databases_to_use.append(db)
                 # get database_targets
@@ -219,11 +199,10 @@ def check_dbinfo(db_basename, dbinfo, alphabet_info, db_input="default", strict_
     # remove any duplicates
     info_targets=list(set(info_targets))
     db_targs = database_targets + info_targets
-
     return databases_to_use, db_targs
 
 def check_and_set_pipeline_databases(config, db_info, strict_mode=False):
-    databases, database_targets=[]
+    databases, database_targets=[],[]
 
     # find the default databases for this pipeline
     pipeline = config["pipeline"]
@@ -235,38 +214,41 @@ def check_and_set_pipeline_databases(config, db_info, strict_mode=False):
     if not no_use_defaults:
         # check that we have the info for these default databases
         for db in default_databases:
-            db_names, db_targets = check_dbinfo(db, db_info, alphabet_info, strict_mode)
+            db_names, db_targets = check_dbinfo(config, db, db_info, alphabet_info, strict_mode=strict_mode)
             databases+=db_names
-            database_targes+=db_targets
+            database_targets+=db_targets
 
     ## add user databases if info is available
     user_dbs = config.get("search_databases", [])
 
     for db in user_dbs:
         # add database to list of databases to search
-        db_names, db_targets = check_dbinfo(db, db_info, alphabet_info, db_input="user", strict_mode)
+        db_names, db_targets = check_dbinfo(config, db, db_info, alphabet_info, db_input="user", strict_mode=strict_mode)
         databases+=db_names
-        database_targes+=db_targets
+        database_targets+=db_targets
 
     if not databases:
-        print(f'** ERROR: no valid databases selected. \
-                   Please choose from the available databases \
-                   or do not disable default databases. \
-                   Available databases are: {", ".join(list(db_info.columns))}')
+        avail_dbs = list(db_info.index)
+        print('\n** ERROR: no valid databases selected. ')
+        print('Please choose from the available databases '\
+              'or do not disable default databases. \n' )
+        print('Available databases are: ',*avail_dbs, sep="\n" )
         print('** exiting.')
         sys.exit(-1)
 
     config["databases"] = databases
 
     # sanitize database directory path
-    config["database_dir"] = sanitize_path(config["database_dir"])
+    database_dir = sanitize_path(config["database_dir"])
+    config["database_dir"] = database_dir
+    final_db_targs = [os.path.join(database_dir, x) for x in database_targets]
+    config["database_info"] = db_info
 
-
-    return config, database_targets
+    return final_db_targs
 
 def integrate_user_config(config):
     # first, check and set alphabets
-    config = check_and_set_alphabets(config)
+    check_and_set_alphabets(config)
     # get info for pipeline we're running
     pipeline = config["pipeline"]
     db_info = ""
@@ -275,57 +257,39 @@ def integrate_user_config(config):
        # if using databases, load database info and check compatibility with alphabets
         config["get_databases"] = True
         # get information for available databases (ksizes, file dl info, etc)
-        default_db_file = os.path.join(srcdir, config["default_database_info"])
+        default_dbinfo = config["default_database_info"]
+        default_db_file = srcdir(default_dbinfo)
         db_info = load_database_info(default_db_file)
         # integrate user database info
         if config.get("user_database_info"):
             db_info = load_database_info(config["user_database_info"], existing_db_info=db_info)
 
-        config, database_targets = check_and_set_pipeline_databases(config, db_info)
+        database_targets = check_and_set_pipeline_databases(config, db_info)
     else:
         config["get_databases"] = False
 
-    return config, database_targets
-
+    return database_targets
 
 
 def generate_database_targets(config):
-    ## integrate user settings and inputs
-    config, database_targets = integrate_user_config(config)
-    ## What alphabets are we using? ##
-    alphabet_info = config["alphabet_info"]
-    ## What databases are we using? ##
-    databases = config["databases"]
-
-    # add database_dir path to database_targets
-    database_dir=config["database_dir"]
-    final_db_targs = [os.path.join(database_dir, x) for x in database_targets]
-
-    return final_db_targs
-
+    database_targets = integrate_user_config(config)
+    return database_targets
 
 def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     pipeline_targets=[]
     ## integrate user settings and inputs
-    config = integrate_user_config(config)
+    database_targets = integrate_user_config(config)
     ## What alphabets are we using? ##
     alphabet_info = config["alphabet_info"]
     ## set run basename
     basename = config.get("basename", "thumper-output")
 
-    ## What databases are we using? ##
-    # Pipeline:: find steps in this pipeline
-    pipeline= config["pipeline"]
-    db_required = config["pipelines"][pipeline]["databases_required"]
-    if db_required:
-        database_targets = generate_database_targets(config)
-        database_names = config["databases"]
-    else:
-        generate_db_targets=False
-        database_targets,database_names=[],[]
+    ## What databases are we using?
+    databases = config["databases"]
 
-    # TO DO: do this with fullnames? Also make a rule to print csv info for generated indices
+    # TO DO: do this above with fullnames? Also make a rule to print csv info for generated indices
     index_names = []
+    pipeline = config["pipeline"]
     if pipeline == "generate_index":
         for alpha, alphaInfo in alphabet_info.items():
             index_names+=expand("{basename}.{alpha}-k{ksize}-scaled{scaled}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
@@ -339,7 +303,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
         # fill variables in the output filenames
         for stepF in step_files:
             # WHAT IS db_nameused for here???? need to remove bc databases will now be the fullnames
-            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename, db_name=config.get("databases", []), index=index_names)
+            pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=config.get("databases", []), basename=basename, index=index_names)
 
     if generate_db_targets:
         targets = database_targets + pipeline_targets

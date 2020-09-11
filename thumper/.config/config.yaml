@@ -47,19 +47,10 @@ alphabet_defaults:
     ksize_multiplier: 3
 
 ## database info ##
+default_database_info: .config/databases.csv
 database_dir: databases
-default_database_info: ".config/databases.csv"
-
-database_suffixes:
-  sbt: zip
-  lca: json.gz
-
-database_target_template:
-  info_csv:
-    - "{db_name}.info.csv"
-  database:
-    - "{db_name}.{alphabet}-{ksize}.{db_type}.{suffix}"
-    #- "{database}.{db_type}.{suffix}" --> use db_fullname instead?
+database_suffix: sbt.zip
+database_info_suffix: info.csv
 
 
 ## rule params ##
@@ -94,11 +85,6 @@ genome_search:
     - "{sample}.x.{database}.search.matches.sig"
     - "{sample}.x.{database}.ranksearch.matches.sig"
 
-#make_hit_list:
-#  output_dir: classify
-#  output_files:
-#    - "{basename}.x.{database}.hit_list_for_filtering.csv"
-
 #thumper_classify:
   # output_files:
     #- "{basename}.x.{database}.classified.csv" --> final classification summary
@@ -115,24 +101,13 @@ index_sbt:
     - "{index}.sbt.zip" # "index name" needs to include alphabet, ksize, scaled
 
 ## not currently in use ##
-sourmash_gather:
-  output_dir: gather
-  output_files:
-    - "{sample}.x.{database}.gather-matches.csv"
-    - "{sample}.x.{database}.gather-matches.sig"
-    - "{sample}.x.{database}.gather-matches.txt"
-    - "{sample}.x.{database}.gather-unassigned.sig"
-  databases:
-   - gtdb.rep_genus
-
-contig_classify:
-  output_dir: classify
-  output_files:
-    - "{sample}.x.{database}.clean.fa.gz" 
-    - "{sample}.x.{database}.dirty.fa.gz" 
-    - "{sample}.x.{database}.report.txt" 
-    - "{sample}.x.{database}.contigs.csv" 
-    - "{sample}.x.{database}.summary.csv"
-  databases:
-   - gtdb.rep_genus
-
+#sourmash_gather:
+#  output_dir: gather
+#  output_files:
+#    - "{sample}.x.{database}.gather-matches.csv"
+#    - "{sample}.x.{database}.gather-matches.sig"
+#    - "{sample}.x.{database}.gather-matches.txt"
+#    - "{sample}.x.{database}.gather-unassigned.sig"
+#  databases:
+#   - gtdb.rep_genus
+#
