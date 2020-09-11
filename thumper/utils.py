@@ -148,7 +148,7 @@ def sanitize_path(path):
 
 
 def make_db_fullname(db_row):
-    row["db_fullname"] = row["db_basename"] + "." + row["alphabet"] + "-k" +  str(row["ksize"]) + ".scaled" + str(row["scaled"])
+    row["db_fullname"] = row["db_basename"] + "." + row["alphabet"] + "-k" +  str(row["ksize"]) + "-scaled" + str(row["scaled"])
     return row
 
 
@@ -183,132 +183,123 @@ def load_database_info(databases_file, existing_db_info=None,strict_mode=False):
     return db_info
 
 
-def check_dbinfo_exists(db_names, dbinfo, strict_mode=False):
-    dbinfo_exists = False
-    available_databases =  all_dbinfo.keys()
-    ## working here - should already have alphabet info. can use it here to check db's!
-    # config["alphabet_info"]
-    #  alphaInfo[alpha]["ksizes"]
-    if db_name in available_databases:
-        # maybe check alphas and ksizes here?
-        dbinfo_exists=True
-    else:
-        print(f'** ERROR: database {db_name} does not have any associated info. Available databases are: {", ".join(available_databases)}')
-        if strict_mode:
-            print('** exiting.')
-            sys.exit(-1)
-        else:
-            print('Strict mode is off: attempting to continue. Removing {db_name} from search databases list.')
-    return dbinfo_exists
+def check_dbinfo(db_basename, dbinfo, alphabet_info, db_input="default", strict_mode=False):
+    databases_to_use=[]
+    db_targs, database_targets, info_targets=[],[],[]
+    db_suffix = config["database_suffix"]
+    info_suffix = config["database_info_suffix"]
 
+    # get database fullnames
+    available_databases = list(dbinfo.columns)
 
-def check_user_databases_and_set_info(config, strict_mode=False):
-    databases=[]
+    # construct fullnames that we want to make
+    desired_db_fullnames = []
+    for alpha, alphaInfo in alphabet_info:
+        desired_dbfullnames = expand("{name}.{alpha}-k{ksize}-scaled{scaled}", \
+                               name=db_basename, alphabet=alpha, ksize=alphaInfo["ksizes"], \
+                               scaled=alphaInfo["scaled"])
 
-    # get information for available databases (ksizes, file dl info, etc)
-    default_db_file = os.path.join(srcdir, config["default_database_info"])
-    db_info = load_database_info(default_db_file)
-    # integrate user database info
-    if config.get("user_database_info"):
-        db_info = load_database_info(config["user_database_info"], existing_db_info=db_info)
+        # this now checks alphas, ksizes, scaled!
+        for db in desired_db_fullnames:
+            if db in available_databases:
+                databases_to_use.append(db)
+                # get database_targets
+                database_targets.append(f"{db}.{db_suffix}")
+                info_targets.append(f"{db_basename}.{info_suffix}")
+            else:
+                k_scaled = db.split('-')
+                this_k = k_scaled[1]
+                this_scaled= k_scaled[2]
+                print(f'** ERROR: A {db_input} {db_basename} database is not provided for {alpha}, {k}, {scaled}.')
+                if strict_mode:
+                    print('** Strict mode is on. Exiting.')
+                    sys.exit(-1)
+                else:
+                    print('Strict mode is off: attempting to continue. Removing {db} from search databases list.')
+    # remove any duplicates
+    info_targets=list(set(info_targets))
+    db_targs = database_targets + info_targets
+
+    return databases_to_use, db_targs
+
+def check_and_set_pipeline_databases(config, db_info, strict_mode=False):
+    databases, database_targets=[]
 
     # find the default databases for this pipeline
     pipeline = config["pipeline"]
     default_databases = config["pipelines"][pipeline].get("databases", [])
     # use pipeline dbs unless user turns them off
     no_use_defaults = config.get("turn_off_default_databases", False)
+
+    alphabet_info = config["alphabet_info"]
     if not no_use_defaults:
         # check that we have the info for these default databases
         for db in default_databases:
-            if check_dbinfo_exists(db, db_info):
-                databases.append(db)
+            db_names, db_targets = check_dbinfo(db, db_info, alphabet_info, strict_mode)
+            databases+=db_names
+            database_targes+=db_targets
 
     ## add user databases if info is available
     user_dbs = config.get("search_databases", [])
 
     for db in user_dbs:
-        if check_dbinfo_exists(db, db_info):
-            # add database to list of databases to search
-            databases.append(db)
+        # add database to list of databases to search
+        db_names, db_targets = check_dbinfo(db, db_info, alphabet_info, db_input="user", strict_mode)
+        databases+=db_names
+        database_targes+=db_targets
 
     if not databases:
-        print(f'** ERROR: no valid databases selected. Please choose from the available databases or do not disable default databases.')
+        print(f'** ERROR: no valid databases selected. \
+                   Please choose from the available databases \
+                   or do not disable default databases. \
+                   Available databases are: {", ".join(list(db_info.columns))}')
         print('** exiting.')
         sys.exit(-1)
-
-    ## TO DO: ##
-    # check for alpha-ksize for each db; only run alpha-ksizes that exist in dbs
 
     config["databases"] = databases
 
     # sanitize database directory path
     config["database_dir"] = sanitize_path(config["database_dir"])
 
-    return config
 
+    return config, database_targets
 
 def integrate_user_config(config):
+    # first, check and set alphabets
     config = check_and_set_alphabets(config)
+    # get info for pipeline we're running
     pipeline = config["pipeline"]
+    db_info = ""
+    database_targets=[]
     if config["pipelines"][pipeline]["databases_required"]:
+       # if using databases, load database info and check compatibility with alphabets
         config["get_databases"] = True
-        config = check_user_databases_and_set_info(config)
+        # get information for available databases (ksizes, file dl info, etc)
+        default_db_file = os.path.join(srcdir, config["default_database_info"])
+        db_info = load_database_info(default_db_file)
+        # integrate user database info
+        if config.get("user_database_info"):
+            db_info = load_database_info(config["user_database_info"], existing_db_info=db_info)
+
+        config, database_targets = check_and_set_pipeline_databases(config, db_info)
     else:
         config["get_databases"] = False
-    return config
+
+    return config, database_targets
 
 
 
-def generate_database_targets(config, also_return_database_names=False):
-    database_targets, database_names=[],[]
+def generate_database_targets(config):
     ## integrate user settings and inputs
-    config = integrate_user_config(config)
+    config, database_targets = integrate_user_config(config)
     ## What alphabets are we using? ##
     alphabet_info = config["alphabet_info"]
     ## What databases are we using? ##
     databases = config["databases"]
-    # get all database details
-    database_info = config["database_info"]
 
-    # default filenaming for each database
-    # variables: db_name, alphabet, ksize, db_type, suffix
-    db_target_templates= config["database_target_template"]
-    info_templates = db_target_templates["info_csv"]
-    db_templates = db_target_templates["database"]
-
-    # iterate through dbinfo and build targets for the alphabets we're using
-    for db in databases:
-        db_targs,db_names=[],[]
-        db_info = config["database_info"][db]
-        for db_alphabet, db_alpha_info in db_info["alphabets"].items():
-            if db_alphabet in alphabet_info.keys():
-                for db_ksize, dbs in db_alpha_info.items():
-                    ksize_int = int(db_ksize[1:]) # db_ksize is string w/format: k{ksize}
-                    # only build target if db has matching ksize available.
-                    # todo: also handle scaled here???
-                    if ksize_int in alphabet_info[db_alphabet]["ksizes"]:
-
-                        for db_type in dbs.keys():
-                            suffix = config["database_suffixes"][db_type]
-                            db_filenames = expand(db_templates, db_name=db,alphabet=db_alphabet, ksize=db_ksize, db_type=db_type, suffix=suffix)
-                            # generate db_name, needed for workflow targets. sigh, don't like this - do it better.
-                            end = f".{db_type}.{suffix}"
-                            names = [fn.rsplit(end)[0] for fn in db_filenames]
-                            db_targs+=db_filenames
-                            db_names+=names
-        # if we have any targets for this database name, also grab the info csv target
-        if db_targs:
-            # also get the db info csv
-            db_info = expand(info_templates, db_name=db)
-            db_targs+=db_info
-        # add targets for this database
-        database_targets+=db_targs
-        database_names+=db_names
-
+    # add database_dir path to database_targets
     database_dir=config["database_dir"]
     final_db_targs = [os.path.join(database_dir, x) for x in database_targets]
-    if also_return_database_names:
-        return final_db_targs, database_names
 
     return final_db_targs
 
@@ -327,14 +318,17 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     pipeline= config["pipeline"]
     db_required = config["pipelines"][pipeline]["databases_required"]
     if db_required:
-        database_targets, database_names = generate_database_targets(config, also_return_database_names=True)
+        database_targets = generate_database_targets(config)
+        database_names = config["databases"]
     else:
         generate_db_targets=False
         database_targets,database_names=[],[]
+
+    # TO DO: do this with fullnames? Also make a rule to print csv info for generated indices
     index_names = []
     if pipeline == "generate_index":
         for alpha, alphaInfo in alphabet_info.items():
-            index_names+=expand("{basename}.{alpha}-k{ksize}.scaled{scaled}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
+            index_names+=expand("{basename}.{alpha}-k{ksize}-scaled{scaled}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
 
     # generate targets for each step
     steps = config["pipelines"][pipeline]["steps"]
@@ -344,6 +338,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
 
         # fill variables in the output filenames
         for stepF in step_files:
+            # WHAT IS db_nameused for here???? need to remove bc databases will now be the fullnames
             pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=database_names, basename=basename, db_name=config.get("databases", []), index=index_names)
 
     if generate_db_targets:
