@@ -40,7 +40,7 @@ alphabet_defaults:
     moltype: "dayhoff"
     ksize_multiplier: 3
   hp:
-    ksizes: [33] #, 42]
+    ksizes: [33]
     scaled: 100
     alpha_cmd: "--hp"
     moltype: "hp"
