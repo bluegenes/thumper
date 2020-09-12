@@ -34,6 +34,11 @@ RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_maj
 
 
 def add_hashes_at_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
+    """\
+    Takes a dictionary of minhash objects keyed by lineage tuples,
+    and adds the given hashes to each lineage minhash for each rank
+    down to match_rank.
+    """
     lineage = pop_to_rank(lineage, match_rank)
     for rank in lca_utils.taxlist(include_strain=False):
         lin_at_rank = pop_to_rank(lineage, rank)
@@ -41,10 +46,10 @@ def add_hashes_at_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
         # if pop to rank yields original lineage, break
         if lin_at_rank == lineage:
             break
-    return lineage_hashD
 
 
 def get_lineage_at_match_rank(linDB, sig, match_rank):
+    "Look up the given signature in the lineage DB, return lineage at rank."
     match_ident = get_ident(sig)
     match_lineage = linDB.ident_to_lineage[match_ident]
     match_lineage = pop_to_rank(match_lineage, match_rank)
@@ -52,18 +57,23 @@ def get_lineage_at_match_rank(linDB, sig, match_rank):
 
 
 def calculate_containment_at_rank(lineage_hashD, query_sig, match_rank):
-    # calculate containment for each lineage match at each rank
+    "calculate containment for the query for every entry and rank in hashD."
     summarized_results = defaultdict(list)
     scaled_val = int(query_sig.minhash.scaled)
     ksize = int(query_sig.minhash.ksize)
+
     for lin, matched_hashes in lineage_hashD.items():
         rank = lin[-1].rank
         # TODO; check this. just scaled_val, or scaled * ksize * num matched hashes?
-        #intersect_bp = scaled_val * len(matched_hashes) * ksize
-        intersect_bp = get_match_bp(scaled_val, ksize, num_matched_hashes=len(matched_hashes))
-        linmatch_sig = sourmash.SourmashSignature(matched_hashes) #ADD MORE INFO (e.g. name/ident?) HERE IF KEEPING SIG?
+        intersect_bp = get_match_bp(scaled_val, ksize,
+                                    num_matched_hashes=len(matched_hashes))
+        # ADD MORE INFO (e.g. name/ident?) HERE IF KEEPING SIG?
+        linmatch_sig = sourmash.SourmashSignature(matched_hashes)
         containment = query_sig.contained_by(linmatch_sig)
-        summarized_results[rank].append((lin, containment, intersect_bp, linmatch_sig)) # optionally don't keep track of sig here
+
+        # optionally don't keep track of sig here
+        summarized_results[rank].append((lin, containment, intersect_bp, linmatch_sig))
+
     return summarized_results
 
 
@@ -120,7 +130,7 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
             if summarize_at_ranks:
                 # Keep track of matched hashes at higher taxonomic ranks
                 intersected_hashes = query_hashes.intersection(set(match_sig.minhash.hashes))
-                lin_hashes = add_hashes_at_ranks(lin_hashes, intersected_hashes, match_lineage, match_rank)
+                add_hashes_at_ranks(lin_hashes, intersected_hashes, match_lineage, match_rank)
 
     # sort and store results
     search_results = sort_and_store_search_results(results)

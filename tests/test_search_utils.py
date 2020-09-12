@@ -34,6 +34,42 @@ def test_gen_mh():
     return mh.copy_and_clear()
 
 
+def test_add_hashes_at_ranks_0_():
+    lin1 = lca_utils.make_lineage('a;b;c;d;e;f;g')
+    hashval1 = 12345678
+    print(lin1)
+
+    lineage_hashD = defaultdict(test_gen_mh)
+
+    add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, 'genus')
+
+    for rank in 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus':
+        check_lin = pop_to_rank(lin1, rank)
+        assert list(lineage_hashD[check_lin].hashes) == [hashval1]
+
+    # CTB: I believe this should NOT work because lin1 is at species level
+    # but we are only asking to do this down to genus. NTP?
+    assert lin1 not in lineage_hashD.keys()
+
+
+def test_add_hashes_at_ranks_0_order():
+    lin1 = lca_utils.make_lineage('a;b;c;d;e;f;g')
+    hashval1 = 12345678
+    print(lin1)
+
+    lineage_hashD = defaultdict(test_gen_mh)
+
+    add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, 'order')
+
+    for rank in 'superkingdom', 'phylum', 'class', 'order':
+        check_lin = pop_to_rank(lin1, rank)
+        assert list(lineage_hashD[check_lin].hashes) == [hashval1]
+
+    for rank in 'family', 'genus':        # CTB: add species here? see above.
+        check_lin = pop_to_rank(lin1, rank)
+        assert list(lineage_hashD[check_lin].hashes) == []
+
+
 def test_add_hashes_at_ranks_1():
     lin1 = lca_utils.make_lineage('a')
     hashval1  = 12345678
@@ -45,7 +81,7 @@ def test_add_hashes_at_ranks_1():
     lin2 = lca_utils.make_lineage('a;b')
     hashval2 = 87654321
     match_rank="genus"
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
 
     assert set(lineage_hashD[lin1].hashes) == set([hashval1, hashval2])
     assert set(lineage_hashD[lin2].hashes) == set([hashval2])
@@ -64,7 +100,7 @@ def test_add_hashes_at_ranks_2():
     lin3 = lca_utils.make_lineage('a;b;c')
     hashval2 = 87654321
     match_rank="genus"
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
 
     assert set(lineage_hashD[lin1].hashes) == set([hashval1, hashval2])
     assert set(lineage_hashD[lin2].hashes) == set([hashval1, hashval2])
@@ -86,7 +122,7 @@ def test_add_hashes_at_ranks_3():
     lin5 = lca_utils.make_lineage('d')
     hashval2 = 87654321
     match_rank="genus"
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
 
     assert set(lineage_hashD[lin1].hashes) == set([hashval1])
     assert set(lineage_hashD[lin2].hashes) == set([hashval1])
@@ -108,7 +144,7 @@ def test_add_hashes_at_ranks_4():
     lin3 = lca_utils.make_lineage('a;d')
     hashval2 = 87654321
     match_rank="genus"
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin3, match_rank)
 
     assert set(lineage_hashD[lin1].hashes) == set([hashval1])
     assert set(lineage_hashD[lin2].hashes) == set([hashval1, hashval2])
@@ -138,7 +174,7 @@ def test_calculate_containment_at_rank_1():
     match_rank="genus"
     # make lineage hashD
     lineage_hashD=defaultdict(test_gen_mh)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
 
     # calculate containment
     containmentD = calculate_containment_at_rank(lineage_hashD, sig1, match_rank)
@@ -157,8 +193,8 @@ def test_calculate_containment_at_rank_2():
     match_rank="genus"
     # make lineage hashD
     lineage_hashD=defaultdict(test_gen_mh)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
 
     # calculate containment
     containmentD = calculate_containment_at_rank(lineage_hashD, sig1, match_rank)
@@ -181,8 +217,8 @@ def test_calculate_containment_at_rank_3():
     match_rank="genus"
     # make lineage hashD
     lineage_hashD=defaultdict(test_gen_mh)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
 
     # make query sig
     mh = make_mh([hashval1,hashval2])
@@ -210,8 +246,8 @@ def test_calculate_containment_at_rank_4():
     match_rank="genus"
     # make lineage hashD
     lineage_hashD=defaultdict(test_gen_mh)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
 
     # make query sig
     mh = make_mh([hashval1,hashval2, 33333333, 44444444])
@@ -238,8 +274,8 @@ def test_sort_by_rank_and_containment_1():
     match_rank="genus"
     # make lineage hashD
     lineage_hashD=defaultdict(test_gen_mh)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval1], lin1, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
     # make query sig
     mh = make_mh([hashval1,hashval2, 33333333, 44444444])
     query_sig = sourmash.SourmashSignature(mh, name='query')
@@ -272,8 +308,8 @@ def test_sort_by_rank_and_containment_2():
     match_rank="genus"
     # make lineage hashD
     lineage_hashD=defaultdict(test_gen_mh)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval1, hashval3], lin1, match_rank)
-    lineage_hashD = add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval1, hashval3], lin1, match_rank)
+    add_hashes_at_ranks(lineage_hashD, [hashval2], lin2, match_rank)
     # make query sig
     mh = make_mh([hashval1,hashval2, hashval3, 44444444])
     query_sig = sourmash.SourmashSignature(mh, name='query')
