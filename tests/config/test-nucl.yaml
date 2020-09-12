@@ -21,7 +21,7 @@ search_databases:
   - gtdb-nine
 
 # list of genome filenames to decontaminate
-sample_list: tests/config/nucl-samplelist.txt
+sample_list: tests/config/nucl-samplelist.csv
 
 # directory in which genome filenames live
 data_dir: tests/test-data/genomes

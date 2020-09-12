@@ -52,7 +52,6 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
 
         # add defaults and system config files, in that order
     configfiles = [get_package_configfile("config.yaml"),
-                   get_package_configfile("databases.yaml"),
                    get_package_configfile("pipelines.yaml")]
 
     if configfile:
@@ -98,15 +97,15 @@ def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose, outdir)
                   verbose=verbose,outdir=outdir,
                   extra_args=snakemake_args)
 
-# download databases using a special Snakefile
+# get databases using a special Snakefile
 @click.command()
 @click.option('--configfile', type=click.Path(exists=True), default=None)
 @click.option('--verbose', is_flag=True)
 # does this outdir need to exist?
 @click.option('--outdir', nargs=1, type=click.Path(exists=True))
-def download_db(configfile, verbose):
-    "download the necessary databases"
-    run_snakemake(configfile, snakefile_name='download_databases.snakefile',
+def get_db(configfile, verbose):
+    "get the necessary databases"
+    run_snakemake(configfile, snakefile_name='get_databases.snakefile',
                   verbose=verbose, outdir=outdir,
                   no_use_conda=True)
 
@@ -205,7 +204,7 @@ cli.add_command(check)
 cli.add_command(showconf)
 cli.add_command(info)
 cli.add_command(init)
-cli.add_command(download_db)
+cli.add_command(get_db)
 
 def main():
     cli()

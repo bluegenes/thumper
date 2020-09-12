@@ -18,12 +18,14 @@ database_info=config["database_info"]
 rule download_databases:
     input: tp.generate_database_targets(config)
 
+
 rule get_dbinfo:
     output:
-        os.path.join(database_dir, "{db_name}-info.csv")
+        os.path.join(database_dir, "{db_basename}.info.csv")
     params:
-         csv_info= lambda w: database_info[w.db_name]["info_csv"]
-    log: os.path.join(db_logs, "get_dbs", "{db_name}.info.get")
+         #csv_info= lambda w: database_info.at[w.db_name, 'info_path']
+         csv_info= lambda w: database_info.loc[database_info["db_basename"]== w.db_basename]["info_path"][0]
+    log: os.path.join(db_logs, "get_dbs", "{db_basename}.info.get")
     threads: 1
     resources:
         mem_mb=1000,
@@ -38,10 +40,11 @@ rule get_dbinfo:
 
 rule get_sbt:
     output:
-        os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}.sbt.zip")
+        os.path.join(database_dir, "{database}.sbt.zip")
     params:
-        sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["sbt"]
-    log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.sbt.zip.get")
+        #sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["sbt"]
+        sbt_info= lambda w: database_info.at[w.database,"path"]
+    log: os.path.join(db_logs, "get_dbs", "{database}.sbt.get")
     threads: 1
     resources:
         mem_mb=1000,
@@ -54,20 +57,20 @@ rule get_sbt:
             full_output = os.path.abspath(str(output))
             shell("ln -s {full_input} {full_output} 2> {log}")
 
-rule get_lca:
-    output:
-        os.path.join(database_dir, "{db_name}.{alphabet}.k{ksize}.lca.json.gz")
-    params:
-        lca_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["lca"]
-    log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.lca.json.gz.get")
-    threads: 1
-    resources:
-        mem_mb=1000,
-        runtime=600
-    run:
-        if params.lca_info.startswith(tuple(urls_begin)):
-            shell("curl -L {params.lca_info}  > {output}")
-        else:
-            full_input = os.path.abspath(str(params.lca_info))
-            full_output = os.path.abspath(str(output))
-            shell("ln -s {full_input} {full_output} 2> {log}")
+#rule get_lca:
+#    output:
+#        os.path.join(database_dir, "{db_name}.{alphabet}.k{ksize}.lca.json.gz")
+#    params:
+#        lca_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["lca"]
+#    log: os.path.join(db_logs, "get_dbs", "{db_name}.{alphabet}-k{ksize}.lca.json.gz.get")
+#    threads: 1
+#    resources:
+#        mem_mb=1000,
+#        runtime=600
+#    run:
+#        if params.lca_info.startswith(tuple(urls_begin)):
+#            shell("curl -L {params.lca_info}  > {output}")
+#        else:
+#            full_input = os.path.abspath(str(params.lca_info))
+#            full_output = os.path.abspath(str(output))
+#            shell("ln -s {full_input} {full_output} 2> {log}")

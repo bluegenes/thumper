@@ -21,4 +21,4 @@ snaketest_prot:
 	pytest tests/test_snakemake.py -v -s -k "002691795 and protein"
 
 alltests:
-	pytest tests
+	pytest tests/*py

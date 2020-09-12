@@ -22,7 +22,7 @@ search_databases:
   - gtdb-nine
 
 # list of genome filenames to decontaminate
-sample_list: tests/config/prot-samplelist.txt
+sample_list: tests/config/prot-samplelist.csv
 
 # directory in which genome filenames live
 data_dir: tests/test-data/proteomes

@@ -13,7 +13,7 @@ def test_empty_contig_search(location):
     args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_000384615.1_protein.100contigs.faa.gz")
     args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_000384615.1_protein.100contigs.faa.gz.sig")
     args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.info.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -50,7 +50,7 @@ def test_empty_genome_search(location):
     args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_000384615.1_protein.100contigs.faa.gz")
     args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_000384615.1_protein.100contigs.faa.gz.sig")
     args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.info.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -91,7 +91,7 @@ def test_contig_search(location):
     args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
     args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
     args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.info.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -154,7 +154,7 @@ def test_contig_search_and_gather(location):
     args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
     args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
     args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.info.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
@@ -226,7 +226,7 @@ def test_genome_search_and_gather(location):
     args.genome = utils.get_testfile("test-data/proteomes/GB_GCA_002691795.1_protein.100contigs.faa.gz")
     args.genome_sig = utils.get_testfile("test-data/intermediate/signatures/GB_GCA_002691795.1_protein.100contigs.faa.gz.sig")
     args.matches_sig = utils.get_testfile("test-data/intermediate/search/GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11.matches.sig")
-    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.lineages.csv")
+    args.lineages_csv = utils.get_testfile("test-data/databases/gtdb-nine.info.csv")
     args.alphabet = "protein"
     args.ksize = 33
     args.output_prefix = "GB_GCA_002691795.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11"
