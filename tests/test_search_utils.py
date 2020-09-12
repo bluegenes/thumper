@@ -49,7 +49,7 @@ def test_add_hashes_at_ranks_0_():
 
     # CTB: I believe this should NOT work because lin1 is at species level
     # but we are only asking to do this down to genus. NTP?
-    assert list(lineage_hashD[lin1].hashes) == [hashval1]
+    assert lin1 not in lineage_hashD.keys()
 
 
 def test_add_hashes_at_ranks_0_order():
