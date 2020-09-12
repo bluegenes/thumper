@@ -34,13 +34,12 @@ RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_maj
 
 
 def add_hashes_at_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
-    # first add full lineage
-    lineage_hashD[lineage].add_many(hashes_to_add)
+    lineage = pop_to_rank(lineage, match_rank)
     for rank in lca_utils.taxlist(include_strain=False):
-        # TODO: add check to pop ONLY if needed (no need to pop at genus if lineage only has superk, phyl)
         lin_at_rank = pop_to_rank(lineage, rank)
         lineage_hashD[lin_at_rank].add_many(hashes_to_add)
-        if rank == match_rank:
+        # if pop to rank yields original lineage, break
+        if lin_at_rank == lineage:
             break
     return lineage_hashD
 
@@ -134,7 +133,7 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
 
 
 def get_match_bp(scaled, ksize, num_matched_hashes=None, match_percent=None, total_num_hashes=None):
-    # TO DO: Check this.
+    # TO DO: ONLY USE NUM MATCHED HASHES
     if match_percent and total_num_hashes:
         return (float(match_percent)*int(total_num_hashes) * int(scaled))
     elif num_matched_hashes:
@@ -167,6 +166,8 @@ def gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=3
 
     f_ident = sum_ident / num_hashes
     f_major = first_count / sum_ident
+    # DO CHECK MATCH BP HERE (USE FIRST COUNT!)
+    # SUM IDENT --> TOTAL MATCHED HASHES
 
     return first_lin, f_ident, f_major
 
