@@ -190,7 +190,7 @@ def check_dbinfo(config, db_basename, dbinfo, alphabet_info, db_input="default",
                 k_scaled = db.split('-')
                 this_k = k_scaled[1]
                 this_scaled= k_scaled[2]
-                print(f'** ERROR: A {db_input} {db_basename} database is not provided for {alpha}, {k}, {scaled}.')
+                print(f'** ERROR: A {db_input} {db_basename} database is not provided for {alpha}, {this_k}, {this_scaled}.')
                 if strict_mode:
                     print('** Strict mode is on. Exiting.')
                     sys.exit(-1)
