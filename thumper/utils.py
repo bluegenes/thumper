@@ -302,7 +302,6 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
 
         # fill variables in the output filenames
         for stepF in step_files:
-            # WHAT IS db_nameused for here???? need to remove bc databases will now be the fullnames
             pipeline_targets += expand(os.path.join(output_dir, step_outdir, stepF), sample=samples, database=config.get("databases", []), basename=basename, index=index_names)
 
     if generate_db_targets:

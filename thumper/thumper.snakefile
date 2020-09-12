@@ -139,11 +139,11 @@ else:
 rule sourmash_search_containment:
     input:
         query=os.path.join(out_dir, "signatures", "{sample}.sig"),
-        database=os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}.sbt.zip")
+        database=os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}-scaled{scaled}.sbt.zip")
     output:
-        csv = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.csv"),
-        matches = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.sig"),
-        txt = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.txt"),
+        csv = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.matches.csv"),
+        matches = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.matches.sig"),
+        txt = os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.matches.txt"),
     params:
         alpha_cmd = lambda w: alphabet_info[w.alphabet]["alpha_cmd"],
         scaled = lambda w: alphabet_info[w.alphabet]["scaled"],
@@ -152,8 +152,8 @@ rule sourmash_search_containment:
     resources:
         mem_mb=lambda wildcards, attempt: attempt *20000,
         runtime=6000,
-    log: os.path.join(logs_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.search.log")
-    benchmark: os.path.join(benchmarks_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.search.benchmark")
+    log: os.path.join(logs_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.log")
+    benchmark: os.path.join(benchmarks_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.benchmark")
     conda: "envs/sourmash-dev.yml"
     shell:
         """
@@ -171,25 +171,25 @@ rule contigs_search:
     input:
         sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
         sample_sig=os.path.join(out_dir, "signatures", "{sample}.sig"),
-        matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.sig"),
-        db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
+        matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.matches.sig"),
+        db_info=lambda w: os.path.join(database_dir, f"{w.db_name}.info.csv")
     output:
-        search_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.search.csv'),
-        search_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.search.matches.sig'),
-        ranksearch_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.ranksearch.csv'),
-        ranksearch_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.ranksearch.matches.sig'),
-        rankgather_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.rankgather.csv'),
-        unmatched=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs.unmatched.fq'),
+        search_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.search.csv'),
+        search_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.search.matches.sig'),
+        ranksearch_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.ranksearch.csv'),
+        ranksearch_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.ranksearch.matches.sig'),
+        rankgather_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.csv'),
+        unmatched=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.unmatched.fq'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
         moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
-        out_prefix = lambda w: os.path.join(out_dir, 'contig-search', f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}"),
+        out_prefix = lambda w: os.path.join(out_dir, 'contig-search', f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}-scaled{w.scaled}"),
     conda: 'envs/sourmash-dev.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *100000,
         runtime=6000,
-    log: os.path.join(logs_dir, "contig-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-search.log")
-    benchmark: os.path.join(benchmarks_dir, "contig-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.contigs-search.benchmark")
+    log: os.path.join(logs_dir, "contig-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs-search.log")
+    benchmark: os.path.join(benchmarks_dir, "contig-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs-search.benchmark")
     shell: 
         """
         python -m thumper.search_or_gather \
@@ -207,24 +207,25 @@ rule genome_search:
     input:
         sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
         sample_sig=os.path.join(out_dir, "signatures", "{sample}.sig"),
-        matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.matches.sig"),
-        db_info=lambda w: config["database_info"][w.db_name]["info_csv"],
+        matches=os.path.join(out_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.matches.sig"),
+        #db_info=config["database_info"].loc["gtdb-nine.hp-k42-scaled10"]["info_path"]
+        db_info=lambda w: os.path.join(database_dir, f"{w.db_name}.info.csv")
     output:
-        search_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.csv'),
-        search_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.search.matches.sig'),
-        ranksearch_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.csv'),
-        ranksearch_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.ranksearch.matches.sig'),
-        rankgather_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}.rankgather.csv'),
+        search_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.csv'),
+        search_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.matches.sig'),
+        ranksearch_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.ranksearch.csv'),
+        ranksearch_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.ranksearch.matches.sig'),
+        rankgather_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.rankgather.csv'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
         moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
-        out_prefix = lambda w: os.path.join(out_dir, 'genome-search', f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}"),
+        out_prefix = lambda w: os.path.join(out_dir, 'genome-search', f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}-scaled{w.scaled}"),
     conda: 'envs/sourmash-dev.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *100000,
         runtime=6000,
-    log: os.path.join(logs_dir, "genome-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.genome-search.log")
-    benchmark: os.path.join(benchmarks_dir, "genome-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}.genome-search.benchmark")
+    log: os.path.join(logs_dir, "genome-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.genome-search.log")
+    benchmark: os.path.join(benchmarks_dir, "genome-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.genome-search.benchmark")
     shell:
         """
         python -m thumper.search_or_gather \
@@ -243,8 +244,8 @@ def aggregate_taxonomy_files_by_database(w):
     sample_list = config["sample_list"]
     db_info = config["database_info"][w.db_name]["info_csv"],
     json_tax,search_sigs=[],[]
-    tax_file = "classify/{sample}.x.{{db_name}}.{alphabet}-k{ksize}.contigs-tax.json"
-    sig_file = "search/{sample}.x.{{db_name}}.{alphabet}-k{ksize}.matches.sig"
+    tax_file = "classify/{sample}.x.{{db_name}}.{alphabet}-k{ksize}-scaled{scaled}.contigs-tax.json"
+    sig_file = "search/{sample}.x.{{db_name}}.{alphabet}-k{ksize}-scaled{scaled}.matches.sig"
     for alpha, alphaInfo in alphabet_info.items():
         json_tax += expand(os.path.join(out_dir, tax_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
         search_sigs += expand(os.path.join(out_dir, sig_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
