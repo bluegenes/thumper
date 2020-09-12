@@ -13,7 +13,7 @@ output_dir: output.demo
 input_type: nucleotide
 
 # list of genome filenames to decontaminate
-sample_list: demo/demo-sample-list.txt 
+sample_list: demo/nucl-samplelist.csv
 
 # directory in which genome filenames live
-data_dir: demo/genomes 
+data_dir: tests/test-data/genomes
