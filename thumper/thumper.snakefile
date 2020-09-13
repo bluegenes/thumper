@@ -82,9 +82,13 @@ def build_sketch_params(output_type):
         # if input is protein, just build protein sketches
         sketch_cmd = "protein "
     for alpha in ["protein", "dayhoff", "hp"]:
+        if alpha in config["alphabet_info"].keys():
         ## default build protein, dayhoff, hp sigs at the default ksizes from config
-        ksizes = config["alphabet_info"][alpha].get("ksizes", config["alphabet_defaults"][alpha]["ksizes"])
-        scaled = config["alphabet_info"][alpha].get("scaled", config["alphabet_defaults"][alpha]["scaled"])
+            ksizes = config["alphabet_info"][alpha].get("ksizes", config["alphabet_defaults"][alpha]["ksizes"])
+            scaled = config["alphabet_info"][alpha].get("scaled", config["alphabet_defaults"][alpha]["scaled"])
+        else:
+            ksizes = config["alphabet_defaults"][alpha]["ksizes"]
+            scaled = config["alphabet_defaults"][alpha]["scaled"]
         sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
     return sketch_cmd
 

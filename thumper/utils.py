@@ -195,7 +195,7 @@ def check_dbinfo(config, db_basename, dbinfo, alphabet_info, db_input="default",
                     print('** Strict mode is on. Exiting.')
                     sys.exit(-1)
                 else:
-                    print('Strict mode is off: attempting to continue. Removing {db} from search databases list.')
+                    print(f'Strict mode is off: attempting to continue. Removing {db} from search databases list.')
     # remove any duplicates
     info_targets=list(set(info_targets))
     db_targs = database_targets + info_targets
@@ -285,7 +285,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     basename = config.get("basename", "thumper-output")
 
     ## What databases are we using?
-    databases = config["databases"]
+    databases = config.get("databases", [])
 
     # TO DO: do this above with fullnames? Also make a rule to print csv info for generated indices
     index_names = []
