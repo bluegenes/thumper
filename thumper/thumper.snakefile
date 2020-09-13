@@ -10,6 +10,7 @@ logs_dir = os.path.join(out_dir, "logs")
 benchmarks_dir = os.path.join(out_dir, "benchmarks")
 database_dir = config['database_dir']
 data_dir = config['data_dir'].rstrip('/')
+report_dir = os.path.join(out_dir, "reports")
 
 
 strict_val = config.get('strict', '1')
@@ -239,7 +240,7 @@ rule genome_search:
             --output-prefix {params.out_prefix}
         """
 
-# For later? Expand sample, alpha, ksize, do NOT expand dbname. Aggregate reports over alpha/ksize
+# for a summary across all genomes, same database:
 def aggregate_taxonomy_files_by_database(w):
     sample_list = config["sample_list"]
     db_info = config["database_info"][w.db_name]["info_csv"],
@@ -256,39 +257,64 @@ def aggregate_taxonomy_files_by_database(w):
                 "all_sig": search_sigs}
     return db_files
 
-#rule make_hit_list:
-#    #input: unpack(aggregate_taxonomy_files)
-#    input:
-#        sample_list = config["sample_list"],
-#        db_info = lambda w: config["database_info"][w.db_name]["info_csv"],
-#        all_json = expand(os.path.join(out_dir, "classify/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.contigs-tax.json"), sample=sample_names),
-#        all_sig = expand(os.path.join(out_dir, "search/{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}.matches.sig"), sample=sample_names),
-#    output:
-#        os.path.join(out_dir, "classify", "{basename}.x.{db_name}.{alphabet}-k{ksize}.hit_list_for_filtering.csv")
-#    params:
-#        output_dir = out_dir,
-#        min_f_major = float(config["min_f_major"]),
-#        min_f_ident = float(config["min_f_ident"]),
-#        moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
-#        ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
-#    resources:
-#        mem_mb=lambda wildcards, attempt: attempt *40000,
-#        runtime=6000,
-#    conda: 'envs/sourmash-dev.yml'
-#    shell:
-#        #    --provided-lineages {input.provided_lineages} \
-#        """
-#        python -m thumper.compare_taxonomy \
-#            --input-directory {params.output_dir} \
-#            --genome-list-file {input.sample_list} \
-#            --database-name {wildcards.db_name} \
-#            --lineages-csv {input.db_info} \
-#            --alphabet {params.moltype} \
-#            --ksize {params.ksize} \
-#            --output {output} \
-#            --min_f_ident={params.min_f_ident} \
-#            --min_f_major={params.min_f_major}
-#        """
 
+# papermill reporting rules
+rule set_kernel:
+    output:
+        f"{output_dir}/.kernel.set"
+    conda: 'envs/reporting-env.yml'
+    shell: """
+        python -m ipykernel install --user --name thumper
+        touch {output}
+    """
 
+# use this notebook to aggregate files from 1. search containment, gather, 2. multiple alphas, 3. multiple databases?
+rule make_notebook:
+    input:
+        nb='thumper/notebooks/genome-report.ipynb',
+        contigs=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.csv'),
+        genome=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.rankgather.csv') 
+        kernel_set = rules.set_kernel.output
+    params:
+        name = lambda w: f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}-scaled{w.scaled}"
+    output:
+        os.path.join(report_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb')
+    conda: 'envs/reporting-env.yml'
+    shell: 
+        """
+        papermill {input.nb} - -k thumper --cwd {report_dir} \
+              -p directory .. -p render '' \
+              -p name {params.name:q} \
+              > {output}
+        """
 
+rule make_html:
+    input:
+        notebook=os.path.join(report_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb')
+        genome_summary=f'{output_dir}/genome_summary.csv',
+        hitlist=f'{output_dir}/hit_list_for_filtering.csv',
+        contigs_json=f'{output_dir}/{{g}}.contigs-tax.json',
+    output:
+        report_dir + '/{g}.fig.html',
+    conda: 'envs/reporting-env.yml'
+    shell: 
+        """
+        python -m nbconvert {input.notebook} --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output}
+        """
+     
+
+rule make_index:
+    input:
+        notebook='thumper/notebooks/report_index.ipynb',
+        summary=f'{output_dir}/genome_summary.csv',
+        kernel_set = rules.set_kernel.output
+    output:
+        nb=f'{report_dir}/index.ipynb',
+        html=f'{report_dir}/index.html',
+    conda: 'envs/reporting-env.yml'
+    shell: 
+        """
+        papermill {input.notebook} - -p name {out_dir:q} -p render '' \
+            -p directory .. -k thumper --cwd {report_dir} > {output.nb}
+        python -m nbconvert {output.nb} --stdout --no-input > {output.html}
+        """
