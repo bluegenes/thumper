@@ -1,8 +1,8 @@
 db_basename,alphabet,ksize,scaled,path,info_path
-gtdb.rep_genus,nucleotide,21,1000,/home/ntpierce/2020-gtdb-smash/index-gtdb/sbt/gtdb_rna.rep_genus.nucleotide_scaled1000_k21.index.sbt.zip,/home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
-gtdb.rep_genus,protein,11,100,https://osf.io/3w5xr/download,/home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
-gtdb.rep_genus,dayhoff,19,100,https://osf.io/g9dme/download,/home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
-gtdb.rep_genus,hp,33,100,https://osf.io/6zqu9/download,/home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
+gtdb.rep_genus,nucleotide,21,1000,/home/ntpierce/2020-gtdb-smash/index-gtdb/sbt/gtdb_rna.rep_genus.nucleotide_scaled1000_k21.index.sbt.zip,https://osf.io/3vm65/download
+gtdb.rep_genus,protein,11,100,https://osf.io/3w5xr/download,https://osf.io/3vm65/download
+gtdb.rep_genus,dayhoff,19,100,https://osf.io/g9dme/download,https://osf.io/3vm65/download
+gtdb.rep_genus,hp,33,100,https://osf.io/6zqu9/download,https://osf.io/3vm65/download
 gtdb-r89,nucleotide,21,10000,/home/ntpierce/2020-gtdb-smash/index-gtdb/sbt/gtdb-release89-k21.sbt.zip,/home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
 gtdb-r89,nucleotide,31,10000,https://osf.io/5mb9k/download,/home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
 gtdb-r89,nucleotide,51,10000,/home/ntpierce/2020-gtdb-smash/index-gtdb/sbt/gtdb-release89-k51.sbt.zip,/home/ntpierce/2020-gtdb-smash/gtdb-lineages.rna-filenames.with-signames.csv
