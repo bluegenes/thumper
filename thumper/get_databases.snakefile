@@ -11,7 +11,7 @@ db_benchmarks = os.path.join(database_dir, "benchmarks")
 
 urls_begin = ["http", "ftp"]
 
-#database_info=config["database_info"]
+database_info=config["database_info"]
 
 
 localrules: get_dbinfo, get_sbt
