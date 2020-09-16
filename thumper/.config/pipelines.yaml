@@ -9,7 +9,7 @@ pipelines:
       - sourmash_search_containment
       - genome_search
     databases:
-      - gtdb.rep_genus
+      - gtdb-genus-n0
       #- gtdb-r89
   gtdb_classification_contig:
     databases_required: True
@@ -20,7 +20,7 @@ pipelines:
       - contigs_search
      # - make_hit_list
     databases:
-      - gtdb.rep_genus
+      - gtdb-genus-n0
       #- gtdb-r89
   #taxonomic_classification_genbank:
   #protein_annotation_PFAM:

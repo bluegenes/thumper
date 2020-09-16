@@ -135,7 +135,7 @@ def make_db_fullname(row):
     return row
 
 
-def load_database_info(databases_file, existing_db_info=None,strict_mode=False):
+def load_database_infa(databases_file, existing_db_info=None,strict_mode=False):
     db_file = find_input_file(databases_file)
     if '.tsv' in db_file or '.csv' in db_file:
         separator = '\t'
@@ -176,26 +176,27 @@ def check_dbinfo(config, db_basename, dbinfo, alphabet_info, db_input="default",
     available_databases = list(dbinfo.index)
 
     # construct fullnames that we want to make
-    desired_db_fullnames = []
+    desired_dbfullnames = []
     for alpha, alphaInfo in alphabet_info.items():
-        desired_dbfullnames = expand("{name}.{alpha}-k{ksize}-scaled{scaled}", name=db_basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
-        # this now checks alphas, ksizes, scaled!
-        for db in desired_dbfullnames:
-            if db in available_databases:
-                databases_to_use.append(db)
-                # get database_targets
-                database_targets.append(f"{db}.{db_suffix}")
-                info_targets.append(f"{db_basename}.{info_suffix}")
+        desired_dbfullnames += expand("{name}.{alpha}-k{ksize}-scaled{scaled}", name=db_basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
+
+    # this now checks alphas, ksizes, scaled!
+    for db in set(desired_dbfullnames):
+        if db in available_databases:
+            databases_to_use.append(db)
+            # get database_targets
+            database_targets.append(f"{db}.{db_suffix}")
+            info_targets.append(f"{db_basename}.{info_suffix}")
+        else:
+            # get alpha, ksize, scaled from db_fullname
+            alpha_k_scaled = db.split(f"{db_basename}.")[1]
+            this_alpha, this_k, this_scaled = alpha_k_scaled.split("-")
+            print(f'** ERROR: A {db_input} {db_basename} database is not provided for {this_alpha}, {this_k}, {this_scaled}.')
+            if strict_mode:
+                print('** Strict mode is on. Exiting.')
+                sys.exit(-1)
             else:
-                k_scaled = db.split('-')
-                this_k = k_scaled[1]
-                this_scaled= k_scaled[2]
-                print(f'** ERROR: A {db_input} {db_basename} database is not provided for {alpha}, {this_k}, {this_scaled}.')
-                if strict_mode:
-                    print('** Strict mode is on. Exiting.')
-                    sys.exit(-1)
-                else:
-                    print(f'Strict mode is off: attempting to continue. Removing {db} from search databases list.')
+                print(f'Strict mode is off: attempting to continue. Removing {db} from search databases list.')
     # remove any duplicates
     info_targets=list(set(info_targets))
     db_targs = database_targets + info_targets
@@ -272,6 +273,10 @@ def integrate_user_config(config):
 
 
 def generate_database_targets(config):
+    # if just downloading databases, allow folks to use minimal config
+    if not config.get("input_type"):
+        # if don't specify, use nucl to download all dbs
+        config["input_type"] = "nucleotide"
     database_targets = integrate_user_config(config)
     return database_targets
 
