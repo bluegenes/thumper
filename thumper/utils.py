@@ -135,7 +135,7 @@ def make_db_fullname(row):
     return row
 
 
-def load_database_infa(databases_file, existing_db_info=None,strict_mode=False):
+def load_database_info(databases_file, existing_db_info=None,strict_mode=False):
     db_file = find_input_file(databases_file)
     if '.tsv' in db_file or '.csv' in db_file:
         separator = '\t'
