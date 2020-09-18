@@ -3,11 +3,11 @@ utility functions for charcoal.
 """
 import json
 from collections import defaultdict, Counter, namedtuple
-from operator import itemgetter
 import csv
+import numpy
 
 import sourmash
-from sourmash.lca import lca_utils, LineagePair, taxlist
+from sourmash.lca import lca_utils, LineagePair, taxlist, display_lineage
 
 
 def is_lineage_match(lin_a, lin_b, rank):
@@ -223,8 +223,25 @@ def is_contig_contaminated(genome_lineage, contig_taxlist, rank, match_count_thr
     return is_bad
 
 
-class HitList:
-    def __init__(self, filename):
+def is_contig_clean(genome_lineage, contig_taxlist, rank, match_count_threshold):
+    taxlist_at_rank = summarize_at_rank(contig_taxlist, rank)
+
+    if contig_taxlist:
+        top_hit, count = contig_taxlist[0]
+        if count >= match_count_threshold:
+            if genome_lineage and is_lineage_match(genome_lineage, top_hit, rank):
+                return True
+
+    return False
+
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+
+class CSV_DictHelper:
+    def __init__(self, filename, key):
         self.rows = {}
         with open(filename, 'rt') as fp:
             r = csv.DictReader(fp)
@@ -232,8 +249,14 @@ class HitList:
                 genome = row['genome']
                 self.rows[genome] = row
 
-    def __getitem__(self, g):
-        return self.rows[g]
+    def __getitem__(self, k):
+        return AttrDict(self.rows[k])
+
+    def __iter__(self):
+        return iter(self.rows)
+
+    def __len__(self):
+        return len(self.rows)
 
 
 def make_lineage(lineage):
@@ -242,5 +265,116 @@ def make_lineage(lineage):
     if len(lin) == 1:
         lin = lineage.split(',')
     lin = [ LineagePair(rank, n) for (rank, n) in zip(taxlist(), lin) ]
+    lin = tuple(lin)
 
     return lin
+
+
+def save_contamination_summary(detected_contam, fp):
+    "Save a contamination summary to JSON."
+    source_contam = list(detected_contam.items())
+
+    contam_l = []
+    for k, values in source_contam:
+        for j, cnt in values.most_common():
+            contam_l.append((k, j, cnt))
+
+    json.dump(contam_l, fp)
+
+
+def load_contamination_summary(fp):
+    "Load a contamination summary saved by save_contamination_summary."
+    x = json.load(fp)
+
+    source_d = defaultdict(int)
+    for source, target, count in x:
+        source = tuple([ LineagePair(rank, name) for rank, name in source ])
+        target = tuple([ LineagePair(rank, name) for rank, name in target ])
+        target_d = source_d.get(source)
+        if not target_d:
+            target_d = defaultdict(int)
+        target_d[target] = count
+        source_d[source] = target_d
+
+    return source_d
+
+
+def filter_contam(contam_d, threshold_f, display_at_rank='phylum'):
+    "Filter a contamination dictionary down to a list of counts/src/target."
+
+    pairtup_list = []
+    for k, target_d in contam_d.items():
+        source_lin = pop_to_rank(k, display_at_rank)
+        for lin, count in target_d.items():
+            target_lin = pop_to_rank(lin, display_at_rank)
+            keytup = (source_lin, target_lin)
+            pairtup_list.append((count, keytup))
+
+    pairtup_list.sort(reverse=True)
+
+    total_counts = 0
+    for count, (k, lin) in pairtup_list:
+        total_counts += count
+
+    # grab % of the total counts
+    threshold = threshold_f * total_counts
+    sub_list = []
+    sofar = 0
+    for count, v in pairtup_list:
+        sofar += count
+        if sofar > threshold:
+            break
+        sub_list.append((count, v))
+        
+    return sub_list
+
+
+class NextIndex:
+    "A class to do counting for defaultdict indices."
+    def __init__(self):
+        self.idx = -1
+        
+    def __call__(self):
+        self.idx += 1
+        return self.idx
+    
+    def __len__(self):
+        return self.idx + 1
+    
+def build_contamination_matrix(contam_list):
+    "Build a matrix that can be used for a heatmap viz."
+    source_idx = NextIndex()
+    source_indices = defaultdict(source_idx)
+
+    target_idx = NextIndex()
+    target_indices = defaultdict(target_idx)
+
+    for count, (source, target) in contam_list:
+        _ = source_indices[source]
+        _ = target_indices[target]
+
+    mat = numpy.zeros((len(source_idx), len(target_idx)))
+
+    for count, (source, target) in contam_list:
+        i = source_indices[source]
+        j = target_indices[target]
+
+        mat[i,j] += count
+
+    source_labels = [""] * len(source_idx)
+    for k, idx in source_indices.items():
+        source_labels[idx] = display_lineage(k)
+
+    target_labels = [""] * len(target_idx)
+    for k, idx in target_indices.items():
+        target_labels[idx] = display_lineage(k)
+
+
+    mat_l = []
+    for j in range(len(target_idx)):
+        x = []
+        for i in range(len(source_idx)):
+            x.append(mat[i, j])
+        mat_l.append(x)
+        
+    return source_labels, target_labels, mat_l
