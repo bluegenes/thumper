@@ -733,7 +733,7 @@ def test_get_match_bp_1():
     num_matched_hashes=2
     scaled=1
     ksize=3
-    match_bp = get_match_bp(scaled, ksize, num_matched_hashes=num_matched_hashes)
+    match_bp = get_match_bp(scaled, num_matched_hashes=num_matched_hashes)
     assert match_bp == 2.0
 
 def test_get_match_bp_2():
@@ -741,7 +741,7 @@ def test_get_match_bp_2():
     f_major = 0.5
     scaled=1
     ksize=3
-    match_bp = get_match_bp(scaled, ksize, match_percent=f_major, total_num_hashes=total_num_hashes)
+    match_bp = get_match_bp(scaled, match_percent=f_major, total_num_hashes=total_num_hashes)
     assert match_bp == 2.0
 
 def test_get_match_bp_3():
@@ -749,7 +749,7 @@ def test_get_match_bp_3():
     f_major = 0.5
     scaled=1
     ksize=3
-    match_bp = get_match_bp(scaled, ksize, match_percent=f_major)
+    match_bp = get_match_bp(scaled, match_percent=f_major)
     assert match_bp == "NA"
 
 @utils.in_tempdir

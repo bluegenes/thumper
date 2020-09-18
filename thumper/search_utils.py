@@ -64,9 +64,7 @@ def calculate_containment_at_rank(lineage_hashD, query_sig, match_rank):
 
     for lin, matched_hashes in lineage_hashD.items():
         rank = lin[-1].rank
-        # TODO; check this. just scaled_val, or scaled * ksize * num matched hashes?
-        intersect_bp = get_match_bp(scaled_val, ksize,
-                                    num_matched_hashes=len(matched_hashes))
+        intersect_bp = get_match_bp(scaled_val, num_matched_hashes=len(matched_hashes))
         # ADD MORE INFO (e.g. name/ident?) HERE IF KEEPING SIG?
         linmatch_sig = sourmash.SourmashSignature(matched_hashes)
         containment = query_sig.contained_by(linmatch_sig)
@@ -142,8 +140,7 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
     return search_results, search_results_at_rank
 
 
-def get_match_bp(scaled, ksize, num_matched_hashes=None, match_percent=None, total_num_hashes=None):
-    # TO DO: ONLY USE NUM MATCHED HASHES
+def get_match_bp(scaled, num_matched_hashes=None, match_percent=None, total_num_hashes=None):
     if match_percent and total_num_hashes:
         return (float(match_percent)*int(total_num_hashes) * int(scaled))
     elif num_matched_hashes:
@@ -178,7 +175,7 @@ def gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=3
     f_major = first_count / sum_ident
     # DO CHECK MATCH BP HERE (USE FIRST COUNT!)
     # SUM IDENT --> TOTAL MATCHED HASHES
-
+    #intersect_bp = get_match_bp(scaled_val, num_matched_hashes=len(matched_hashes))
     return first_lin, f_ident, f_major
 
 
@@ -206,20 +203,21 @@ class SearchFiles:
     """
     def __init__(self, out_prefix, search=True, gather=False, contigs=True):
 
+        self.prefix = out_prefix
         self.gather = gather
         self.search = search
         self.contigs = contigs
 
         if self.contigs:
-            out_prefix = out_prefix + ".contigs"
-
-            self.unmatched = open(f"{out_prefix}.unmatched.fq", "w")
+            #out_prefix = out_prefix + ".contigs"
+            self.prefix = out_prefix + ".contigs"
+            self.unmatched = open(f"{self.prefix}.unmatched.fq", "w")
 
         if self.search:
-            self.search_csv = open(f"{out_prefix}.search.csv", "w")
-            self.search_matches = open(f"{out_prefix}.search.matches.sig", "w")
-            self.ranksearch_csv = open(f"{out_prefix}.ranksearch.csv", "w")
-            self.ranksearch_matches = open(f"{out_prefix}.ranksearch.matches.sig", "w")
+            self.search_csv = open(f"{self.prefix}.search.csv", "w")
+            self.search_matches = open(f"{self.prefix}.search.matches.sig", "w")
+            self.ranksearch_csv = open(f"{self.prefix}.ranksearch.csv", "w")
+            self.ranksearch_matches = open(f"{self.prefix}.ranksearch.matches.sig", "w")
             self.search_sigs = []
             self.ranksearch_sigs = []
 
@@ -233,7 +231,7 @@ class SearchFiles:
             self.rank_w.writeheader()
 
         if self.gather:
-            self.rankgather_csv = open(f"{out_prefix}.rankgather.csv", "w")
+            self.rankgather_csv = open(f"{self.prefix}.rankgather.csv", "w")
             gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major']
             self.gather_rank_w = csv.DictWriter(self.rankgather_csv, fieldnames=gather_rank_fieldnames)
             self.gather_rank_w.writeheader()
@@ -258,6 +256,14 @@ class SearchFiles:
             d["match_rank"] = result.lineage[-1].rank
             #d["major_bp"] = get_match_bp(float(gr.f_major))
             self.gather_rank_w.writerow(d)
+
+    def write_taxonomy_json(self, tax_dict, result_type="gather"):
+        if self.search and result_type == "search":
+            with open(f"{self.prefix}.ranksearch.json", "w") as ranksearch_json:
+                ranksearch_json.write(json.dumps(tax_dict))
+        elif self.gather and result_type == "gather":
+            with open(f"{self.prefix}.rankgather.json", "w") as rankgather_json:
+                rankgather_json.write(json.dumps(tax_dict))
 
 
     def close(self):
