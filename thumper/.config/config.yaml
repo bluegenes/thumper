@@ -65,8 +65,6 @@ sourmash_search_containment:
     - "{sample}.x.{database}.matches.csv"
     - "{sample}.x.{database}.matches.sig"
     - "{sample}.x.{database}.matches.txt"
-  databases:
-   - gtdb.rep_genus
 
 contigs_search:
   output_dir: contig-search

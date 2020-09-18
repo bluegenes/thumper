@@ -14,17 +14,14 @@ urls_begin = ["http", "ftp"]
 database_info=config["database_info"]
 
 
-# if running as standalone, use this as rule all
-rule download_databases:
-    input: tp.generate_database_targets(config)
-
+localrules: get_dbinfo, get_sbt
 
 rule get_dbinfo:
     output:
         os.path.join(database_dir, "{db_basename}.info.csv")
     params:
          #csv_info= lambda w: database_info.at[w.db_name, 'info_path']
-         csv_info= lambda w: database_info.loc[database_info["db_basename"]== w.db_basename]["info_path"][0]
+         csv_info= lambda w: config["database_info"].loc[database_info["db_basename"]== w.db_basename]["info_path"][0]
     log: os.path.join(db_logs, "get_dbs", "{db_basename}.info.get")
     threads: 1
     resources:
@@ -43,7 +40,7 @@ rule get_sbt:
         os.path.join(database_dir, "{database}.sbt.zip")
     params:
         #sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["sbt"]
-        sbt_info= lambda w: database_info.at[w.database,"path"]
+        sbt_info= lambda w: config["database_info"].at[w.database,"path"]
     log: os.path.join(db_logs, "get_dbs", "{database}.sbt.get")
     threads: 1
     resources:
@@ -56,6 +53,11 @@ rule get_sbt:
             full_input = os.path.abspath(str(params.sbt_info))
             full_output = os.path.abspath(str(output))
             shell("ln -s {full_input} {full_output} 2> {log}")
+
+
+# if running as standalone, use this as rule all
+rule download_databases:
+    input: tp.generate_database_targets(config)
 
 #rule get_lca:
 #    output:
