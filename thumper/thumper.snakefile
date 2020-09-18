@@ -261,7 +261,7 @@ def aggregate_taxonomy_files_by_database(w):
 # papermill reporting rules
 rule set_kernel:
     output:
-        f"{output_dir}/.kernel.set"
+        f"{out_dir}/.kernel.set"
     conda: 'envs/reporting-env.yml'
     shell: """
         python -m ipykernel install --user --name thumper
@@ -273,8 +273,8 @@ rule make_notebook:
     input:
         nb='thumper/notebooks/genome-report.ipynb',
         contigs=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.csv'),
-        genome=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.rankgather.csv') 
-        kernel_set = rules.set_kernel.output
+        genome=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.rankgather.csv'),
+        kernel_set = rules.set_kernel.output,
     params:
         name = lambda w: f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}-scaled{w.scaled}"
     output:
@@ -288,33 +288,33 @@ rule make_notebook:
               > {output}
         """
 
-rule make_html:
-    input:
-        notebook=os.path.join(report_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb')
-        genome_summary=f'{output_dir}/genome_summary.csv',
-        hitlist=f'{output_dir}/hit_list_for_filtering.csv',
-        contigs_json=f'{output_dir}/{{g}}.contigs-tax.json',
-    output:
-        report_dir + '/{g}.fig.html',
-    conda: 'envs/reporting-env.yml'
-    shell: 
-        """
-        python -m nbconvert {input.notebook} --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output}
-        """
+#rule make_html:
+#    input:
+#        notebook=os.path.join(report_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb')
+#        genome_summary=f'{out_dir}/genome_summary.csv',
+#        hitlist=f'{out_dir}/hit_list_for_filtering.csv',
+#        contigs_json=f'{out_dir}/{{g}}.contigs-tax.json',
+#    output:
+#        report_dir + '/{g}.fig.html',
+#    conda: 'envs/reporting-env.yml'
+#    shell: 
+#        """
+#        python -m nbconvert {input.notebook} --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output}
+#        """
      
 
-rule make_index:
-    input:
-        notebook='thumper/notebooks/report_index.ipynb',
-        summary=f'{output_dir}/genome_summary.csv',
-        kernel_set = rules.set_kernel.output
-    output:
-        nb=f'{report_dir}/index.ipynb',
-        html=f'{report_dir}/index.html',
-    conda: 'envs/reporting-env.yml'
-    shell: 
-        """
-        papermill {input.notebook} - -p name {out_dir:q} -p render '' \
-            -p directory .. -k thumper --cwd {report_dir} > {output.nb}
-        python -m nbconvert {output.nb} --stdout --no-input > {output.html}
-        """
+#rule make_index:
+#    input:
+#        notebook='thumper/notebooks/report_index.ipynb',
+#        summary=f'{output_dir}/genome_summary.csv',
+#        kernel_set = rules.set_kernel.output
+#    output:
+#        nb=f'{report_dir}/index.ipynb',
+#        html=f'{report_dir}/index.html',
+#    conda: 'envs/reporting-env.yml'
+#    shell: 
+#        """
+#        papermill {input.notebook} - -p name {out_dir:q} -p render '' \
+#            -p directory .. -k thumper --cwd {report_dir} > {output.nb}
+#        python -m nbconvert {output.nb} --stdout --no-input > {output.html}
+#        """
