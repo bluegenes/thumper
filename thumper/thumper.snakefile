@@ -28,7 +28,8 @@ if force:
 
 wildcard_constraints:
     alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
-    ksize="\d+"
+    ksize="\d+",
+    sample="\w+"
     #database = "(?!x\.).+"
 
 if config.get("sample_list"):
@@ -183,7 +184,7 @@ rule contigs_search:
         search_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.search.matches.sig'),
         ranksearch_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.ranksearch.csv'),
         ranksearch_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.ranksearch.matches.sig'),
-        rankgather_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.csv'),
+        rankgather_json=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.json'),
         unmatched=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.unmatched.fq'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
@@ -276,13 +277,13 @@ rule set_kernel:
 rule make_notebook:
     input:
         nb='thumper/notebooks/genome-report.ipynb',
-        contigs=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.csv'),
+        contigs=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.json'),
         genome=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.rankgather.csv'),
         kernel_set = rules.set_kernel.output,
     params:
         name = lambda w: f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}-scaled{w.scaled}"
     output:
-        os.path.join(report_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb')
+        os.path.join(report_dir, '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb')
     conda: 'envs/reporting-env.yml'
     shell: 
         """
@@ -292,19 +293,19 @@ rule make_notebook:
               > {output}
         """
 
-#rule make_html:
-#    input:
-#        notebook=os.path.join(report_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb')
-#        genome_summary=f'{out_dir}/genome_summary.csv',
-#        hitlist=f'{out_dir}/hit_list_for_filtering.csv',
-#        contigs_json=f'{out_dir}/{{g}}.contigs-tax.json',
-#    output:
-#        report_dir + '/{g}.fig.html',
-#    conda: 'envs/reporting-env.yml'
-#    shell: 
-#        """
-#        python -m nbconvert {input.notebook} --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output}
-#        """
+rule make_html:
+    input:
+        notebook=os.path.join(report_dir, '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb'),
+        #genome_summary=f'{out_dir}/genome_summary.csv',
+        #hitlist=f'{out_dir}/hit_list_for_filtering.csv',
+        contigs_json=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.json'),
+    output:
+        os.path.join(report_dir, "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.html")
+    conda: 'envs/reporting-env.yml'
+    shell: 
+        """
+        python -m nbconvert {input.notebook} --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output}
+        """
      
 
 #rule make_index:
