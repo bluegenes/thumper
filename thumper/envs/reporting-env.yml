@@ -12,5 +12,5 @@ dependencies:
   - pip
   - pip:
     - git+https://github.com/dib-lab/sourmash@latest
-    - git+https://github.com/bluegenes/thumper.git
+    - git+https://github.com/bluegenes/thumper@add-report
     #- dendropy==4.4.0
