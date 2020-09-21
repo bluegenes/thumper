@@ -8,6 +8,7 @@ Thumper: One of the types of stills used to accomplish the second distillation o
 To test and develop, first install Miniconda and clone this repo to your system. Then install an editable version of thumper.
 
 ```
+git clone https://github.com/bluegenes/thumper.git
 cd thumper
 conda env create -f environment.yml
 conda activate thumper
