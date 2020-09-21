@@ -88,8 +88,8 @@ genome_report:
 # make notebook, make_html
     output_dir: reports
     output_files:
-      - "{sample}.x.{database}.fig.ipynb"
-      - "{sample}.x.{database}.fig.html"
+      - "{sample}.fig.ipynb"
+      - "{sample}.fig.html"
 
 
 

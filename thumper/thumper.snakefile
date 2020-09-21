@@ -262,7 +262,6 @@ def aggregate_taxonomy_files_by_database(w):
                 "all_sig": search_sigs}
     return db_files
 
-
 # papermill reporting rules
 rule set_kernel:
     output:
@@ -274,33 +273,36 @@ rule set_kernel:
     """
 
 # use this notebook to aggregate files from 1. search containment, gather, 2. multiple alphas, 3. multiple databases?
-rule make_notebook:
+rule make_genome_notebook:
     input:
         nb='thumper/notebooks/genome-report.ipynb',
-        contigs=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.json'),
-        genome=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.rankgather.csv'),
+        contigs=expand(os.path.join(out_dir, 'contig-search', '{{sample}}.x.{database}.contigs.rankgather.json'), database=config['databases']),
+        genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.rankgather.csv'), database=config['databases']),
         kernel_set = rules.set_kernel.output,
     params:
-        name = lambda w: f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}-scaled{w.scaled}"
+        name = lambda w: f"{w.sample}",
+        databases= ",".join(config["databases"])#{"databases": config["databases"]}
     output:
-        os.path.join(report_dir, '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb')
+        os.path.join(report_dir, '{sample}.fig.ipynb')
     conda: 'envs/reporting-env.yml'
     shell: 
         """
         papermill {input.nb} - -k thumper --cwd {report_dir} \
               -p directory .. -p render '' \
               -p name {params.name:q} \
+              -p databases {params.databases:q} \
               > {output}
         """
 
-rule make_html:
+rule make_genome_html:
     input:
-        notebook=os.path.join(report_dir, '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb'),
+        #notebook=os.path.join(report_dir, '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb'),
+        notebook=os.path.join(report_dir, '{sample}.fig.ipynb'),
         #genome_summary=f'{out_dir}/genome_summary.csv',
         #hitlist=f'{out_dir}/hit_list_for_filtering.csv',
-        contigs_json=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.json'),
+        contigs_json=expand(os.path.join(out_dir, 'contig-search', '{{sample}}.x.{database}.contigs.rankgather.json'), database=config['databases']),
     output:
-        os.path.join(report_dir, "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.html")
+        os.path.join(report_dir, "{sample}.fig.html")
     conda: 'envs/reporting-env.yml'
     shell: 
         """

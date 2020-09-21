@@ -2,7 +2,6 @@
 channels:
   - conda-forge
   - bioconda
-  - anaconda
   - defaults
 dependencies:
   - python>=3.7
@@ -10,9 +9,7 @@ dependencies:
   - notebook>=6,<7
   - plotly>=4.9.0,<5
   - ipykernel
-  - pandas >=1.1
   - pip
   - pip:
     - git+https://github.com/dib-lab/sourmash@latest
     - git+https://github.com/bluegenes/thumper@add-report
-    #- dendropy==4.4.0
