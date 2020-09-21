@@ -5,7 +5,7 @@ channels:
   - anaconda
   - defaults
 dependencies:
-  - python>=3.8
+  - python>=3.7
   - pytest
   - pandas>=1.1
   - snakemake-minimal>=5.24.1

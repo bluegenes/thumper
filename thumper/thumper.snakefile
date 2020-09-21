@@ -282,9 +282,10 @@ rule make_genome_notebook:
     params:
         name = lambda w: f"{w.sample}",
         databases= ",".join(config["databases"]),
-        directory = out_dir,
+        directory = os.path.abspath(out_dir),
     output:
-        os.path.join(report_dir, '{sample}.fig.ipynb')
+        nb=os.path.join(report_dir, '{sample}.fig.ipynb'),
+        html=os.path.join(report_dir, "{sample}.fig.html")
     conda: 'envs/reporting-env.yml'
     shell: 
         """
@@ -292,24 +293,9 @@ rule make_genome_notebook:
               -p directory {params.directory:q} -p render '' \
               -p name {params.name:q} \
               -p databases {params.databases:q} \
-              > {output}
+              > {output.nb}
+        python -m nbconvert {output.nb} --to html --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output.html}
         """
-
-rule make_genome_html:
-    input:
-        #notebook=os.path.join(report_dir, '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.fig.ipynb'),
-        notebook=os.path.join(report_dir, '{sample}.fig.ipynb'),
-        #genome_summary=f'{out_dir}/genome_summary.csv',
-        #hitlist=f'{out_dir}/hit_list_for_filtering.csv',
-        contigs_json=expand(os.path.join(out_dir, 'contig-search', '{{sample}}.x.{database}.contigs.rankgather.json'), database=config['databases']),
-    output:
-        os.path.join(report_dir, "{sample}.fig.html")
-    conda: 'envs/reporting-env.yml'
-    shell: 
-        """
-        python -m nbconvert {input.notebook} --to html --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output}
-        """
-     
 
 #rule make_index:
 #    input:
