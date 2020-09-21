@@ -14,4 +14,4 @@ dependencies:
   - pip
   - pip:
     - git+https://github.com/dib-lab/sourmash@latest
-    - git+https://github.com/bluegenes/thumper@add-report
+    - git+https://github.com/bluegenes/thumper

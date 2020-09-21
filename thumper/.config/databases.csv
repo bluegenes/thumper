@@ -13,9 +13,9 @@ gtdb-genus-n0,hp,42,100,https://osf.io/byjw5/download,https://osf.io/3vm65/downl
 gtdb-r89,nucleotide,21,10000,https://osf.io/fjk7v/download,https://osf.io/kv3x9/download
 gtdb-r89,nucleotide,31,10000,https://osf.io/5mb9k/download,https://osf.io/kv3x9/download
 gtdb-r89,nucleotide,51,10000,https://osf.io/vcfdx/download,https://osf.io/kv3x9/download
-gtdb-r89,protein,11,100,link_needed,https://osf.io/kv3x9/download
-gtdb-r89,dayhoff,19,100,link_needed,https://osf.io/kv3x9/download
-gtdb-r89,hp,35,100,link_needed,https://osf.io/kv3x9/download
+gtdb-r89,protein,11,100,https://osf.io/9zxtb/download,https://osf.io/kv3x9/download
+gtdb-r89,dayhoff,19,100,https://osf.io/2jezd/download,https://osf.io/kv3x9/download
+gtdb-r89,hp,35,100,https://osf.io/jkrnz/download,https://osf.io/kv3x9/download
 gtdb-nine,nucleotide,21,1000,tests/test-data/databases/gtdb-nine.nucleotide-k21.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
 gtdb-nine,nucleotide,31,1000,tests/test-data/databases/gtdb-nine.nucleotide-k31.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
 gtdb-nine,nucleotide,51,1000,tests/test-data/databases/gtdb-nine.nucleotide-k51.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
