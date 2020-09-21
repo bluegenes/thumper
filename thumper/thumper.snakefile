@@ -281,14 +281,15 @@ rule make_genome_notebook:
         kernel_set = rules.set_kernel.output,
     params:
         name = lambda w: f"{w.sample}",
-        databases= ",".join(config["databases"])#{"databases": config["databases"]}
+        databases= ",".join(config["databases"]),
+        directory = out_dir,
     output:
         os.path.join(report_dir, '{sample}.fig.ipynb')
     conda: 'envs/reporting-env.yml'
     shell: 
         """
         papermill {input.nb} - -k thumper --cwd {report_dir} \
-              -p directory .. -p render '' \
+              -p directory {params.directory:q} -p render '' \
               -p name {params.name:q} \
               -p databases {params.databases:q} \
               > {output}
@@ -306,7 +307,7 @@ rule make_genome_html:
     conda: 'envs/reporting-env.yml'
     shell: 
         """
-        python -m nbconvert {input.notebook} --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output}
+        python -m nbconvert {input.notebook} --to html --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output}
         """
      
 
@@ -323,5 +324,5 @@ rule make_genome_html:
 #        """
 #        papermill {input.notebook} - -p name {out_dir:q} -p render '' \
 #            -p directory .. -k thumper --cwd {report_dir} > {output.nb}
-#        python -m nbconvert {output.nb} --stdout --no-input > {output.html}
+#        python -m nbconvert {output.nb} --to html --stdout --no-input > {output.html}
 #        """
