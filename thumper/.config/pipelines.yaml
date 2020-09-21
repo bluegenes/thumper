@@ -18,6 +18,7 @@ pipelines:
       - sourmash_search_containment
       - genome_search # for now, just run both
       - contigs_search
+      - genome_report
      # - make_hit_list
     databases:
       - gtdb-genus-n0

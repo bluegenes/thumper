@@ -21,7 +21,7 @@ from sourmash.lca import LCA_Database, lca_utils
 
 from .lineage_db import LineageDB
 from .version import version
-from thumper.charcoal_utils import (gather_at_rank, get_ident)
+from thumper.charcoal_utils import (gather_at_rank, get_ident, ContigGatherInfo)
 from .search_utils import (gather_guess_tax_at_each_rank, search_containment_at_rank, SearchFiles)
 
 def main(args):
@@ -55,14 +55,18 @@ def main(args):
             new_siglist.append(ss)
     siglist = new_siglist
 
+    # init search and gather tax dicts
+    search_tax, gather_tax = {},{}
     if not siglist:
         # write empty files so snakemake workflows don't complain; exit.
         print('no non-identical matches for this genome, exiting.')
         if not args.no_search_contigs:
             sf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=True)
+            sf.write_taxonomy_json(search_tax, result_type="ranksearch")
             sf.close()
         if args.search_genome:
             gf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=False)
+            sf.write_taxonomy_json(gather_tax, result_type="rankgather")
             gf.close()
         return 0
 
@@ -90,6 +94,9 @@ def main(args):
 
     screed_iter = screed.open(args.genome)
     genome_len = 0
+
+    search_tax = {}
+    gather_tax = {}
 
     if not args.no_search_contigs:
         sf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=True)
@@ -119,10 +126,15 @@ def main(args):
                     for sr in search_rank_results:
                         sf.write_result(sr, record.name, seq_len, result_type="ranksearch")
 
+                    #info = ContigRankSearchInfo(len(record.sequence), len(mh), results)
+                    #search_tax[record.name] = info
+
             if args.gather:
                 # first, gather at match rank (default genus)
                 gather_results = list(gather_at_rank(mh, lca_db, lin_db, match_rank))
-                # write standard gather_results?
+                # store dict of gather_results
+                info = ContigGatherInfo(len(record.sequence), len(mh), gather_results)
+                gather_tax[record.name] = info
 
                 if not gather_results:
                     # write to unclassified. should only get here if no search OR gather results
@@ -131,10 +143,10 @@ def main(args):
                     # next, summarize at higher ranks
                     gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
                                                                              minimum_matches=args.gather_min_matches, \
-
-            lowest_rank=match_rank, \
+                                                                             lowest_rank=match_rank, \
                                                                              taxlist=lca_utils.taxlist(include_strain=False))
-                    #results = list of RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
+                    #these results = list of RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
+
 
                     # write taxonomy out
                     for gr in gather_taxonomy_per_rank:
@@ -142,6 +154,7 @@ def main(args):
 
         print(f"Processed {n+1} contigs.")
         # close contig files
+        sf.write_taxonomy_json(gather_tax, result_type ="gather")
         sf.close()
 
     if args.search_genome:
