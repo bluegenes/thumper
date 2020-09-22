@@ -56,17 +56,18 @@ def main(args):
     siglist = new_siglist
 
     # init search and gather tax dicts
-    search_tax, gather_tax = {},{}
+    search_tax, gather_tax,genome_gather_tax = {},{},{}
     if not siglist:
         # write empty files so snakemake workflows don't complain; exit.
         print('no non-identical matches for this genome, exiting.')
         if not args.no_search_contigs:
             sf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=True)
-            sf.write_taxonomy_json(search_tax, result_type="ranksearch")
+            sf.write_taxonomy_json(search_tax, result_type="search")
+            sf.write_taxonomy_json(gather_tax, result_type="gather")
             sf.close()
         if args.search_genome:
             gf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=False)
-            sf.write_taxonomy_json(gather_tax, result_type="rankgather")
+            gf.write_taxonomy_json(genome_gather_tax, result_type="gather")
             gf.close()
         return 0
 
@@ -141,13 +142,10 @@ def main(args):
                     sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
                 else:
                     # next, summarize at higher ranks
-                    gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
+                    gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, scaled, \
                                                                              minimum_matches=args.gather_min_matches, \
                                                                              lowest_rank=match_rank, \
                                                                              taxlist=lca_utils.taxlist(include_strain=False))
-                    #these results = list of RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
-
-
                     # write taxonomy out
                     for gr in gather_taxonomy_per_rank:
                         sf.write_result(gr, record.name, seq_len, result_type="rankgather")
@@ -175,14 +173,17 @@ def main(args):
                 gf.write_result(sr, genome_name, genome_len, result_type="ranksearch")
         if args.gather:
             gather_results = list(gather_at_rank(entire_mh, lca_db, lin_db, match_rank))
+            genome_gather_info = ContigGatherInfo(genome_len, len(entire_mh), gather_results)
+            genome_gather_tax[genome_name] = genome_gather_info
             # next, summarize at higher ranks
-            gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
+            gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, scaled, \
                                                                      minimum_matches=args.gather_min_matches, \
                                                                      lowest_rank=match_rank, \
                                                                      taxlist=lca_utils.taxlist(include_strain=False))
             for gather_res in gather_taxonomy_per_rank:
                 gf.write_result(gather_res, genome_name, genome_len, result_type="rankgather")
         # close genome files
+        gf.write_taxonomy_json(genome_gather_tax, result_type="gather")
         gf.close()
 
     return 0
