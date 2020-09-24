@@ -65,27 +65,35 @@ def calculate_clean(genome_lin, contigs_d, rank):
 
     return (good_names, bad_names)
 
-def guess_tax_by_gather(entire_mh, lca_db, lin_db, match_rank, report_fp):
+def guess_tax_by_gather(gather_results, num_hashes, match_rank, report_fp, minimum_matches=GATHER_MIN_MATCHES):
     "Guess likely taxonomy using gather."
     sum_ident = 0
     first_lin = ()
     first_count = 0
-
-    for lin, count in gather_at_rank(entire_mh, lca_db, lin_db, match_rank):
-        if count >= GATHER_MIN_MATCHES:
+    comment=""
+    if num_hashes < minimum_matches:
+        comment= "insufficient hashes for classification"
+    # if match_rank is genus, this should be same as using gather_results
+    rank_gather = summarize_at_rank(gather_results, match_rank)
+    for lin, count in rank_gather:
+        if count >= minimum_matches:
             # record the first lineage we come across as likely lineage.
             if not first_lin:
                 first_lin = lin
                 first_count = count
+        else:
+            comment= "insufficient matched hashes"
 
         sum_ident += count
 
-    f_ident = sum_ident / len(entire_mh)
+    if not first_lin:
+        return "", 0.0, 0.0, ""
+
+    f_ident = sum_ident / num_hashes
     f_major = first_count / sum_ident
 
-    return first_lin, f_ident, f_major
+    return first_lin, f_ident, f_major, comment
 
-# what do I want to use here?
 
 # gather results from each alpha-ksize?
 def main(args):
@@ -120,7 +128,7 @@ def main(args):
         # guess genome taxonomy
         #x = get_genome_taxonomy(matches_filename, genome_sig, lineage,tax_assign, match_rank, args.min_f_ident,args.min_f_major)
 
-        genome_taxonomy = gather_guess_tax_at_rank(gather_results, genome_hashes, scaled, \
+        genome_taxonomy = guess_tax_by_gather(gather_results, genome_hashes, scaled, \
                                                    args.match_rank, minimum_matches=args.gather_min_matches)
         #genome_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, genome_hashes, scaled, \
         #                                                         minimum_matches=args.gather_min_matches, \
@@ -128,8 +136,7 @@ def main(args):
         #                                                         taxlist=lca_utils.taxlist(include_strain=False))
 
         # assign genome lineage
-        genome_lineage,f_ident,f_major,f_minor, bp_ident, bp_major, bp_minor, minor_lineage, comment = genome_taxonomy
-
+        genome_lineage,f_ident,f_major, comment = genome_taxonomy
         #genome_lineage, comment, needs_lineage, f_major, f_ident = genome_taxonomy_per_rank
 
         # genome info --> gather_taxonomy_per_rank.values()???
