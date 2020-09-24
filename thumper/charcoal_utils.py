@@ -273,34 +273,43 @@ def make_lineage(lineage):
     return lin
 
 
+#def save_contamination_summary(detected_contam, fp):
+#    "Save a contamination summary to JSON."
+#    source_contam = list(detected_contam.items())
+#
+#    contam_l = []
+#    for k, values in source_contam:
+#        if values:
+#            for j, cnt in values.most_common():
+#                import pdb;pdb.set_trace()
+#                contam_l.append((k, j, cnt))
+#    json.dump(contam_l, fp)
+
 def save_contamination_summary(detected_contam, fp):
     "Save a contamination summary to JSON."
-    source_contam = list(detected_contam.items())
-
-    contam_l = []
-    for k, values in source_contam:
-        if values:
-            for j, cnt in values.most_common():
-                contam_l.append((k, j, cnt))
-
-    json.dump(contam_l, fp)
+    json.dump(detected_contam, fp)
 
 
 def load_contamination_summary(fp):
     "Load a contamination summary saved by save_contamination_summary."
     x = json.load(fp)
 
-    source_d = defaultdict(int)
-    for source, target, count in x:
-        source = tuple([ LineagePair(rank, name) for rank, name in source ])
-        target = tuple([ LineagePair(rank, name) for rank, name in target ])
-        target_d = source_d.get(source)
-        if not target_d:
-            target_d = defaultdict(int)
-        target_d[target] = count
-        source_d[source] = target_d
 
-    return source_d
+#def load_contamination_summary(fp):
+#    "Load a contamination summary saved by save_contamination_summary."
+#    x = json.load(fp)
+#
+#    source_d = defaultdict(int)
+#    for source, target, count in x:
+#        source = tuple([ LineagePair(rank, name) for rank, name in source ])
+#        target = tuple([ LineagePair(rank, name) for rank, name in target ])
+#        target_d = source_d.get(source)
+#        if not target_d:
+#            target_d = defaultdict(int)
+#        target_d[target] = count
+#        source_d[source] = target_d
+#
+#    return source_d
 
 
 def filter_contam(contam_d, threshold_f, display_at_rank='phylum'):

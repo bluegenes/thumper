@@ -94,8 +94,8 @@ genome_report:
 thumper_classify:
    output_dir: classify
    output_files:
-     - "{basename}_{database}.gather.txt"
-     - "{basename}_{database}.taxonomy-report.csv"
+     - "{basename}.x.{database}.gather.txt"
+     - "{basename}.x.{database}.taxonomy-report.csv"
     #- "{basename}.x.{database}.classified.csv" --> final classification summary
 
 ## index snakefile ##

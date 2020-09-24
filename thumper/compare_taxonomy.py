@@ -231,9 +231,9 @@ def main(args):
     fp = open(args.output_csv, 'wt')
     hitlist_w = csv.writer(fp)
 
-    hitlist_w.writerow(['genome', 'total_mismatched_bp', 'superkingdom_mismatched_bp', 'phylum_mismatched_bp',
-        'class_mismatched_bp', 'order_mismatched_bp', 'family_mismatched_bp', 'genus_mismatched_bp',
-        'f_ident', 'f_major', 'lineage', 'comment'])
+    hitlist_w.writerow(['genome', 'total_bad_bp', 'superkingdom_bad_bp', 'phylum_bad_bp',
+                        'class_bad_bp', 'order_bad_bp', 'family_bad_bp', 'genus_bad_bp',
+                        'f_ident', 'f_major', 'lineage', 'comment'])
 
     summary_items = list(summary_d.items())
     summary_items.sort(key=lambda x: -x[1]["total_bad_bp"])

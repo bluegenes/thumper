@@ -285,7 +285,7 @@ rule aggregate_gather_resultfiles:
         genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.gather.json'), sample=sample_names),
         contigs=expand(os.path.join(out_dir, 'contig-search', '{sample}.x.{{database}}.contigs.gather.json'), sample=sample_names),
     output:
-        os.path.join(out_dir, "classify", "{basename}_{database}.gather.txt")
+        os.path.join(out_dir, "classify", "{basename}.x.{database}.gather.txt")
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=200,
@@ -300,13 +300,13 @@ rule aggregate_gather_resultfiles:
 
 rule taxonomy_report:
     input:
-        gather_info=os.path.join(out_dir, "classify", "{basename}_{database}.gather.txt"),
+        gather_info=os.path.join(out_dir, "classify", "{basename}.x.{database}.gather.txt"),
     output:
-        genome_report=os.path.join(out_dir, "classify", "{basename}_{database}.taxonomy-report.csv"),
-        common_contamination=os.path.join(out_dir, "classify", "{basename}_{database}.contamination-summary.json"),
-        contig_details_summary=os.path.join(out_dir, "classify", "{basename}_{database}.contig-details-summary.csv"),
-    log: os.path.join(logs_dir, "genome-report", "{basename}_{database}.genome-report.log")
-    benchmark: os.path.join(benchmarks_dir, "genome-report", "{basename}_{database}.genome-report.benchmark")
+        genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        common_contamination=os.path.join(out_dir, "classify", "{basename}.x.{database}.contamination-summary.json"),
+        contig_details_summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.contig-details-summary.csv"),
+    log: os.path.join(logs_dir, "genome-report", "{basename}.x.{database}.genome-report.log")
+    benchmark: os.path.join(benchmarks_dir, "genome-report", "{basename}.x.{database}.genome-report.benchmark")
     resources:
         mem_mb=lambda wildcards, attempt: attempt *5000,
         runtime=6000,
