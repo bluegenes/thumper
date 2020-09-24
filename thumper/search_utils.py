@@ -266,8 +266,8 @@ class SearchFiles:
             with open(f"{self.prefix}.ranksearch.json", "w") as ranksearch_json:
                 ranksearch_json.write(json.dumps(tax_dict))
         elif self.gather and result_type == "gather":
-            with open(f"{self.prefix}.rankgather.json", "w") as rankgather_json:
-                rankgather_json.write(json.dumps(tax_dict))
+            with open(f"{self.prefix}.gather.json", "w") as gather_json:
+                gather_json.write(json.dumps(tax_dict))
 
 
     def close(self):

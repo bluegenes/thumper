@@ -187,6 +187,9 @@ def get_ident(sig):
 ContigGatherInfo = namedtuple('ContigGatherInfo',
                               ['length', 'num_hashes', 'gather_tax'])
 
+def kb(bp):
+    return int(bp/1000)
+
 def load_contigs_gather_json(filename):
     # load contigs JSON file - @CTB
     with open(filename, 'rt') as fp:
@@ -276,8 +279,9 @@ def save_contamination_summary(detected_contam, fp):
 
     contam_l = []
     for k, values in source_contam:
-        for j, cnt in values.most_common():
-            contam_l.append((k, j, cnt))
+        if values:
+            for j, cnt in values.most_common():
+                contam_l.append((k, j, cnt))
 
     json.dump(contam_l, fp)
 
@@ -325,7 +329,7 @@ def filter_contam(contam_d, threshold_f, display_at_rank='phylum'):
         if sofar > threshold:
             break
         sub_list.append((count, v))
-        
+
     return sub_list
 
 
@@ -333,14 +337,14 @@ class NextIndex:
     "A class to do counting for defaultdict indices."
     def __init__(self):
         self.idx = -1
-        
+
     def __call__(self):
         self.idx += 1
         return self.idx
-    
+
     def __len__(self):
         return self.idx + 1
-    
+
 def build_contamination_matrix(contam_list):
     "Build a matrix that can be used for a heatmap viz."
     source_idx = NextIndex()
@@ -376,5 +380,5 @@ def build_contamination_matrix(contam_list):
         for i in range(len(source_idx)):
             x.append(mat[i, j])
         mat_l.append(x)
-        
+
     return source_labels, target_labels, mat_l

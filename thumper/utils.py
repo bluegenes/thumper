@@ -287,7 +287,7 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     ## What alphabets are we using? ##
     alphabet_info = config["alphabet_info"]
     ## set run basename
-    basename = config.get("basename", "thumper-output")
+    basename = config["basename"]
 
     ## What databases are we using?
     databases = config.get("databases", [])

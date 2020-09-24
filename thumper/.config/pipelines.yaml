@@ -19,7 +19,7 @@ pipelines:
       - genome_search # for now, just run both
       - contigs_search
       - genome_report
-     # - make_hit_list
+      - thumper_classify
     databases:
       - gtdb-genus-n0
       #- gtdb-r89
