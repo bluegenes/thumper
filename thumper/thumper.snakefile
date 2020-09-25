@@ -278,7 +278,7 @@ rule set_kernel:
         touch {output}
         """
 
-localrules: aggregate_gather_resultfiles
+localrules: make_genome_notebook, make_index, set_kernel, aggregate_gather_resultfiles
 
 rule aggregate_gather_resultfiles:
     input:

@@ -94,6 +94,28 @@ def guess_tax_by_gather(gather_results, num_hashes, match_rank, report_fp, minim
 
     return first_lin, f_ident, f_major, comment
 
+def get_genome_taxonomy(genome_name, genome_gather_json_filename, match_rank, min_f_ident, min_f_major):
+
+    guessed_genome_lineage, f_major, f_ident = "", 0.0, 0.0
+    # did we get gather results?
+    genome_info = utils.load_contigs_gather_json(genome_gather_json_filename)
+
+    if genome_info:
+        gather_results = genome_info[genome_name].gather_tax
+        genome_len = genome_info[genome_name].length
+        genome_hashes = genome_info[genome_name].num_hashes
+
+        # calculate lineage from majority vote on LCA
+        guessed_genome_lineage, f_major, f_ident = guess_tax_by_gather(gather_results, genome_hashes, match_rank, sys.stdout)
+
+        print(f'Gather classification on this genome yields: {pretty_print_lineage(guessed_genome_lineage)}')
+
+        if f_major == 1.0 and f_ident == 1.0:
+            comment = "All genome hashes belong to one lineage! Nothing to do."
+            print(comment)
+
+    return guessed_genome_lineage, f_major, f_ident, comment
+
 
 # gather results from each alpha-ksize?
 def main(args):
@@ -116,30 +138,9 @@ def main(args):
         ksize = int(ksize.split("k")[1])
         print(f'examining {genome_name} for classification accuracy ({n+1} of {num_genomes})')
 
-        genome_info = utils.load_contigs_gather_json(genome_jsonfile)
-        # name: ContigGatherInfo(genome_len, len(entire_mh), gather_results)
+        # assign genome lineage -- CURRENTLY NOT USING MIN_F_IDENT, MIN_F_MAJOR?
+        genome_lineage,f_ident,f_major, comment = get_genome_taxonomy(genome_name, genome_jsonfile, args.match_rank, args.min_f_ident, args.min_f_major)
 
-        # what additional things do we need here????
-        gather_results = genome_info[genome_name].gather_tax
-        genome_len = genome_info[genome_name].length
-        genome_hashes = genome_info[genome_name].num_hashes
-        #genome_info[genome_name].scaled
-
-        # guess genome taxonomy
-        #x = get_genome_taxonomy(matches_filename, genome_sig, lineage,tax_assign, match_rank, args.min_f_ident,args.min_f_major)
-
-        genome_taxonomy = guess_tax_by_gather(gather_results, genome_hashes, scaled, \
-                                                   args.match_rank, minimum_matches=args.gather_min_matches)
-        #genome_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, genome_hashes, scaled, \
-        #                                                         minimum_matches=args.gather_min_matches, \
-        #                                                         lowest_rank=args.match_rank, \
-        #                                                         taxlist=lca_utils.taxlist(include_strain=False))
-
-        # assign genome lineage
-        genome_lineage,f_ident,f_major, comment = genome_taxonomy
-        #genome_lineage, comment, needs_lineage, f_major, f_ident = genome_taxonomy_per_rank
-
-        # genome info --> gather_taxonomy_per_rank.values()???
         vals = {}
         vals['genome'] = genome_name
         vals['f_ident'] = f_ident
