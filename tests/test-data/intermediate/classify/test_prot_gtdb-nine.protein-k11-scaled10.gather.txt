@@ -1,4 +1,0 @@
-name,database,genome-gather,contig-gather
-GCA_002691795,gtdb-nine.protein-k11-scaled10,genome-search/GCA_002691795.x.gtdb-nine.protein-k11-scaled10.gather.json,contig-search/GCA_002691795.x.gtdb-nine.protein-k11-scaled10.contigs.gather.json
-GCF_003143755,gtdb-nine.protein-k11-scaled10,genome-search/GCF_003143755.x.gtdb-nine.protein-k11-scaled10.gather.json,contig-search/GCF_003143755.x.gtdb-nine.protein-k11-scaled10.contigs.gather.json
-GCA_000384615,gtdb-nine.protein-k11-scaled10,genome-search/GCA_000384615.x.gtdb-nine.protein-k11-scaled10.gather.json,contig-search/GCA_000384615.x.gtdb-nine.protein-k11-scaled10.contigs.gather.json

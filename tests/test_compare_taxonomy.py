@@ -11,7 +11,7 @@ def test_compare_taxonomy(location):
     # test an empty set of matches (once self is removed)
     args = utils.Args()
     #args.jsoninfo_file = utils.get_testfile("output.test-prot/classify/test_prot_gtdb-nine.protein-k11-scaled10.gather.txt")
-    args.jsoninfo_file = utils.get_testfile("test-data/intermediate/classify/test_prot_gtdb-nine.protein-k11-scaled10.gather.txt")
+    args.jsoninfo_file = utils.get_testfile("test-data/intermediate/classify/test_prot.x.gtdb-nine.protein-k11-scaled10.gather.txt")
     args.gather_min_matches = 3
     args.min_f_ident=0.1
     args.min_f_major=0.2
@@ -27,6 +27,8 @@ def test_compare_taxonomy(location):
     with open(args.output_csv) as fp:
         out = csv.reader(fp)
         firstline = out.__next__()
-        header = ['genome', 'total_mismatched_bp', 'superkingdom_mismatched_bp', 'phylum_mismatched_bp', 'class_mismatched_bp', 'order_mismatched_bp', 'family_mismatched_bp', 'genus_mismatched_bp', 'f_ident', 'f_major', 'lineage', 'comment']
+        print(firstline)
+        header= ['genome', 'total_bad_bp', 'superkingdom_bad_bp', 'phylum_bad_bp', 'class_bad_bp', 'order_bad_bp', 'family_bad_bp', 'genus_bad_bp', 'f_ident', 'f_major', 'lineage', 'comment']
+        #header = ['genome', 'total_mismatched_bp', 'superkingdom_mismatched_bp', 'phylum_mismatched_bp', 'class_mismatched_bp', 'order_mismatched_bp', 'family_mismatched_bp', 'genus_mismatched_bp', 'f_ident', 'f_major', 'lineage', 'comment']
         assert firstline == header
 
