@@ -96,7 +96,7 @@ def guess_tax_by_gather(gather_results, num_hashes, match_rank, report_fp, minim
 
 def get_genome_taxonomy(genome_name, genome_gather_json_filename, match_rank, min_f_ident, min_f_major):
 
-    guessed_genome_lineage, f_major, f_ident = "", 0.0, 0.0
+    guessed_genome_lineage, f_major, f_ident, comment = "", 0.0, 0.0, ""
     # did we get gather results?
     genome_info = utils.load_contigs_gather_json(genome_gather_json_filename)
 
@@ -106,7 +106,7 @@ def get_genome_taxonomy(genome_name, genome_gather_json_filename, match_rank, mi
         genome_hashes = genome_info[genome_name].num_hashes
 
         # calculate lineage from majority vote on LCA
-        guessed_genome_lineage, f_major, f_ident = guess_tax_by_gather(gather_results, genome_hashes, match_rank, sys.stdout)
+        guessed_genome_lineage, f_major, f_ident, comment = guess_tax_by_gather(gather_results, genome_hashes, match_rank, sys.stdout)
 
         print(f'Gather classification on this genome yields: {pretty_print_lineage(guessed_genome_lineage)}')
 
