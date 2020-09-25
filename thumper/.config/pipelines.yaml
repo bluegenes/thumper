@@ -20,6 +20,7 @@ pipelines:
       - contigs_search
       - genome_report
       - thumper_classify
+      - summary_report
     databases:
       - gtdb-genus-n0
       #- gtdb-r89

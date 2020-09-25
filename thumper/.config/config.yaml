@@ -91,6 +91,12 @@ genome_report:
       - "{sample}.fig.ipynb"
       - "{sample}.fig.html"
 
+summary_report:
+    output_dir: reports
+    output_files:
+      - "{basename}.x.{database}.index.ipynb"
+      - "{basename}.x.{database}.index.html"
+
 thumper_classify:
    output_dir: classify
    output_files:

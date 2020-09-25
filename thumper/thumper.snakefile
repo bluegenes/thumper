@@ -365,18 +365,21 @@ rule make_genome_notebook:
         python -m nbconvert {output.nb} --to html --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output.html}
         """
 
-#rule make_index:
-#    input:
-#        notebook='thumper/notebooks/report_index.ipynb',
-#        summary=f'{output_dir}/genome_summary.csv',
-#        kernel_set = rules.set_kernel.output
-#    output:
-#        nb=f'{report_dir}/index.ipynb',
-#        html=f'{report_dir}/index.html',
-#    conda: 'envs/reporting-env.yml'
-#    shell: 
-#        """
-#        papermill {input.notebook} - -p name {out_dir:q} -p render '' \
-#            -p directory .. -k thumper --cwd {report_dir} > {output.nb}
-#        python -m nbconvert {output.nb} --to html --stdout --no-input > {output.html}
-#        """
+rule make_index:
+    input:
+        notebook='thumper/notebooks/report-index.ipynb',
+        summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        kernel_set = rules.set_kernel.output
+    output:
+        nb=os.path.join(report_dir, "{basename}.x.{database}.index.ipynb"),
+        html=os.path.join(report_dir, "{basename}.x.{database}.index.html")
+    params:
+        directory = os.path.abspath(out_dir),
+    conda: 'envs/reporting-env.yml'
+    shell:
+        """
+        papermill {input.notebook} - -p name {out_dir:q} -p render '' \
+            -p database {wildcards.database:q} -p directory {params.directory:q} \
+            -k thumper --cwd {report_dir} > {output.nb}
+        python -m nbconvert {output.nb} --to html --stdout --no-input > {output.html}
+        """
