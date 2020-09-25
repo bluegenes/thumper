@@ -303,6 +303,7 @@ rule taxonomy_report:
         gather_info=os.path.join(out_dir, "classify", "{basename}.x.{database}.gather.txt"),
     output:
         genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        charcoal_lineages=os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"),
         common_contamination=os.path.join(out_dir, "classify", "{basename}.x.{database}.contamination-summary.json"),
         contig_details_summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.contig-details-summary.csv"),
     log: os.path.join(logs_dir, "genome-report", "{basename}.x.{database}.genome-report.log")
@@ -318,6 +319,7 @@ rule taxonomy_report:
                   --gather_min_matches 3 \
                   --min_f_ident 0.1 \
                   --min_f_major 0.2 \
+                  --lineages-for-charcoal {output.charcoal_lineages} \
                   --output-csv {output.genome_report} \
                   --contam-summary-json {output.common_contamination} \
                   --contig-details-summary {output.contig_details_summary} 2> {log}

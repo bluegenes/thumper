@@ -278,6 +278,13 @@ def main(args):
     for genome, vals in summary_items:
         w.writerow(vals)
 
+    if args.lineages_for_charcoal:
+        with open(args.lineages_for_charcoal, "w") as fp:
+            header = ["genome", "lineage"] # is header allowed?
+            fp.write(",".join(header) + "\n")
+            for genome, vals in summary_items:
+                fp.write(genome + "," + vals["lineage"] + "\n")
+
     fp.close()
 
     ####
@@ -300,6 +307,7 @@ def cmdline(sys_args):
     p = argparse.ArgumentParser(sys_args)
     p.add_argument('--jsoninfo-file', required=True) # file with list of json files to aggregate
     p.add_argument('--output-csv', required=True)
+    p.add_argument('--lineages-for-charcoal')
     p.add_argument('--contig-details-summary', required=True)
     p.add_argument('--contam-summary-json', required=True)
     p.add_argument('--match-rank', default="genus")
