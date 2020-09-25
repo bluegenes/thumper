@@ -378,7 +378,7 @@ rule make_index:
     conda: 'envs/reporting-env.yml'
     shell:
         """
-        papermill {input.notebook} - -p name {out_dir:q} -p render '' \
+        papermill {input.notebook} - -p name {wildcards.basename:q} -p render '' \
             -p database {wildcards.database:q} -p directory {params.directory:q} \
             -k thumper --cwd {report_dir} > {output.nb}
         python -m nbconvert {output.nb} --to html --stdout --no-input > {output.html}
