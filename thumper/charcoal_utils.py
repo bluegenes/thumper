@@ -187,6 +187,9 @@ def get_ident(sig):
 ContigGatherInfo = namedtuple('ContigGatherInfo',
                               ['length', 'num_hashes', 'gather_tax'])
 
+def kb(bp):
+    return int(bp/1000)
+
 def load_contigs_gather_json(filename):
     # load contigs JSON file - @CTB
     with open(filename, 'rt') as fp:
@@ -270,33 +273,43 @@ def make_lineage(lineage):
     return lin
 
 
+#def save_contamination_summary(detected_contam, fp):
+#    "Save a contamination summary to JSON."
+#    source_contam = list(detected_contam.items())
+#
+#    contam_l = []
+#    for k, values in source_contam:
+#        if values:
+#            for j, cnt in values.most_common():
+#                import pdb;pdb.set_trace()
+#                contam_l.append((k, j, cnt))
+#    json.dump(contam_l, fp)
+
 def save_contamination_summary(detected_contam, fp):
     "Save a contamination summary to JSON."
-    source_contam = list(detected_contam.items())
-
-    contam_l = []
-    for k, values in source_contam:
-        for j, cnt in values.most_common():
-            contam_l.append((k, j, cnt))
-
-    json.dump(contam_l, fp)
+    json.dump(detected_contam, fp)
 
 
 def load_contamination_summary(fp):
     "Load a contamination summary saved by save_contamination_summary."
     x = json.load(fp)
 
-    source_d = defaultdict(int)
-    for source, target, count in x:
-        source = tuple([ LineagePair(rank, name) for rank, name in source ])
-        target = tuple([ LineagePair(rank, name) for rank, name in target ])
-        target_d = source_d.get(source)
-        if not target_d:
-            target_d = defaultdict(int)
-        target_d[target] = count
-        source_d[source] = target_d
 
-    return source_d
+#def load_contamination_summary(fp):
+#    "Load a contamination summary saved by save_contamination_summary."
+#    x = json.load(fp)
+#
+#    source_d = defaultdict(int)
+#    for source, target, count in x:
+#        source = tuple([ LineagePair(rank, name) for rank, name in source ])
+#        target = tuple([ LineagePair(rank, name) for rank, name in target ])
+#        target_d = source_d.get(source)
+#        if not target_d:
+#            target_d = defaultdict(int)
+#        target_d[target] = count
+#        source_d[source] = target_d
+#
+#    return source_d
 
 
 def filter_contam(contam_d, threshold_f, display_at_rank='phylum'):
@@ -325,7 +338,7 @@ def filter_contam(contam_d, threshold_f, display_at_rank='phylum'):
         if sofar > threshold:
             break
         sub_list.append((count, v))
-        
+
     return sub_list
 
 
@@ -333,14 +346,14 @@ class NextIndex:
     "A class to do counting for defaultdict indices."
     def __init__(self):
         self.idx = -1
-        
+
     def __call__(self):
         self.idx += 1
         return self.idx
-    
+
     def __len__(self):
         return self.idx + 1
-    
+
 def build_contamination_matrix(contam_list):
     "Build a matrix that can be used for a heatmap viz."
     source_idx = NextIndex()
@@ -376,5 +389,5 @@ def build_contamination_matrix(contam_list):
         for i in range(len(source_idx)):
             x.append(mat[i, j])
         mat_l.append(x)
-        
+
     return source_labels, target_labels, mat_l

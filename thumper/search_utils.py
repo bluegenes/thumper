@@ -10,21 +10,20 @@ import sourmash
 from sourmash.lca import lca_utils, LineagePair, taxlist
 from thumper.charcoal_utils import get_ident, pop_to_rank, gather_at_rank, summarize_at_rank
 
-#GATHER_MIN_MATCHES=3
-
 # generic SearchResult WITH lineage
 SearchResultLin = namedtuple('SearchResult',
                           'similarity, match, md5, filename, name, lineage')
 
 # generic RankSearchResult = summarized containment at rank
 RankSumSearchResult = namedtuple('RankSumSearchResult',
+                                 'lineage, f_contained, bp_contained, match')
+                                 #'lineage, contained_at_rank, contained_bp, match')
                                  #'lineage, containment, intersect_bp, match_sig')
-                                 'lineage, contained_at_rank, contained_bp, match')
-
-RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_major')
 
 #RankSumGatherResult = namedtuple('RankSumGatherResult',
-#                                 'lineage, num_hashes, matched_bp')
+#                                 'lineage, f_ident, f_major, f_minor, bp_ident, bp_major, bp_minor, minor_lineage, reason')
+RankSumGatherResult = namedtuple('RankSumGatherResult',
+                                 'lineage, f_ident, f_major')
 
 # use csv instead of json for now
 #ContigSearchInfo = namedtuple('ContigSearchInfo',
@@ -34,7 +33,7 @@ RankSumGatherResult = namedtuple('RankSumGatherResult', 'lineage, f_ident, f_maj
 
 
 def add_hashes_at_ranks(lineage_hashD, hashes_to_add, lineage, match_rank):
-    """\
+    """
     Takes a dictionary of minhash objects keyed by lineage tuples,
     and adds the given hashes to each lineage minhash for each rank
     down to match_rank.
@@ -82,13 +81,13 @@ def sort_by_rank_and_containment(summarized_results, match_rank):
         rank_res = summarized_results[rank]
         rank_res.sort(key=itemgetter(1), reverse=True)  # sort by containment
         for (lin, containment, intersect_bp, match_sig) in rank_res:
-            sorted_results.append(RankSumSearchResult(lineage=lin, contained_at_rank=containment, contained_bp=intersect_bp, match=match_sig))
+            sorted_results.append(RankSumSearchResult(lineage=lin, f_contained=containment, bp_contained=intersect_bp, match=match_sig))
         if rank == match_rank:
             break
     return sorted_results
 
 
-def sort_and_store_search_results(res): # same as in charcoal_utils
+def sort_and_store_search_results(res): # same sorting code as in charcoal_utils
     # sort normal search --containment results on similarity (reverse)
     sorted_rs = []
     res.sort(key=itemgetter(0), reverse=True)
@@ -140,15 +139,8 @@ def search_containment_at_rank(mh, lca_db, lin_db, match_rank, ignore_abundance=
     return search_results, search_results_at_rank
 
 
-def get_match_bp(scaled, num_matched_hashes=None, match_percent=None, total_num_hashes=None):
-    if match_percent and total_num_hashes:
-        return (float(match_percent)*int(total_num_hashes) * int(scaled))
-    elif num_matched_hashes:
-        return (float(num_matched_hashes) * int(scaled))
-    else:
-        # to be safe, should probably return something useful if we don't have these...
-        print("Can't calculate matched bp. Please make sure you've provided all the right info.")
-        return "NA"
+def get_match_bp(scaled, num_matched_hashes):
+    return (int(num_matched_hashes) * int(scaled))
 
 
 def gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=3):
@@ -169,26 +161,68 @@ def gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=3
         sum_ident += count
 
     if not first_lin:
-        return "","",""
+        return "", 0.0, 0.0
 
     f_ident = sum_ident / num_hashes
     f_major = first_count / sum_ident
-    # DO CHECK MATCH BP HERE (USE FIRST COUNT!)
-    # SUM IDENT --> TOTAL MATCHED HASHES
-    #intersect_bp = get_match_bp(scaled_val, num_matched_hashes=len(matched_hashes))
+
     return first_lin, f_ident, f_major
 
 
-def gather_guess_tax_at_each_rank(gather_results, num_hashes, taxlist=lca_utils.taxlist(include_strain=False), minimum_matches=3, lowest_rank="genus"):
+def gather_guess_tax_at_rank_with_bp(gather_results, num_hashes, scaled, rank, minimum_matches=3):
+    # modified from charcoal_utils
+    "Guess likely taxonomy using gather."
+    sum_ident = 0
+    first_lin = ()
+    first_count = 0
+    second_lin = ()
+    second_count = 0
+    # summarize to rank
+    rank_gather = summarize_at_rank(gather_results, rank)
+    for lin, count in rank_gather:
+        if count >= minimum_matches:
+            # record the first lineage we come across as likely lineage.
+            if not first_lin:
+                first_lin = lin
+                first_count = count
+            elif not second_lin:
+                second_lin = lin
+                second_count = count
+
+        sum_ident += count
+
+    if not first_lin:
+        if num_hashes < 3:
+            reason="total hashes insufficient"
+        else:
+            reason="matched hashes insufficient"
+        return "","","","","","","","",reason
+
+    f_ident = sum_ident / num_hashes
+    f_major = first_count / sum_ident
+    f_minor = second_count / sum_ident
+    # if f_minor is not far from f_major, low certainty score?
+
+    # calculate bp here?
+    bp_ident = get_match_bp(scaled, sum_ident)
+    bp_major = get_match_bp(scaled, first_count)
+    bp_minor = get_match_bp(scaled, second_count)
+
+    return first_lin, f_ident, f_major, f_minor, bp_ident, bp_major, bp_minor, second_lin, "matched"
+
+
+def gather_guess_tax_at_each_rank(gather_results, num_hashes, taxlist=lca_utils.taxlist(include_strain=False), minimum_matches=3, lowest_rank="genus"): # scaled
     rank_results = []
     prev_lineage=""
     top_lineage=""
     for rank in taxlist:
+        #top_lineage, f_ident, f_major, f_minor, bp_ident, bp_major, bp_minor, lin_minor, reason= gather_guess_tax_at_rank(gather_results, num_hashes, scaled, rank, minimum_matches=minimum_matches)
         top_lineage, f_ident, f_major = gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=minimum_matches)
 
         # summarizing at a lower rank than exists will yield same result as prev. break!
         if not top_lineage or top_lineage == prev_lineage:
             break
+        #rank_results.append(RankSumGatherResult(lineage=top_lineage, f_ident=f_ident, f_major=f_major, bp_ident=bp_ident, bp_major=bp_major, f_minor=f_minor, bp_minor=bp_minor, minor_lineage =lin_minor,reason=reason))
         rank_results.append(RankSumGatherResult(lineage=top_lineage, f_ident=f_ident, f_major=f_major))
         prev_lineage = top_lineage
         if rank == lowest_rank:
@@ -226,12 +260,13 @@ class SearchFiles:
             self.search_w = csv.DictWriter(self.search_csv, fieldnames=search_fieldnames)
             self.search_w.writeheader()
 
-            rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
+            rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_contained', 'bp_contained']
             self.rank_w = csv.DictWriter(self.ranksearch_csv, fieldnames=rank_fieldnames)
             self.rank_w.writeheader()
 
         if self.gather:
             self.rankgather_csv = open(f"{self.prefix}.rankgather.csv", "w")
+            #gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major', 'bp_ident', 'bp_major', 'f_minor', 'bp_minor', 'minor_lineage', 'reason']
             gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major']
             self.gather_rank_w = csv.DictWriter(self.rankgather_csv, fieldnames=gather_rank_fieldnames)
             self.gather_rank_w.writeheader()
@@ -254,7 +289,7 @@ class SearchFiles:
             self.rank_w.writerow(d)
         elif self.gather and result_type == "rankgather":
             d["match_rank"] = result.lineage[-1].rank
-            #d["major_bp"] = get_match_bp(float(gr.f_major))
+            #d["minor_lineage"] = lca_utils.display_lineage(result.minor_lineage)
             self.gather_rank_w.writerow(d)
 
     def write_taxonomy_json(self, tax_dict, result_type="gather"):
@@ -262,8 +297,8 @@ class SearchFiles:
             with open(f"{self.prefix}.ranksearch.json", "w") as ranksearch_json:
                 ranksearch_json.write(json.dumps(tax_dict))
         elif self.gather and result_type == "gather":
-            with open(f"{self.prefix}.rankgather.json", "w") as rankgather_json:
-                rankgather_json.write(json.dumps(tax_dict))
+            with open(f"{self.prefix}.gather.json", "w") as gather_json:
+                gather_json.write(json.dumps(tax_dict))
 
 
     def close(self):

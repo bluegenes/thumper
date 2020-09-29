@@ -41,7 +41,7 @@ def test_empty_contig_search(location):
     with open(ranksearch_csv) as rp:
         sr = csv.reader(rp)
         firstline = sr.__next__()
-        assert firstline == ['name', 'length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
+        assert firstline == ['name', 'length', 'match_rank', 'lineage', 'f_contained', 'bp_contained']
 
 @utils.in_tempdir
 def test_empty_genome_search(location):
@@ -77,7 +77,7 @@ def test_empty_genome_search(location):
     with open(ranksearch_csv) as rp:
         sr = csv.reader(rp)
         firstline = sr.__next__()
-        assert firstline == ['name', 'length', 'match_rank', 'lineage', 'contained_at_rank', 'contained_bp']
+        assert firstline == ['name', 'length', 'match_rank', 'lineage', 'f_contained', 'bp_contained']
 
 
 def get_csv_set(f):

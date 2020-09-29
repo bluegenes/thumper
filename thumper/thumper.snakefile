@@ -11,6 +11,7 @@ benchmarks_dir = os.path.join(out_dir, "benchmarks")
 database_dir = config['database_dir']
 data_dir = config['data_dir'].rstrip('/')
 report_dir = os.path.join(out_dir, "reports")
+basename = config["basename"]
 
 
 strict_val = config.get('strict', '1')
@@ -184,7 +185,7 @@ rule contigs_search:
         search_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.search.matches.sig'),
         ranksearch_csv=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.ranksearch.csv'),
         ranksearch_sig=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.ranksearch.matches.sig'),
-        rankgather_json=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.rankgather.json'),
+        gather_json=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.gather.json'),
         unmatched=os.path.join(out_dir, 'contig-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs.unmatched.fq'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
@@ -222,6 +223,7 @@ rule genome_search:
         ranksearch_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.ranksearch.csv'),
         ranksearch_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.ranksearch.matches.sig'),
         rankgather_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.rankgather.csv'),
+        gather_json=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.gather.json'),
     params:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
         moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
@@ -267,16 +269,81 @@ rule set_kernel:
     output:
         f"{out_dir}/.kernel.set"
     conda: 'envs/reporting-env.yml'
-    shell: """
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *1000,
+        runtime=1200,
+    shell:
+        """
         python -m ipykernel install --user --name thumper
         touch {output}
-    """
+        """
+
+localrules: make_genome_notebook, make_index, set_kernel, aggregate_gather_resultfiles
+
+rule aggregate_gather_resultfiles:
+    input:
+        genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.gather.json'), sample=sample_names),
+        contigs=expand(os.path.join(out_dir, 'contig-search', '{sample}.x.{{database}}.contigs.gather.json'), sample=sample_names),
+    output:
+        os.path.join(out_dir, "classify", "{basename}.x.{database}.gather.txt")
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *1000,
+        runtime=200,
+    run:
+        with open(str(output), "w") as outF:
+            header = ["name", "database", "genome-gather", "contig-gather"]
+            outF.write(",".join(header) + "\n")
+            for sample in sample_names:
+                genome_json = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.gather.json')
+                contig_json = os.path.join('contig-search', f'{sample}.x.{wildcards.database}.contigs.gather.json')
+                outF.write(sample + "," + wildcards.database + ',' + genome_json + ',' + contig_json + "\n")
+
+rule taxonomy_report:
+    input:
+        gather_info=os.path.join(out_dir, "classify", "{basename}.x.{database}.gather.txt"),
+    output:
+        genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        charcoal_lineages=os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"),
+        common_contamination=os.path.join(out_dir, "classify", "{basename}.x.{database}.contamination-summary.json"),
+        contig_details_summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.contig-details-summary.csv"),
+    log: os.path.join(logs_dir, "genome-report", "{basename}.x.{database}.genome-report.log")
+    benchmark: os.path.join(benchmarks_dir, "genome-report", "{basename}.x.{database}.genome-report.benchmark")
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *5000,
+        runtime=6000,
+    shell:
+        """
+        python -m thumper.compare_taxonomy \
+                  --jsoninfo-file {input.gather_info} \
+                  --match-rank "genus" \
+                  --gather_min_matches 3 \
+                  --min_f_ident 0.1 \
+                  --min_f_major 0.2 \
+                  --lineages-for-charcoal {output.charcoal_lineages} \
+                  --output-csv {output.genome_report} \
+                  --contam-summary-json {output.common_contamination} \
+                  --contig-details-summary {output.contig_details_summary} 2> {log}
+        """
+
+#rule report_genome_lineage:
+#    input:
+#        genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.gather.json'), database=config['databases']),
+#    output:
+#        expand(os.path.join(report_dir, "{basename}.taxonomy-report.csv"))
+#    resources:
+#        mem_mb=lambda wildcards, attempt: attempt *1000,
+#        runtime=1200,
+#    shell:
+#        """
+#        python -m thumper.genome_report {input} -o {output}
+#        """
+
 
 # use this notebook to aggregate files from 1. search containment, gather, 2. multiple alphas, 3. multiple databases?
 rule make_genome_notebook:
     input:
         nb='thumper/notebooks/genome-report.ipynb',
-        contigs=expand(os.path.join(out_dir, 'contig-search', '{{sample}}.x.{database}.contigs.rankgather.json'), database=config['databases']),
+        contigs=expand(os.path.join(out_dir, 'contig-search', '{{sample}}.x.{database}.contigs.gather.json'), database=config['databases']),
         genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.rankgather.csv'), database=config['databases']),
         kernel_set = rules.set_kernel.output,
     params:
@@ -287,7 +354,10 @@ rule make_genome_notebook:
         nb=os.path.join(report_dir, '{sample}.fig.ipynb'),
         html=os.path.join(report_dir, "{sample}.fig.html")
     conda: 'envs/reporting-env.yml'
-    shell: 
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *1000,
+        runtime=1200,
+    shell:
         """
         papermill {input.nb} - -k thumper --cwd {report_dir} \
               -p directory {params.directory:q} -p render '' \
@@ -297,18 +367,21 @@ rule make_genome_notebook:
         python -m nbconvert {output.nb} --to html --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output.html}
         """
 
-#rule make_index:
-#    input:
-#        notebook='thumper/notebooks/report_index.ipynb',
-#        summary=f'{output_dir}/genome_summary.csv',
-#        kernel_set = rules.set_kernel.output
-#    output:
-#        nb=f'{report_dir}/index.ipynb',
-#        html=f'{report_dir}/index.html',
-#    conda: 'envs/reporting-env.yml'
-#    shell: 
-#        """
-#        papermill {input.notebook} - -p name {out_dir:q} -p render '' \
-#            -p directory .. -k thumper --cwd {report_dir} > {output.nb}
-#        python -m nbconvert {output.nb} --to html --stdout --no-input > {output.html}
-#        """
+rule make_index:
+    input:
+        notebook='thumper/notebooks/report-index.ipynb',
+        summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        kernel_set = rules.set_kernel.output
+    output:
+        nb=os.path.join(report_dir, "{basename}.x.{database}.index.ipynb"),
+        html=os.path.join(report_dir, "{basename}.x.{database}.index.html")
+    params:
+        directory = os.path.abspath(out_dir),
+    conda: 'envs/reporting-env.yml'
+    shell:
+        """
+        papermill {input.notebook} - -p name {wildcards.basename:q} -p render '' \
+            -p database {wildcards.database:q} -p directory {params.directory:q} \
+            -k thumper --cwd {report_dir} > {output.nb}
+        python -m nbconvert {output.nb} --to html --stdout --no-input > {output.html}
+        """
