@@ -30,11 +30,13 @@ if force:
 wildcard_constraints:
     alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
     ksize="\d+",
-    sample="\w+"
+    #sample="\w+"
     #database = "(?!x\.).+"
 
 if config.get("sample_list"):
     sample_info = tp.read_samples(config["sample_list"], data_dir)
+elif config.get("lineages_csv") and config["pipeline"] == "generate_index":
+    sample_info = tp.read_samples(config["lineages_csv"], data_dir, lineages_csv=True)
 else:
     print('** Error: Please provide proteomes/genomes as a txt file ' \
         '(one filename per line) or a csv file("sample,filename"; no headers ' \
@@ -65,6 +67,7 @@ rule all:
 if config["get_databases"]:
     include: "get_databases.snakefile"
 include: "index.snakefile"
+include: "compare.snakefile"
 include: "common.snakefile"
 alphabet_info = config["alphabet_info"]
 
@@ -105,7 +108,7 @@ if config["input_type"] == "nucleotide":
             translate_sketch_params = build_sketch_params("protein"),
             nucl_sketch=os.path.join(out_dir, "signatures", "{sample}.nucleotide.sig"),
             prot_sketch=os.path.join(out_dir, "signatures", "{sample}.translate.sig"),
-            #signame = lambda w: accession2signame[w.accession],
+            signame = lambda w: sample_info.at[w.sample, 'signame'],
         threads: 1
         resources:
             mem_mb=lambda wildcards, attempt: attempt *1000,
@@ -115,8 +118,8 @@ if config["input_type"] == "nucleotide":
         conda: "envs/sourmash-dev.yml"
         shell:
             """
-            sourmash sketch {params.nucl_sketch_params} -o {params.nucl_sketch} --name {wildcards.sample} {input}  2> {log}
-            sourmash sketch {params.translate_sketch_params} -o {params.prot_sketch} --name {wildcards.sample} {input}  2>> {log}
+            sourmash sketch {params.nucl_sketch_params} -o {params.nucl_sketch} --name {params.signame} {input}  2> {log}
+            sourmash sketch {params.translate_sketch_params} -o {params.prot_sketch} --name {params.signame} {input}  2>> {log}
             sourmash sig cat {params.nucl_sketch} {params.prot_sketch} -o {output.full_sketch} 2>> {log}
             rm {params.nucl_sketch}
             rm {params.prot_sketch}
@@ -127,8 +130,8 @@ else:
         output:
             os.path.join(out_dir, "signatures", "{sample}.sig"),
         params:
-            sketch_params = build_sketch_params("protein")
-            #signame = lambda w: accession2signame[w.accession],
+            sketch_params = build_sketch_params("protein"),
+            signame = lambda w: sample_info.at[w.sample, 'signame'],
         threads: 1
         resources:
             mem_mb=lambda wildcards, attempt: attempt *1000,
@@ -140,7 +143,7 @@ else:
         conda: "envs/sourmash-dev.yml"
         shell:
             """
-            sourmash sketch {params.sketch_params} -o {output} --name {wildcards.sample} {input} 2> {log}
+            sourmash sketch {params.sketch_params} -o {output} --name {params.signame} {input} 2> {log}
             """
 
 rule sourmash_search_containment:
@@ -158,7 +161,7 @@ rule sourmash_search_containment:
         search_threshold = float(config.get("search_threshold", 0.001))
     resources:
         mem_mb=lambda wildcards, attempt: attempt *20000,
-        runtime=6000,
+        runtime=600,
     log: os.path.join(logs_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.log")
     benchmark: os.path.join(benchmarks_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.benchmark")
     conda: "envs/sourmash-dev.yml"
@@ -194,7 +197,7 @@ rule contigs_search:
     conda: 'envs/sourmash-dev.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *100000,
-        runtime=6000,
+        runtime=800,
     log: os.path.join(logs_dir, "contig-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs-search.log")
     benchmark: os.path.join(benchmarks_dir, "contig-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.contigs-search.benchmark")
     shell: 
@@ -231,7 +234,7 @@ rule genome_search:
     conda: 'envs/sourmash-dev.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *100000,
-        runtime=6000,
+        runtime=800,
     log: os.path.join(logs_dir, "genome-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.genome-search.log")
     benchmark: os.path.join(benchmarks_dir, "genome-search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.genome-search.benchmark")
     shell:
@@ -271,7 +274,7 @@ rule set_kernel:
     conda: 'envs/reporting-env.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
-        runtime=1200,
+        runtime=100,
     shell:
         """
         python -m ipykernel install --user --name thumper
@@ -310,7 +313,7 @@ rule taxonomy_report:
     benchmark: os.path.join(benchmarks_dir, "genome-report", "{basename}.x.{database}.genome-report.benchmark")
     resources:
         mem_mb=lambda wildcards, attempt: attempt *5000,
-        runtime=6000,
+        runtime=100,
     shell:
         """
         python -m thumper.compare_taxonomy \
@@ -356,7 +359,7 @@ rule make_genome_notebook:
     conda: 'envs/reporting-env.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
-        runtime=1200,
+        runtime=100,
     shell:
         """
         papermill {input.nb} - -k thumper --cwd {report_dir} \
@@ -378,6 +381,9 @@ rule make_index:
     params:
         directory = os.path.abspath(out_dir),
     conda: 'envs/reporting-env.yml'
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *1000,
+        runtime=100,
     shell:
         """
         papermill {input.notebook} - -p name {wildcards.basename:q} -p render '' \

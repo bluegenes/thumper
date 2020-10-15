@@ -27,27 +27,38 @@ def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml
     return found_file
 
 
-def read_samples(samples_file, data_dir, strict_mode=False):
+def read_samples(samples_file, data_dir, strict_mode=False, lineages_csv=False):
     samples_file = find_input_file(samples_file)
     if '.tsv' in samples_file or '.csv' in samples_file:
         separator = '\t'
         if '.csv' in samples_file:
             separator = ','
         try:
-            samples = pd.read_csv(samples_file, dtype=str, sep=separator, names = ["sample", "filename"])
+            # signame col doesn't need to exist: "If you pass extra name in this list, it will add another new column with that name with NaN values"
+            if not lineages_csv:
+                samples = pd.read_csv(samples_file, dtype=str, sep=separator, names = ["sample", "filename", "signame"])
+            else:
+                samples = pd.read_csv(samples_file, dtype=str, sep=separator, header=0)
         except Exception as e:
             sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
             print(e)
+        # if signame column was not given, it will be NaNs. Fill NA's with sample names.
+        samples['signame'] = samples['signame'].fillna(samples['sample'])
     elif '.xls' in samples_file:
         try:
-            samples = pd.read_excel(samples_file, dtype=str, names = ["sample", "filename"])
+            if not lineages_csv:
+                samples = pd.read_excel(samples_file, dtype=str, names = ["sample", "filename", "signame"])
+            else:
+                samples = pd.read_excel(samples_file, dtype=str, header=0)
         except Exception as e:
             sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
             print(e)
+        # if signame column was not given, it will be NaNs. Fill NA's with sample names.
+        samples['signame'] = samples['signame'].fillna(samples['sample'])
     else:
         sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
         sample_list = [ line for line in sample_list if line ]   # remove empty lines
-        samplesD = {"sample":sample_list,"filename":sample_list} # maybe later try removing *fa.gz or the like
+        samplesD = {"sample":sample_list,"filename":sample_list,"signame":sample_list} # maybe later try removing *fa.gz or the like
         samples = pd.DataFrame(samplesD)
 
     samples.set_index("sample", inplace=True)
@@ -295,9 +306,9 @@ def generate_targets(config, samples, output_dir="", generate_db_targets=False):
     # TO DO: do this above with fullnames? Also make a rule to print csv info for generated indices
     index_names = []
     pipeline = config["pipeline"]
-    if pipeline == "generate_index":
-        for alpha, alphaInfo in alphabet_info.items():
-            index_names+=expand("{basename}.{alpha}-k{ksize}-scaled{scaled}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
+    #if pipeline == "generate_index" or pipeline == "compare_samples": eh. just always make index names, in case we need em
+    for alpha, alphaInfo in alphabet_info.items():
+        index_names+=expand("{basename}.{alpha}-k{ksize}-scaled{scaled}", basename=basename, alpha=alpha, ksize=alphaInfo["ksizes"], scaled=alphaInfo["scaled"])
 
     # generate targets for each step
     steps = config["pipelines"][pipeline]["steps"]

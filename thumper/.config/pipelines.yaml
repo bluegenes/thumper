@@ -30,5 +30,9 @@ pipelines:
     databases_required: False
     steps:
       - sourmash_sketch
-      - signames_to_file
       - index_sbt
+  compare_samples:
+    databases_required: False
+    steps:
+      - sourmash_sketch
+      - sourmash_compare
