@@ -33,10 +33,10 @@ wildcard_constraints:
     #sample="\w+"
     #database = "(?!x\.).+"
 
-if config.get("sample_list"):
-    sample_info = tp.read_samples(config["sample_list"], data_dir)
-elif config.get("lineages_csv") and config["pipeline"] == "generate_index":
+if config.get("lineages_csv") and config["pipeline"] == "generate_index":
     sample_info = tp.read_samples(config["lineages_csv"], data_dir, lineages_csv=True)
+elif config.get("sample_list"):
+    sample_info = tp.read_samples(config["sample_list"], data_dir)
 else:
     print('** Error: Please provide proteomes/genomes as a txt file ' \
         '(one filename per line) or a csv file("sample,filename"; no headers ' \
@@ -118,8 +118,8 @@ if config["input_type"] == "nucleotide":
         conda: "envs/sourmash-dev.yml"
         shell:
             """
-            sourmash sketch {params.nucl_sketch_params} -o {params.nucl_sketch} --name {params.signame} {input}  2> {log}
-            sourmash sketch {params.translate_sketch_params} -o {params.prot_sketch} --name {params.signame} {input}  2>> {log}
+            sourmash sketch {params.nucl_sketch_params} -o {params.nucl_sketch} --name {params.signame:q} {input}  2> {log}
+            sourmash sketch {params.translate_sketch_params} -o {params.prot_sketch} --name {params.signame:q} {input}  2>> {log}
             sourmash sig cat {params.nucl_sketch} {params.prot_sketch} -o {output.full_sketch} 2>> {log}
             rm {params.nucl_sketch}
             rm {params.prot_sketch}
@@ -143,7 +143,7 @@ else:
         conda: "envs/sourmash-dev.yml"
         shell:
             """
-            sourmash sketch {params.sketch_params} -o {output} --name {params.signame} {input} 2> {log}
+            sourmash sketch {params.sketch_params} -o {output} --name {params.signame:q} {input} 2> {log}
             """
 
 rule sourmash_search_containment:
@@ -160,7 +160,7 @@ rule sourmash_search_containment:
         ksize = lambda w: int(w.ksize)*int(alphabet_info[w.alphabet]["ksize_multiplier"]),
         search_threshold = float(config.get("search_threshold", 0.001))
     resources:
-        mem_mb=lambda wildcards, attempt: attempt *20000,
+        mem_mb=lambda wildcards, attempt: attempt *15000,
         runtime=600,
     log: os.path.join(logs_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.log")
     benchmark: os.path.join(benchmarks_dir, "search", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.benchmark")
@@ -314,6 +314,7 @@ rule taxonomy_report:
     resources:
         mem_mb=lambda wildcards, attempt: attempt *5000,
         runtime=100,
+    conda: 'envs/reporting-env.yml'
     shell:
         """
         python -m thumper.compare_taxonomy \

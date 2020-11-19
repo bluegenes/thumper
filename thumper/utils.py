@@ -37,8 +37,11 @@ def read_samples(samples_file, data_dir, strict_mode=False, lineages_csv=False):
             # signame col doesn't need to exist: "If you pass extra name in this list, it will add another new column with that name with NaN values"
             if not lineages_csv:
                 samples = pd.read_csv(samples_file, dtype=str, sep=separator, names = ["sample", "filename", "signame"])
+                samples["sample"] = samples["sample"].str.split(" ", expand=True)[0]
             else:
                 samples = pd.read_csv(samples_file, dtype=str, sep=separator, header=0)
+                samples.rename(columns={'accession':'sample'}, inplace=True)
+                samples["sample"] = samples["sample"].str.split(" ", expand=True)[0]
         except Exception as e:
             sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
             print(e)
@@ -48,8 +51,11 @@ def read_samples(samples_file, data_dir, strict_mode=False, lineages_csv=False):
         try:
             if not lineages_csv:
                 samples = pd.read_excel(samples_file, dtype=str, names = ["sample", "filename", "signame"])
+                samples["sample"] = samples["sample"].str.split(" ", expand=True)[0]
             else:
                 samples = pd.read_excel(samples_file, dtype=str, header=0)
+                samples["sample"] = samples["sample"].str.split(" ", expand=True)[0]
+                samples.rename(columns={'accession':'sample'}, inplace=True)
         except Exception as e:
             sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
             print(e)
@@ -73,7 +79,6 @@ def read_samples(samples_file, data_dir, strict_mode=False, lineages_csv=False):
             if strict_mode:
                 print('** exiting.')
                 sys.exit(-1)
-
     return samples
 
 

@@ -117,6 +117,7 @@ index_sbt:
   output_dir: index
   output_files:
     - "{index}.sbt.zip" # "index name" needs to include alphabet, ksize, scaled
+    #- "{index}.lca.json.gz"
 
 sourmash_compare:
   output_dir: compare
