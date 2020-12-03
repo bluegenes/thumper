@@ -19,6 +19,7 @@ def test_compare_taxonomy(location):
     args.output_csv = os.path.join(location, "GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11-scaled10.gather.classify.csv")
     args.contam_summary_json = os.path.join(location, "GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11-scaled10.contam-summary.json")
     args.contig_details_summary = os.path.join(location, "GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11-scaled10.contig-details.csv")
+    args.lineages_for_charcoal = os.path.join(location, "GB_GCA_000384615.1_protein.100contigs.faa.gz.x.gtdb-nine.protein-k11-scaled10.charcoal-lineages.csv")
 
     status = compare_taxonomy.main(args)
 
