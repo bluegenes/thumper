@@ -20,8 +20,8 @@ RankSumSearchResult = namedtuple('RankSumSearchResult',
                                  #'lineage, contained_at_rank, contained_bp, match')
                                  #'lineage, containment, intersect_bp, match_sig')
 
-#RankSumGatherResult = namedtuple('RankSumGatherResult',
-#                                 'lineage, f_ident, f_major, f_minor, bp_ident, bp_major, bp_minor, minor_lineage, reason')
+RankSumGatherResult_bp = namedtuple('RankSumGatherResult',
+                                 'lineage, f_ident, f_major, f_minor, bp_ident, bp_major, bp_minor, minor_lineage, reason')
 RankSumGatherResult = namedtuple('RankSumGatherResult',
                                  'lineage, f_ident, f_major')
 
@@ -211,19 +211,19 @@ def gather_guess_tax_at_rank_with_bp(gather_results, num_hashes, scaled, rank, m
     return first_lin, f_ident, f_major, f_minor, bp_ident, bp_major, bp_minor, second_lin, "matched"
 
 
-def gather_guess_tax_at_each_rank(gather_results, num_hashes, taxlist=lca_utils.taxlist(include_strain=False), minimum_matches=3, lowest_rank="genus"): # scaled
+def gather_guess_tax_at_each_rank(gather_results, num_hashes, scaled, taxlist=lca_utils.taxlist(include_strain=False), minimum_matches=3, lowest_rank="genus"): # scaled
     rank_results = []
     prev_lineage=""
     top_lineage=""
     for rank in taxlist:
-        #top_lineage, f_ident, f_major, f_minor, bp_ident, bp_major, bp_minor, lin_minor, reason= gather_guess_tax_at_rank(gather_results, num_hashes, scaled, rank, minimum_matches=minimum_matches)
-        top_lineage, f_ident, f_major = gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=minimum_matches)
+        top_lineage, f_ident, f_major, f_minor, bp_ident, bp_major, bp_minor, lin_minor, reason= gather_guess_tax_at_rank_with_bp(gather_results, num_hashes, scaled, rank, minimum_matches=minimum_matches)
+        #top_lineage, f_ident, f_major = gather_guess_tax_at_rank(gather_results, num_hashes, rank, minimum_matches=minimum_matches)
 
         # summarizing at a lower rank than exists will yield same result as prev. break!
         if not top_lineage or top_lineage == prev_lineage:
             break
-        #rank_results.append(RankSumGatherResult(lineage=top_lineage, f_ident=f_ident, f_major=f_major, bp_ident=bp_ident, bp_major=bp_major, f_minor=f_minor, bp_minor=bp_minor, minor_lineage =lin_minor,reason=reason))
-        rank_results.append(RankSumGatherResult(lineage=top_lineage, f_ident=f_ident, f_major=f_major))
+        rank_results.append(RankSumGatherResult_bp(lineage=top_lineage, f_ident=f_ident, f_major=f_major, bp_ident=bp_ident, bp_major=bp_major, f_minor=f_minor, bp_minor=bp_minor, minor_lineage =lin_minor,reason=reason))
+        #rank_results.append(RankSumGatherResult(lineage=top_lineage, f_ident=f_ident, f_major=f_major))
         prev_lineage = top_lineage
         if rank == lowest_rank:
             break
@@ -266,12 +266,12 @@ class SearchFiles:
 
         if self.gather:
             self.rankgather_csv = open(f"{self.prefix}.rankgather.csv", "w")
-            #gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major', 'bp_ident', 'bp_major', 'f_minor', 'bp_minor', 'minor_lineage', 'reason']
-            gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major']
+            gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major', 'bp_ident', 'bp_major', 'f_minor', 'bp_minor', 'minor_lineage', 'reason']
+            #gather_rank_fieldnames = ['name', 'length', 'match_rank', 'lineage', 'f_ident', 'f_major']
             self.gather_rank_w = csv.DictWriter(self.rankgather_csv, fieldnames=gather_rank_fieldnames)
             self.gather_rank_w.writeheader()
 
-    def write_result(self, result, name, length, result_type="search"):
+    def write_result(self, result, name, length, result_type="search", select_rank=None):
         # write single result
         d = dict(result._asdict())
         d["name"] = name
@@ -289,8 +289,12 @@ class SearchFiles:
             self.rank_w.writerow(d)
         elif self.gather and result_type == "rankgather":
             d["match_rank"] = result.lineage[-1].rank
-            #d["minor_lineage"] = lca_utils.display_lineage(result.minor_lineage)
-            self.gather_rank_w.writerow(d)
+            d["minor_lineage"] = lca_utils.display_lineage(result.minor_lineage)
+            if select_rank:
+                if select_rank == result.lineage[-1].rank:
+                    self.gather_rank_w.writerow(d)
+            else:
+                self.gather_rank_w.writerow(d)
 
     def write_taxonomy_json(self, tax_dict, result_type="gather"):
         if self.search and result_type == "search":

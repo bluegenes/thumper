@@ -159,6 +159,7 @@ def main(args):
         gf = SearchFiles(args.output_prefix, not args.no_search, args.gather, contigs=False)
         # MAG workflow
         entire_mh = genome_sig.minhash
+        scaled = entire_mh.scaled
         genome_name = genome_sig.name()
         num_hashes = len(entire_mh.hashes)
         if not genome_len:
@@ -176,12 +177,12 @@ def main(args):
             genome_gather_info = ContigGatherInfo(genome_len, len(entire_mh), gather_results)
             genome_gather_tax[genome_name] = genome_gather_info
             # next, summarize at higher ranks
-            gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
+            gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, scaled, \
                                                                      minimum_matches=args.gather_min_matches, \
-                                                                     lowest_rank=match_rank, \
-                                                                     taxlist=lca_utils.taxlist(include_strain=False))
+                                                                     lowest_rank=match_rank ) #, \
+                                                                     #taxlist=lca_utils.taxlist(include_strain=False))
             for gather_res in gather_taxonomy_per_rank:
-                gf.write_result(gather_res, genome_name, genome_len, result_type="rankgather")
+                gf.write_result(gather_res, genome_name, genome_len, result_type="rankgather", select_rank="genus")
         # close genome files
         gf.write_taxonomy_json(genome_gather_tax, result_type="gather")
         gf.close()
