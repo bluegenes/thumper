@@ -56,8 +56,8 @@ rule get_sbt:
 
 
 # if running as standalone, use this as rule all
-rule download_databases:
-    input: tp.generate_database_targets(config)
+#rule download_databases:
+#    input: tp.generate_database_targets(config)
 
 #rule get_lca:
 #    output:

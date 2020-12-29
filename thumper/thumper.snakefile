@@ -13,7 +13,7 @@ data_dir = config['data_dir'].rstrip('/')
 report_dir = os.path.join(out_dir, "reports")
 basename = config["basename"]
 
-
+# check strict and force values
 strict_val = config.get('strict', '1')
 strict_mode = int(strict_val)
 if not strict_mode:
@@ -25,13 +25,9 @@ force_param = ''
 if force:
     force_param = '--force'
 
-# snakemake workflow
-
-wildcard_constraints:
-    alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
-    ksize="\d+",
-    sample="\w+"
-    #database = "(?!x\.).+"
+## integrate values from user config ##
+tp.check_and_set_alphabets(config, strict_mode=strict_mode)
+alphabet_info = config["alphabet_info"]
 
 if config.get("sample_list"):
     sample_info = tp.read_samples(config["sample_list"], data_dir)
@@ -43,13 +39,22 @@ else:
 
 sample_names = sample_info.index.tolist()
 
+# snakemake info and workflow #
+ascii_thumper = srcdir("animals/thumper")
+failwhale = srcdir("animals/failwhale")
+
+wildcard_constraints:
+    alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
+    ksize="\d+",
+    sample="\w+"
+    #database = "(?!x\.).+"
+
 onstart:
     print("------------------------------")
     print("Perform taxonomic classification using protein k-mers")
     print("------------------------------")
 
-ascii_thumper = srcdir("animals/thumper")
-failwhale = srcdir("animals/failwhale")
+
 onsuccess:
     print("\n--- Workflow executed successfully! ---\n")
     shell('cat {ascii_thumper}')
@@ -58,15 +63,36 @@ onerror:
     print("Alas!\n")
     shell('cat {failwhale}')
 
-rule all:
-    input: tp.generate_targets(config, sample_names, out_dir, generate_db_targets=False)
 
-# include the databases, index, common utility snakefiles
-if config["get_databases"]:
-    include: "get_databases.snakefile"
+# targeting rules
+rule download_databases:
+    input:
+        expand(os.path.join(database_dir, "{database}.sbt.zip"), database=tp.check_databases(config))
+
+rule mag_taxonomy:
+    input: 
+        expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config)),
+        expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"), basename=basename, database=tp.check_databases(config))
+        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv", basename=basename, database=config["databases"])
+        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"), basename=basename, database=config["databases"])
+        
+rule mag_contig_taxonomy:
+    input:
+        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv", basename=basename, database=config["databases"])
+        expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config))
+    
+#rule metagenome_classify:
+
+rule build_index:
+    input: 
+        expand(os.path.join(out_dir, "index", "{index}.sbt.zip"), index = tp.build_index_names(config))
+        #expand(os.path.join(out_dir, "index", "{index}.sbt.zip", index = config["index_names"])
+
+include: "get_databases.snakefile"
 include: "index.snakefile"
 include: "common.snakefile"
-alphabet_info = config["alphabet_info"]
+
+## individual rules and steps ##
 
 def build_sketch_params(output_type):
     sketch_cmd = ""

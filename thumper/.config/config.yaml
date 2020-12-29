@@ -1,10 +1,10 @@
 output_dir: output.thumper
-basename: thumper-output
+basename: thumper
 #experiment_suffix: ""
 logs_dir: logs
 #sigs_dir: "sigs" #default: sigs_dir is under out_dir. Optionally enable user to specify a sigs dir?
 
-pipeline: gtdb_classification_contig
+#pipeline: gtdb_classification_mag
 
 ### default settings 
 default_input_type: protein
@@ -51,69 +51,69 @@ default_database_info: .config/databases.csv
 database_dir: databases
 database_suffix: sbt.zip
 database_info_suffix: info.csv
-
+default_databases:
+  - gtdb95-genus-n0 
 
 ## rule params ##
-sourmash_sketch:
-  output_dir: signatures
-  output_files:
-    - "{sample}.sig"
+#sourmash_sketch:
+#  output_dir: signatures
+#  output_files:
+#    - "{sample}.sig"
 
-sourmash_search_containment:
-  output_dir: search
-  output_files:
-    - "{sample}.x.{database}.matches.csv"
-    - "{sample}.x.{database}.matches.sig"
-    - "{sample}.x.{database}.matches.txt"
+#sourmash_search_containment:
+#  output_dir: search
+#  output_files:
+#    - "{sample}.x.{database}.matches.csv"
+#    - "{sample}.x.{database}.matches.sig"
+#    - "{sample}.x.{database}.matches.txt"
 
-contigs_search:
-  output_dir: contig-search
-  output_files:
-    - "{sample}.x.{database}.contigs.search.csv"
-    - "{sample}.x.{database}.contigs.ranksearch.csv"
-    - "{sample}.x.{database}.contigs.search.matches.sig"
-    - "{sample}.x.{database}.contigs.ranksearch.matches.sig"
-    - "{sample}.x.{database}.contigs.unmatched.fq"
+#contigs_search:
+#  output_dir: contig-search
+#  output_files:
+#    - "{sample}.x.{database}.contigs.search.csv"
+#    - "{sample}.x.{database}.contigs.ranksearch.csv"
+#    - "{sample}.x.{database}.contigs.search.matches.sig"
+#    - "{sample}.x.{database}.contigs.ranksearch.matches.sig"
+#    - "{sample}.x.{database}.contigs.unmatched.fq"
 
-genome_search:
-  output_dir: genome-search
-  output_files:
-    - "{sample}.x.{database}.search.csv"
-    - "{sample}.x.{database}.ranksearch.csv"
-    - "{sample}.x.{database}.search.matches.sig"
-    - "{sample}.x.{database}.ranksearch.matches.sig"
+#genome_search:
+#  output_dir: genome-search
+#  output_files:
+#    - "{sample}.x.{database}.search.csv"
+#    - "{sample}.x.{database}.ranksearch.csv"
+#    - "{sample}.x.{database}.search.matches.sig"
+#    - "{sample}.x.{database}.ranksearch.matches.sig"
+#    - "{basename}.x.{database}.rankgather.csv"
 
-
-genome_report:
+#genome_report:
 # make notebook, make_html
-    output_dir: reports
-    output_files:
-      - "{sample}.fig.ipynb"
-      - "{sample}.fig.html"
+#    output_dir: reports
+#    output_files:
+#      - "{sample}.fig.ipynb"
+#      - "{sample}.fig.html"
 
-summary_report:
-    output_dir: reports
-    output_files:
-      - "{basename}.x.{database}.index.ipynb"
-      - "{basename}.x.{database}.index.html"
+#summary_report:
+#    output_dir: reports
+#    output_files:
+#      - "{basename}.x.{database}.index.ipynb"
+#      - "{basename}.x.{database}.index.html"
 
-thumper_classify:
-   output_dir: classify
-   output_files:
-     - "{basename}.x.{database}.gather.txt"
-     - "{basename}.x.{database}.taxonomy-report.csv"
+#thumper_classify:
+#   output_dir: classify
+#   output_files:
+#     - "{basename}.x.{database}.taxonomy-report.csv"
     #- "{basename}.x.{database}.classified.csv" --> final classification summary
 
 ## index snakefile ##
-signames_to_file:
-  output_dir: index
-  output_files:
-    - "{basename}.signatures.txt"
+#signames_to_file:
+#  output_dir: index
+#  output_files:
+#    - "{basename}.signatures.txt"
 
-index_sbt:
-  output_dir: index
-  output_files:
-    - "{index}.sbt.zip" # "index name" needs to include alphabet, ksize, scaled
+#index_sbt:
+#  output_dir: index
+#  output_files:
+#    - "{index}.sbt.zip" # "index name" needs to include alphabet, ksize, scaled
 
 ## not currently in use ##
 #sourmash_gather:
