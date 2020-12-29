@@ -83,7 +83,7 @@ rule mag_contig_taxonomy:
     
 #rule metagenome_classify:
 
-rule build_index:
+rule index:
     input: 
         expand(os.path.join(out_dir, "index", "{index}.sbt.zip"), index = tp.build_index_names(config))
         #expand(os.path.join(out_dir, "index", "{index}.sbt.zip", index = config["index_names"])
@@ -320,7 +320,7 @@ rule set_kernel:
         touch {output}
         """
 
-localrules: make_genome_notebook, make_index, set_kernel, aggregate_gather_resultfiles
+localrules: make_genome_notebook, make_index, set_kernel, aggregate_gather_json, aggregate_contig_gather_json
 
 rule aggregate_gather_json:
     input:
@@ -336,7 +336,7 @@ rule aggregate_gather_json:
             outF.write(",".join(header) + "\n")
             for sample in sample_names:
                 genome_json = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.gather.json')
-                outF.write(sample + "," + wildcards.database + ',' + genome_json + ',' + "\n")
+                outF.write(sample + "," + wildcards.database + ',' + genome_json + "\n")
 
 rule aggregate_contig_gather_json:
     input:
@@ -371,7 +371,7 @@ rule taxonomy_report:
     shell:
         """
         python -m thumper.compare_taxonomy \
-                  --jsoninfo-file {input.gather_info} \
+                  --jsoninfo-file {input.genome_info} \
                   --match-rank "genus" \
                   --gather_min_matches 3 \
                   --min_f_ident 0.1 \
