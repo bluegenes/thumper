@@ -142,7 +142,7 @@ def main(args):
                     sf.unmatched.write(">" + record.name + "\n" + record.sequence + "\n")
                 else:
                     # next, summarize at higher ranks
-                    gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, \
+                    gather_taxonomy_per_rank = gather_guess_tax_at_each_rank(gather_results, num_hashes, scaled, \
                                                                              minimum_matches=args.gather_min_matches, \
                                                                              lowest_rank=match_rank, \
                                                                              taxlist=lca_utils.taxlist(include_strain=False))
