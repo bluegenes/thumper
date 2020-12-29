@@ -356,7 +356,7 @@ rule aggregate_contig_gather_json:
 
 rule taxonomy_report:
     input:
-        genome_info=os.path.join(out_dir, "genome_search", "{basename}.x.{database}.gather.txt"),
+        genome_info=os.path.join(out_dir, "genome-search", "{basename}.x.{database}.gather.txt"),
         #contig_info=os.path.join(out_dir, "contig-search", "{basename}.x.{database}.gather.txt"),
     output:
         genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
