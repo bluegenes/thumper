@@ -1,4 +1,3 @@
-## borrows heavily from charcoal, dammit, sgc cli infra
 "Enable python -m thumper"
 import os
 import sys
@@ -51,8 +50,7 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
     cmd += list(extra_args)
 
         # add defaults and system config files, in that order
-    configfiles = [get_package_configfile("config.yaml"),
-                   get_package_configfile("pipelines.yaml")]
+    configfiles = [get_package_configfile("config.yaml")]
 
     if configfile:
         configfiles+= [configfile]
@@ -96,19 +94,6 @@ def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose, outdir)
                   no_use_conda=no_use_conda, no_use_mamba=no_use_mamba,
                   verbose=verbose,outdir=outdir,
                   extra_args=snakemake_args)
-
-# get databases
-#@click.command()
-#@click.option('--configfile', type=click.Path(exists=True), default=None)
-#@click.option('--verbose', is_flag=True)
-# does this outdir need to exist?
-#@click.option('--outdir', nargs=1, type=click.Path(exists=True), default=None)
-#def download_databases(configfile, verbose, outdir):
-#    "get the necessary databases"
-#    run_snakemake(configfile, snakefile_name='get_databases.snakefile',
-#                  no_use_conda=True,
-#                  verbose=verbose, outdir=outdir,
-#                  extra_args=['download_databases'])
 
 # 'check' command
 @click.command()
@@ -205,7 +190,6 @@ cli.add_command(check)
 cli.add_command(showconf)
 cli.add_command(info)
 cli.add_command(init)
-#cli.add_command(download_databases)
 
 def main():
     cli()

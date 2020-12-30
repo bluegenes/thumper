@@ -114,7 +114,10 @@ def check_and_set_alphabets(config, strict_mode=False):
             # if override values are provided in the config, replace defaults
             if isinstance(alphabets, dict):
                 alphaInfo[alpha]["ksizes"] = alphabets[alpha].get("ksizes", default_alphabets[alpha]["ksizes"])
-                alphaInfo[alpha]["scaled"] = alphabets[alpha].get("scaled", default_alphabets[alpha]["scaled"])
+                scaled = alphabets[alpha].get("scaled", default_alphabets[alpha]["scaled"])
+                if not isinstance(scaled, list):
+                    scaled = [scaled]
+                alphaInfo[alpha]["scaled"] = scaled
     if alphaInfo:
         config["alphabet_info"] = alphaInfo
         config = check_input_type(config)

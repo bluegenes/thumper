@@ -69,24 +69,20 @@ rule download_databases:
     input:
         expand(os.path.join(database_dir, "{database}.sbt.zip"), database=tp.check_databases(config))
 
-rule mag_taxonomy:
+rule classify_mags:
     input: 
         expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config)),
         expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"), basename=basename, database=tp.check_databases(config))
-        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv", basename=basename, database=config["databases"])
-        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"), basename=basename, database=config["databases"])
         
-rule mag_contig_taxonomy:
+rule classify_contigs:
     input:
-        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv", basename=basename, database=config["databases"])
         expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config))
     
-#rule metagenome_classify:
+#rule classify_reads:
 
 rule index:
     input: 
         expand(os.path.join(out_dir, "index", "{index}.sbt.zip"), index = tp.build_index_names(config))
-        #expand(os.path.join(out_dir, "index", "{index}.sbt.zip", index = config["index_names"])
 
 include: "get_databases.snakefile"
 include: "index.snakefile"
@@ -101,7 +97,7 @@ def build_sketch_params(output_type):
     if input_type == "nucleotide":
         if output_type == "nucleotide":
             ksizes = config["alphabet_info"]["nucleotide"].get("ksizes", config["alphabet_defaults"]["nucleotide"]["ksizes"])
-            scaled = config["alphabet_info"]["nucleotide"].get("scaled", config["alphabet_defaults"]["nucleotide"]["scaled"])
+            scaled = min(config["alphabet_info"]["nucleotide"].get("scaled", config["alphabet_defaults"]["nucleotide"]["scaled"]))
             # always track abund when sketching (?)
             sketch_cmd = "dna -p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
             return sketch_cmd
@@ -114,10 +110,10 @@ def build_sketch_params(output_type):
         if alpha in config["alphabet_info"].keys():
         ## default build protein, dayhoff, hp sigs at the default ksizes from config
             ksizes = config["alphabet_info"][alpha].get("ksizes", config["alphabet_defaults"][alpha]["ksizes"])
-            scaled = config["alphabet_info"][alpha].get("scaled", config["alphabet_defaults"][alpha]["scaled"])
+            scaled = min(config["alphabet_info"][alpha].get("scaled", config["alphabet_defaults"][alpha]["scaled"]))
         else:
             ksizes = config["alphabet_defaults"][alpha]["ksizes"]
-            scaled = config["alphabet_defaults"][alpha]["scaled"]
+            scaled = min(config["alphabet_defaults"][alpha]["scaled"])
         sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
     return sketch_cmd
 
