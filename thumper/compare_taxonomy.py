@@ -130,7 +130,7 @@ def main(args):
     summary_d = {}
     detected_contam = {}
 
-    for n, [genome_name, database, genome_json, contigs_json] in enumerate(jsoninfo[1:]):
+    for n, [genome_name, database, genome_json] in enumerate(jsoninfo[1:]):
         genome_jsonfile = os.path.join(json_dir, genome_json)
         contigs_jsonfile = os.path.join(json_dir, contigs_json)
         alpha,ksize,scaled = database.split(".", 1)[1].split("-")
@@ -309,8 +309,8 @@ def cmdline(sys_args):
     p.add_argument('--jsoninfo-file', required=True) # file with list of json files to aggregate
     p.add_argument('--output-csv', required=True)
     p.add_argument('--lineages-for-charcoal')
-    p.add_argument('--contig-details-summary', required=True)
-    p.add_argument('--contam-summary-json', required=True)
+    p.add_argument('--contig-details-summary')
+    p.add_argument('--contam-summary-json')
     p.add_argument('--match-rank', default="genus")
     p.add_argument('--gather_min_matches', type=float, default=GATHER_MIN_MATCHES)
     p.add_argument('--min_f_ident', type=float, default=F_IDENT_THRESHOLD)

@@ -1,4 +1,4 @@
-name,length,match_rank,lineage,f_ident,f_major
-name,6,superkingdom,a,1.0,1.0
-name,6,phylum,a;b,1.0,1.0
-name,6,class,a;b;f,1.0,0.5
+name,length,match_rank,lineage,f_ident,f_major,bp_ident,bp_major,f_minor,bp_minor,minor_lineage,reason
+name,6,superkingdom,a,1.0,1.0,2,2,0.0,0,,matched
+name,6,phylum,a;b,1.0,1.0,2,2,0.0,0,,matched
+name,6,class,a;b;f,1.0,0.5,2,1,0.5,1,a;b;c,matched

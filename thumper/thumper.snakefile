@@ -69,6 +69,10 @@ rule download_databases:
     input:
         expand(os.path.join(database_dir, "{database}.sbt.zip"), database=tp.check_databases(config))
 
+rule sketch:
+    input:
+        expand(os.path.join(out_dir, "signatures", "{basename}.signatures.txt"), basename=basename)
+
 rule classify_mags:
     input: 
         expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config)),
@@ -157,13 +161,21 @@ else:
             runtime=1200,
         log: os.path. join(logs_dir, "sourmash_sketch_prot_input", "{sample}.sketch.log")
         benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_prot_input", "{sample}.sketch.benchmark")
-        #wildcard_constraints:
-        #    alphabet="protein|dayhoff|hp",
         conda: "envs/sourmash-dev.yml"
         shell:
             """
             sourmash sketch {params.sketch_params} -o {output} --name {wildcards.sample} {input} 2> {log}
             """
+
+localrules: signames_to_file
+
+rule signames_to_file:
+    input:  expand(os.path.join(out_dir, "signatures", "{sample}.sig"), sample=sample_names),
+    output: os.path.join(out_dir, "signatures", "{basename}.signatures.txt")
+    run:
+        with open(str(output), "w") as outF:
+            for inF in input:
+                outF.write(str(inF) + "\n")
 
 rule sourmash_search_containment:
     input:
@@ -318,11 +330,13 @@ rule set_kernel:
 
 localrules: make_genome_notebook, make_index, set_kernel, aggregate_gather_json, aggregate_contig_gather_json
 
-rule aggregate_gather_json:
+rule aggregate_gather_csv:
     input:
-        genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.gather.json'), sample=sample_names),
+        #genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.gather.json'), sample=sample_names),
+        genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.rankgather.csv'), sample=sample_names),
     output:
-        os.path.join(out_dir, "genome-search", "{basename}.x.{database}.gather.txt")
+        #os.path.join(out_dir, "genome-search", "{basename}.x.{database}.gather.txt")
+        os.path.join(out_dir, "genome-search", "{basename}.x.{database}.rankgather.txt")
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=200,
@@ -331,8 +345,10 @@ rule aggregate_gather_json:
             header = ["name", "database", "genome-gather"]
             outF.write(",".join(header) + "\n")
             for sample in sample_names:
-                genome_json = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.gather.json')
-                outF.write(sample + "," + wildcards.database + ',' + genome_json + "\n")
+                #genome_json = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.gather.json')
+                #outF.write(sample + "," + wildcards.database + ',' + genome_json + "\n")
+                genome_csv = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.rankgather.csv')
+                outF.write(sample + "," + wildcards.database + ',' + genome_csv + "\n")
 
 rule aggregate_contig_gather_json:
     input:
@@ -355,7 +371,7 @@ rule taxonomy_report:
         genome_info=os.path.join(out_dir, "genome-search", "{basename}.x.{database}.gather.txt"),
         #contig_info=os.path.join(out_dir, "contig-search", "{basename}.x.{database}.gather.txt"),
     output:
-        genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report2.csv"),
         charcoal_lineages=os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"),
         #common_contamination=os.path.join(out_dir, "classify", "{basename}.x.{database}.contamination-summary.json"),
         #contig_details_summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.contig-details-summary.csv"),
@@ -381,9 +397,12 @@ rule taxonomy_report:
 
 rule report_genome_lineage:
     input:
-        genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.gather.json'), database=config['databases']),
+        #genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.gather.json'), database=config['databases']),
+        #genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.rankgather.csv'), database=config['databases']),
+        gather_info=os.path.join(out_dir, "genome-search", "{basename}.x.{database}.rankgather.txt")
     output:
-        expand(os.path.join(report_dir, "{basename}.taxonomy-report.csv"), basename=basename)
+        os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        #expand(os.path.join(report_dir, "{basename}.taxonomy-report.csv"), basename=basename)
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=1200,
