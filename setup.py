@@ -31,5 +31,5 @@ setup(
     setup_requires = [ "setuptools>=38.6.0",
                        'setuptools_scm', 'setuptools_scm_git_archive' ],
     use_scm_version = {"write_to": "thumper/version.py"},
-    install_requires = ['snakemake>=5.24', 'click>=7']
+    install_requires = ['snakemake>=5.32.2', 'click>=7']
 )

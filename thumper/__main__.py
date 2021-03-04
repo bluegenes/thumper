@@ -20,13 +20,14 @@ def get_package_configfile(filename):
 
 
 def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
-                  snakefile_name='thumper.snakefile',
+                  snakefile_name='Snakefile',
                   outdir=None, verbose=False, extra_args=[]):
     # find the Snakefile relative to package path
     snakefile = get_snakefile_path(snakefile_name)
 
     # basic command
     cmd = ["snakemake", "-s", snakefile]
+    #cmd = ["snakemake", snakefile]
 
     # add --use-conda
     if not no_use_conda:
@@ -90,7 +91,7 @@ def cli():
 @click.argument('snakemake_args', nargs=-1)
 def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose, outdir):
     "execute thumper workflow (using snakemake underneath)"
-    run_snakemake(configfile, snakefile_name='thumper.snakefile',
+    run_snakemake(configfile, snakefile_name='Snakefile',
                   no_use_conda=no_use_conda, no_use_mamba=no_use_mamba,
                   verbose=verbose,outdir=outdir,
                   extra_args=snakemake_args)
@@ -119,7 +120,7 @@ This is thumper version v{version}
 
 Package install path: {os.path.dirname(__file__)}
 Install-wide config file: {get_package_configfile('config.yaml')}
-snakemake Snakefile: {get_snakefile_path('thumper.snakefile')}
+snakemake Snakefile: {get_snakefile_path('Snakefile')}
 """)
 
 # 'init' command
