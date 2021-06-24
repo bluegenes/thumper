@@ -10,4 +10,3 @@ demo/*
 tests/test-data/databases/*
 cluster_config*
 databases
-*/

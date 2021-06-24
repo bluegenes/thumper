@@ -3,7 +3,7 @@ import pandas as pd
 import glob
 
 from snakemake.workflow import srcdir
-import thumper.utils as tp
+from thumper.utils import process_user_config
 
 out_dir = config["output_dir"]
 logs_dir = os.path.join(out_dir, "logs")
@@ -26,39 +26,37 @@ if force:
     force_param = '--force'
 
 SOURMASH_DATABASE_THRESHOLD_BP = config.get('sourmash_database_threshold_bp', 1e5)
-SOURMASH_COMPUTE_KSIZES=[21,31,51]
-SOURMASH_COMPUTE_SCALED=1000
-ALPHABET  = 'dna' #'nucleotide'
-DATABASES= 'gtdb-rs202'
+GATHER_MEMORY=150000
 
 ## integrate values from user config ##
+config = process_user_config(config)
 #tp.check_and_set_alphabets(config, strict_mode=strict_mode)
-#alphabet_info = config["alphabet_info"]
+alphabet_info = config["alphabet_defaults"]
 
-if config.get("sample_list"):
-    sample_info = tp.read_samples(config["sample_list"], data_dir)
-else:
-    print('** Error: Please provide proteomes/genomes as a txt file ' \
-        '(one filename per line) or a csv file("sample,filename"; no headers ' \
-        'using "sample_list:" in the config')
-    sys.exit(-1)
-
-sample_names = sample_info.index.tolist()
+sample_info = config['samples']
+sample_names = sample_info.index.to_list()
+sketch_type = config['sketch_type']
+alphabet = config['alphabet']
+ksize = config['ksize']
+databases = config['valid_databases']
 
 # make a `sourmash sketch` -p param string.
-def make_param_str(ksizes, scaled, alphabet, input_type='nucleotide'):
-    if not isinstance(ksizes, list):
-        ksizes = [ksizes]
-    if input_type in ['dna', 'rna', 'nucleotide']:
-        if alphabet in ['protein', 'dayhoff', 'hp']:
-            action = 'protein'
-        else:
-            action = 'dna'
-    elif input_type == 'protein':
-        action = 'protein'
-    ks = [ f'k={k}' for k in ksizes ]
-    ks = ",".join(ks)
-    return f"{action} -p {ks},scaled={scaled},abund"
+def make_param_str(sketch_type):
+    if sketch_type in ['nucleotide', 'rna', 'dna']:
+        ksizes = alphabet_info['nucleotide']["ksizes"]
+        scaled = alphabet_info['nucleotide']["scaled"]
+        ks = [ f'k={k}' for k in ksizes ]
+        ks = ",".join(ks)
+        return f"-p {ks},scaled={scaled},abund"
+    elif sketch_type in ['translate', 'protein']:
+        param_str = []
+        for alpha, info in alphabet_info['protein'].items():
+            ksizes = info["ksizes"]
+            ks = [ f'k={k}' for k in ksizes ]
+            ks = ",".join(ks)
+            scaled = info["scaled"]
+            param_str.append(f"-p {ks},scaled={scaled},abund")
+        return ' '.join(param_str)
 
 # snakemake info and workflow #
 ascii_thumper = srcdir("animals/thumper")
@@ -66,6 +64,7 @@ failwhale = srcdir("animals/failwhale")
 
 wildcard_constraints:
     alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
+    sketch_type="protein|nucleotide", #|dna|rna",
     ksize="\d+",
     sample="\w+"
     #database = "(?!x\.).+"
@@ -86,79 +85,95 @@ onerror:
 
 
 # targeting rules
-#rule download_databases:
-#    input:
-#        expand(os.path.join(database_dir, "{database}.sbt.zip"), database=tp.check_databases(config)),
-#        expand(os.path.join(database_dir, "{database}.taxonomy.csv"), database=tp.check_databases(config))
+rule download_databases:
+    input:
+        expand(os.path.join(database_dir, "{database}.sbt.zip"), database=databases),
+        expand(os.path.join(database_dir, "{database}.taxonomy.csv"), database=databases)
 
 rule sketch:
     input:
-        expand(os.path.join(out_dir, "sigs", "{basename}.queries.zip"), basename=basename)
+        expand(os.path.join(out_dir, "sigs", "{basename}.{sketch_type}.queries.zip"), basename=basename, sketch_type = config['sketch_type'])
 
 rule genome_classify:
     input: 
-        expand(os.path.join(out_dir, "classify", "{basename}.gather.txt"), basename=basename),
+         expand(os.path.join(out_dir, 'classify', f"{basename}.{sketch_type}.{alphabet}-k{{ksize}}.tax.csv"), ksize = ksize)
 
-#include: "get_databases.snakefile"
+include: "get_databases.snakefile"
 #include: "index.snakefile"
 include: "common.snakefile"
 
 ## individual rules and steps ##
-rule sketch_and_describe:
+rule sourmash_sketch:
     input:
         lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
     output:
-        sig=temp(os.path.join(out_dir, "sigs", "{sample}.sig")),
-        picklist=os.path.join(out_dir, "sigs", "{sample}.sig.csv")
+        sig=temp(os.path.join(out_dir, "sigs/{sketch_type}/{sample}.sig")),
     params:
-        param_str = make_param_str(ksizes=SOURMASH_COMPUTE_KSIZES,
-                                   scaled=SOURMASH_COMPUTE_SCALED,
-                                   alphabet=ALPHABET,
-                                   input_type=config["input_type"]),
+        param_str = lambda w: make_param_str(sketch_type),
     threads: 1
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=1200,
-    log: os.path.join(logs_dir, "sourmash-sketch", "{sample}.sketch.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash-sketch", "{sample}.sketch.benchmark")
+    log: os.path.join(logs_dir, "sketch", "{sketch_type}/{sample}.sketch.log")
+    benchmark: os.path.join(benchmarks_dir, "sketch", "{sketch_type}/{sample}.sketch.benchmark")
     conda: "conf/env/sourmash-dev.yml"
     shell:
         """
-        sourmash sketch {params.param_str} {input} -o {output.sig} --name '{wildcards.sample}' 2> {log}
-        sourmash sig describe {output.sig} -csv {output.picklist}' 2> {log}
+        sourmash sketch {wildcards.sketch_type} {params.param_str} {input} -o {output.sig} --name '{wildcards.sample}' 2> {log}
         """
 
-rule gather_sig:
+
+localrules: sigs_to_zipfile
+rule sigs_to_zipfile:
+    input:  
+        expand(os.path.join(out_dir, "sigs", "{sketch_type}/{sample}.sig"), sample=sample_names, sketch_type = sketch_type),
+    output: 
+        zipF=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.queries.zip"),
+        manifest=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.queries.csv.gz"),
+    log: os.path.join(logs_dir, "sourmash", f"{basename}.{sketch_type}.catzip.log")
+    benchmark: os.path.join(benchmarks_dir, "sourmash", f"{basename}.{sketch_type}.catzip.benchmark")
+    conda: "envs/sourmash-dev.yml"
+    shell:
+        """
+        sourmash sig cat {input} -o {output} 2> {log}
+        """
+
+
+rule gather_sig_from_zipfile:
     input:
-        query=os.path.join(out_dir, "sigs", "{sample}.sig"),
-        query_picklist=os.path.join(out_dir, "sigs", "{sample}.sig.csv"),
-        database=expand(os.path.join(database_dir, "{database}.sbt.zip"), database=DATABASES),
-        database_manifest=expand(os.path.join(database_dir, "{database}.manifest.csv.gz"), database=DATABASES)
+        query_zip=rules.sigs_to_zipfile.output.zipF,
+        query_manifest=rules.sigs_to_zipfile.output.manifest,
+        database=expand(os.path.join(database_dir, "{database}.sbt.zip"), database=databases),
     output:
-        gather_csv=os.path.join(out_dir, 'gather', '{sample}.gather.csv'),
+        gather_csv=os.path.join(out_dir, 'gather', '{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.csv'),
     params:
-        scaled = SOURMASH_COMPUTE_SCALED,
+        scaled = lambda w: alphabet_info[w.alphabet]["scaled"],
+        ksize = config['ksize'],
         threshold_bp = SOURMASH_DATABASE_THRESHOLD_BP,
-        alpha_cmd = "--" + ALPHABET,
+        alpha_cmd = "--" + alphabet 
     resources:
         #mem_mb=int(PREFETCH_MEMORY / 1e3),
-        mem_mb=lambda wildcards, attempt: attempt *150000,
+        mem_mb=lambda wildcards, attempt: attempt *GATHER_MEMORY,
         runtime=6000,
-    log: os.path.join(logs_dir, "gather", "{sample}.gather.log")
-    benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.gather.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    log: os.path.join(logs_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.log")
+    benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.benchmark")
+    conda: "envs/sourmash-dev.yml"
     shell:
         """
         echo "DB is {input.database}"
-        sourmash gather {input.query} {input.database} -o {output} -k {wildcards.ksize} \
-          --threshold-bp={params.threshold_bp} {params.alpha_cmd} \
-          --picklist {input.query_picklist}:name:{wildcards.sample}:exclude 2> {log} 
+        sourmash extract {input.query_zip} --name {wildcards.sample} \
+                 --ksize {wildcards.ksize} | sourmash gather - {input.database} \
+                 -o {output} -k {wildcards.ksize} --threshold-bp={params.threshold_bp} \
+                 --picklist {input.query_manifest}:name:{wildcards.sample}:exclude \
+                 {params.alpha_cmd} 2> {log}
         """
 
 
 rule gather_csvs_to_pathlist:
-    input: expand(os.path.join(out_dir, 'gather', '{sample}.gather.csv'), sample=sample_names),
-    output: os.path.join(out_dir, 'gather', "{basename}.gather-pathlist.txt")
+    input: 
+        expand(os.path.join(out_dir, 'gather', '{sample}.{{sketch_type}}.{{alphabet}}-k{{ksize}}.gather.csv'), sample=sample_names),
+    output: 
+        os.path.join(out_dir, 'gather', "{basename}.{sketch_type}.{alphabet}-k{ksize}.gather-pathlist.txt")
     run:
         with open(str(output), 'w') as outF:
             for inF in input:
@@ -168,19 +183,20 @@ rule gather_csvs_to_pathlist:
 rule tax_classify:
     input:
         gather_pathlist = rules.gather_csvs_to_pathlist.output,
-        taxonomy_files = expand("{database}.taxonomy.csv", database = DATABASES),
-    output:  os.path.join(out_dir, 'gather', "{basename}.tax.csv")
+        tax_files = expand(os.path.join(database_dir, "{database}.taxonomy.csv"), database=databases)
+    output: 
+        os.path.join(out_dir, 'classify', "{basename}.{sketch_type}.{alphabet}-k{ksize}.tax.csv")
     threads: 1
     resources:
         mem_mb=lambda wildcards, attempt: attempt *3000,
         runtime=600,
     params:
-        outdir = os.path.join(out_dir, "gather"),
+        outdir = os.path.join(out_dir, "classify"),
         threshold = config.get("classify_threshold", 0.1)
     conda: "conf/env/sourmash-dev.yml"
     shell:
         """
-        sourmash tax genome --from-file {input.gather_pathlist} --taxonomy-csv {taxonomy_files} \
+        sourmash tax genome --from-file {input.gather_pathlist} --taxonomy-csv {input.tax_files} \
                             --output-dir {params.outdir} -o {wildcards.basename} \
                             --containment-threshold {params.threshold} 2> {log}
         """
@@ -196,44 +212,31 @@ rule tax_classify:
 #            for inF in input:
 #                outF.write(str(inF) + "\n")
 
-
-localrules: sigs_to_zipfile
-rule sigs_to_zipfile:
-    input:  expand(os.path.join(out_dir, "sigs", "{sample}.sig"), sample=sample_names),
-    output: os.path.join(out_dir, "sigs", "{basename}.queries.zip")
-    log: os.path.join(logs_dir, "sourmash", "{basename}.catzip.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash", "{basename}.catzip.benchmark")
-    conda: "envs/sourmash-dev.yml"
-    shell:
-        """
-        sourmash sig cat {input} -o {output} 2> {log}
-        """
-
-
-#rule gather_sig_from_zipfile:
+#rule gather_sig:
 #    input:
-#        query=os.path.join(out_dir, "sigs", "{basename}.queries.zip"),
-#        database=expand(os.path.join(database_dir, "{database}.sbt.zip", database=DATABASES)
+#        query=os.path.join(out_dir, "sigs", "{sample}.sig"),
+#        query_picklist=os.path.join(out_dir, "sigs", "{sample}.sig.csv"),
+#        database=expand(os.path.join(database_dir, "{database}.sbt.zip"), database=DATABASES),
+#        database_manifest=expand(os.path.join(database_dir, "{database}.manifest.csv.gz"), database=DATABASES)
 #    output:
-#        gather_csv=os.path.join(out_dir, "{basename}", 'gather', '{sample}.gather.csv'),
+#        gather_csv=os.path.join(out_dir, 'gather', '{sample}.gather.csv'),
 #    params:
-#        scaled = lambda w: alphabet_info[w.alphabet]["scaled"],
-#        ksize = config['ksize'],
+#        scaled = SOURMASH_COMPUTE_SCALED,
+#        ksize = SOURMASH_COMPUTE_KSIZE,
 #        threshold_bp = SOURMASH_DATABASE_THRESHOLD_BP,
-#        alpha_cmd = lambda w: config["alphabet_info"][w.alphabet]["alpha_cmd"],
+#        alpha_cmd = "--" + ALPHABET,
 #    resources:
 #        #mem_mb=int(PREFETCH_MEMORY / 1e3),
 #        mem_mb=lambda wildcards, attempt: attempt *150000,
 #        runtime=6000,
 #    log: os.path.join(logs_dir, "gather", "{sample}.gather.log")
 #    benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.gather.benchmark")
-#    conda: "envs/sourmash-dev.yml"
+#    conda: "conf/env/sourmash-dev.yml"
 #    shell:
 #        """
 #        echo "DB is {input.database}"
-#        sourmash extract {input.zip_query} --name {wildcards.sample} \
-#                 --ksize {wildcards.ksize} | sourmash gather - {input.database} \
-#                 -o {output} -k {wildcards.ksize} --threshold-bp={params.threshold_bp} \
-#                 --picklist {input.query_picklist}:name:{wildcards.sample}:exclude \
-#                 {params.alpha_cmd} 2> {log}
+#        sourmash gather {input.query} {input.database} -o {output} -k {params.ksize} \
+#          --threshold-bp={params.threshold_bp} {params.alpha_cmd} \
+#          --picklist {input.query_picklist}:name:{wildcards.sample}:exclude 2> {log} 
 #        """
+

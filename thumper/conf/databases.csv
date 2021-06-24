@@ -1,4 +1,4 @@
-db_basename,alphabet,ksize,scaled,path,taxonomy
+db_basename,alphabet,ksize,scaled,path,taxonomy_path
 gtdb-rs202-reps,nucleotide,21,1000,https://osf.io/py92w/download,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
 gtdb-rs202-reps,nucleotide,31,1000,https://osf.io/w4bcm/download,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
 gtdb-rs202-reps,nucleotide,51,1000,https://osf.io/rv9zp/download,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
