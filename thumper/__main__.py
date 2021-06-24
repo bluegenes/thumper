@@ -15,7 +15,7 @@ def get_snakefile_path(name):
 
 def get_package_configfile(filename):
     thisdir = os.path.dirname(__file__)
-    configfile = os.path.join(thisdir, '.config', filename)
+    configfile = os.path.join(thisdir, 'conf', filename)
     return configfile
 
 
@@ -51,7 +51,7 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
     cmd += list(extra_args)
 
         # add defaults and system config files, in that order
-    configfiles = [get_package_configfile("config.yaml")]
+    configfiles = [get_package_configfile("defaults.conf")]
 
     if configfile:
         configfiles+= [configfile]

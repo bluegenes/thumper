@@ -26,10 +26,14 @@ if force:
     force_param = '--force'
 
 SOURMASH_DATABASE_THRESHOLD_BP = config.get('sourmash_database_threshold_bp', 1e5)
+SOURMASH_COMPUTE_KSIZES=[21,31,51]
+SOURMASH_COMPUTE_SCALED=1000
+ALPHABET  = 'dna' #'nucleotide'
+DATABASES= 'gtdb-rs202'
 
 ## integrate values from user config ##
-tp.check_and_set_alphabets(config, strict_mode=strict_mode)
-alphabet_info = config["alphabet_info"]
+#tp.check_and_set_alphabets(config, strict_mode=strict_mode)
+#alphabet_info = config["alphabet_info"]
 
 if config.get("sample_list"):
     sample_info = tp.read_samples(config["sample_list"], data_dir)
@@ -40,6 +44,21 @@ else:
     sys.exit(-1)
 
 sample_names = sample_info.index.tolist()
+
+# make a `sourmash sketch` -p param string.
+def make_param_str(ksizes, scaled, alphabet, input_type='nucleotide'):
+    if not isinstance(ksizes, list):
+        ksizes = [ksizes]
+    if input_type in ['dna', 'rna', 'nucleotide']:
+        if alphabet in ['protein', 'dayhoff', 'hp']:
+            action = 'protein'
+        else:
+            action = 'dna'
+    elif input_type == 'protein':
+        action = 'protein'
+    ks = [ f'k={k}' for k in ksizes ]
+    ks = ",".join(ks)
+    return f"{action} -p {ks},scaled={scaled},abund"
 
 # snakemake info and workflow #
 ascii_thumper = srcdir("animals/thumper")
@@ -53,7 +72,7 @@ wildcard_constraints:
 
 onstart:
     print("------------------------------")
-    print("Perform taxonomic classification using protein k-mers")
+    print("Thumper: taxonomic classification with sourmash gather")
     print("------------------------------")
 
 
@@ -67,375 +86,154 @@ onerror:
 
 
 # targeting rules
-rule download_databases:
-    input:
-        expand(os.path.join(database_dir, "{database}.sbt.zip"), database=tp.check_databases(config))
+#rule download_databases:
+#    input:
+#        expand(os.path.join(database_dir, "{database}.sbt.zip"), database=tp.check_databases(config)),
+#        expand(os.path.join(database_dir, "{database}.taxonomy.csv"), database=tp.check_databases(config))
 
-# this could be a little dangerous -- will not rerun based on updated config file, will it?
 rule sketch:
     input:
-        expand(os.path.join(out_dir, "signatures", "{basename}.signatures.txt"), basename=basename)
+        expand(os.path.join(out_dir, "sigs", "{basename}.queries.zip"), basename=basename)
 
-rule classify_mags:
+rule genome_classify:
     input: 
-        expand(os.path.join(out_dir, "signatures", "{basename}.signatures.txt"), basename=basename),
-        expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.gather.txt"), basename=basename, database=tp.check_databases(config)),
-        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config)),
-        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config)),
-        #expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"), basename=basename, database=tp.check_databases(config))
-        
-#rule classify_contigs:
-#    input:
-#        expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config))
-    
-#rule classify_reads:
+        expand(os.path.join(out_dir, "classify", "{basename}.gather.txt"), basename=basename),
 
-rule index:
-    input: 
-        expand(os.path.join(out_dir, "index", "{index}.sbt.zip"), index = tp.build_index_names(config))
-
-include: "get_databases.snakefile"
-include: "index.snakefile"
+#include: "get_databases.snakefile"
+#include: "index.snakefile"
 include: "common.snakefile"
 
 ## individual rules and steps ##
-
-def build_sketch_params(output_type):
-    sketch_cmd = ""
-    input_type = config["input_type"]
-    # if input is dna, build dna, translate sketches
-    if input_type == "nucleotide":
-        if output_type == "nucleotide":
-            ksizes = config["alphabet_info"]["nucleotide"].get("ksizes", config["alphabet_defaults"]["nucleotide"]["ksizes"])
-            scaled = min(config["alphabet_info"]["nucleotide"].get("scaled", config["alphabet_defaults"]["nucleotide"]["scaled"]))
-            # always track abund when sketching (?)
-            sketch_cmd = "dna -p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
-            return sketch_cmd
-        else:
-            sketch_cmd = "translate "
-    else:
-        # if input is protein, just build protein sketches
-        sketch_cmd = "protein "
-    for alpha in ["protein", "dayhoff", "hp"]:
-        if alpha in config["alphabet_info"].keys():
-        ## default build protein, dayhoff, hp sigs at the default ksizes from config
-            ksizes = config["alphabet_info"][alpha].get("ksizes", config["alphabet_defaults"][alpha]["ksizes"])
-            scaled = min(config["alphabet_info"][alpha].get("scaled", config["alphabet_defaults"][alpha]["scaled"]))
-        else:
-            ksizes = config["alphabet_defaults"][alpha]["ksizes"]
-            scaled = min(config["alphabet_defaults"][alpha]["scaled"])
-        sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
-    return sketch_cmd
-
-if config["input_type"] == "nucleotide":
-    rule sourmash_sketch_nucleotide_input:
-        input: lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
-        output:
-            full_sketch=os.path.join(out_dir, "signatures", "{sample}.sig"),
-        params:
-            nucl_sketch_params = build_sketch_params("nucleotide"),
-            translate_sketch_params = build_sketch_params("protein"),
-            nucl_sketch=os.path.join(out_dir, "signatures", "{sample}.nucleotide.sig"),
-            prot_sketch=os.path.join(out_dir, "signatures", "{sample}.translate.sig"),
-            #signame = lambda w: accession2signame[w.accession],
-        threads: 1
-        resources:
-            mem_mb=lambda wildcards, attempt: attempt *1000,
-            runtime=1200,
-        log: os.path.join(logs_dir, "sourmash_sketch_nucl_input", "{sample}.sketch.log")
-        benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_nucl_input", "{sample}.sketch.benchmark")
-        conda: "envs/sourmash-dev.yml"
-        shell:
-            """
-            sourmash sketch {params.nucl_sketch_params} -o {params.nucl_sketch} --name {wildcards.sample} {input}  2> {log}
-            sourmash sketch {params.translate_sketch_params} -o {params.prot_sketch} --name {wildcards.sample} {input}  2>> {log}
-            sourmash sig cat {params.nucl_sketch} {params.prot_sketch} -o {output.full_sketch} 2>> {log}
-            rm {params.nucl_sketch}
-            rm {params.prot_sketch}
-            """
-else:
-    rule sourmash_sketch_protein_input:
-        input: lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
-        output:
-            os.path.join(out_dir, "signatures", "{sample}.sig"),
-        params:
-            sketch_params = build_sketch_params("protein")
-            #signame = lambda w: accession2signame[w.accession],
-        threads: 1
-        resources:
-            mem_mb=lambda wildcards, attempt: attempt *1000,
-            runtime=1200,
-        log: os.path. join(logs_dir, "sourmash_sketch_prot_input", "{sample}.sketch.log")
-        benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_prot_input", "{sample}.sketch.benchmark")
-        conda: "envs/sourmash-dev.yml"
-        shell:
-            """
-            sourmash sketch {params.sketch_params} -o {output} --name {wildcards.sample} {input} 2> {log}
-            """
-
-localrules: signames_to_file
-
-rule signames_to_file:
-    input:  expand(os.path.join(out_dir, "signatures", "{sample}.sig"), sample=sample_names),
-    output: os.path.join(out_dir, "signatures", "{basename}.signatures.txt")
-    run:
-        with open(str(output), "w") as outF:
-            for inF in input:
-                outF.write(str(inF) + "\n")
-
-rule prefetch:
+rule sketch_and_describe:
     input:
-        query=os.path.join(out_dir, "signatures", "{sample}.sig"),
-        database=os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}-scaled{scaled}.sbt.zip")
+        lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
     output:
-        matchlist = os.path.join(out_dir, "prefetch-gather", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.prefetch-matchlist.txt"),
+        sig=temp(os.path.join(out_dir, "sigs", "{sample}.sig")),
+        picklist=os.path.join(out_dir, "sigs", "{sample}.sig.csv")
     params:
-        #search_threshold = float(config.get("search_threshold", 0.001)),
-        scaled = lambda w: alphabet_info[w.alphabet]["scaled"],
-        threshold_bp = SOURMASH_DATABASE_THRESHOLD_BP,
+        param_str = make_param_str(ksizes=SOURMASH_COMPUTE_KSIZES,
+                                   scaled=SOURMASH_COMPUTE_SCALED,
+                                   alphabet=ALPHABET,
+                                   input_type=config["input_type"]),
+    threads: 1
     resources:
-        #mem_mb=int(PREFETCH_MEMORY / 1e3),
-        mem_mb=lambda wildcards, attempt: attempt *20000,
-        runtime=6000,
-    log: os.path.join(logs_dir, "prefetch-gather", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.prefetch-gather.log")
-    benchmark: os.path.join(benchmarks_dir, "prefetch-gather", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.prefetch-gather.benchmark")
-    conda: "envs/sourmash4.yml"
-    shell: """
-        echo "DB is {input.database}"
-        python -Werror -m thumper.prefetch_gather --query {input.query} \
-          --db {input.database} --save-matchlist {output.matchlist} -k {wildcards.ksize} \
-          --threshold-bp={params.threshold_bp} --moltype {wildcards.alphabet} > {log} 2>&1
-    """
-
-rule gather:
-    input:
-        query=os.path.join(out_dir, "signatures", "{sample}.sig"),
-        database=os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}-scaled{scaled}.sbt.zip"),
-        sample_file=lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename']),
-        sample_sig=os.path.join(out_dir, "signatures", "{sample}.sig"),
-        matchlist=os.path.join(out_dir, "prefetch-gather", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.prefetch-matchlist.txt"),
-        ##database=os.path.join(database_dir, "{db_name}.{alphabet}-k{ksize}-scaled{scaled}.sbt.zip")
-        ##db_info=config["database_info"].loc["gtdb-nine.hp-k42-scaled10"]["info_path"]
-        db_info=lambda w: os.path.join(database_dir, f"{w.db_name}.info.csv")
-    output:
-        gather_csv=os.path.join(out_dir, 'gather', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.gather.csv'),
-        gather_json=os.path.join(out_dir, 'gather', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.gather.json'),
-        #search_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.csv'),
-        #search_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.search.matches.sig'),
-        #ranksearch_csv=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.ranksearch.csv'),
-        #ranksearch_sig=os.path.join(out_dir, 'genome-search', '{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.ranksearch.matches.sig'),
-    params:
-        #moltype = lambda w: alphabet_info[w.alphabet]["moltype"],
-        out_prefix = lambda w: os.path.join(out_dir, 'genome-search', f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}-scaled{w.scaled}"),
-        #alpha_cmd = lambda w: alphabet_info[w.alphabet]["alpha_cmd"],
-        #out_prefix = lambda w: os.path.join(out_dir, 'gather', f"{w.sample}.x.{w.db_name}.{w.alphabet}-k{w.ksize}-scaled{w.scaled}"),
-    conda: 'envs/sourmash4.yml'
-    resources:
-        mem_mb=lambda wildcards, attempt: attempt *100000,
-        runtime=6000,
-    log: os.path.join(logs_dir, "gather", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.gather.log")
-    benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.gather.benchmark")
+        mem_mb=lambda wildcards, attempt: attempt *1000,
+        runtime=1200,
+    log: os.path.join(logs_dir, "sourmash-sketch", "{sample}.sketch.log")
+    benchmark: os.path.join(benchmarks_dir, "sourmash-sketch", "{sample}.sketch.benchmark")
+    conda: "conf/env/sourmash-dev.yml"
     shell:
         """
-        python -m thumper.gather-on-siglist \
-               --genome {input.sample_file} \
-               --genome-sig {input.sample_sig} \
-               --siglist-db {input.matchlist} \
-               --lineages-csv {input.db_info} \
-               --alphabet {wildcards.alphabet} \
-               --ksize {wildcards.ksize} \
-               --output-prefix {params.out_prefix} 2> {log}
-
+        sourmash sketch {params.param_str} {input} -o {output.sig} --name '{wildcards.sample}' 2> {log}
+        sourmash sig describe {output.sig} -csv {output.picklist}' 2> {log}
         """
-        #sourmash gather {input.query} {input.database} --ksize {wildcards.ksize} {params.alpha_cmd} -o {output.gather_csv}
-        #"""
-        #python -m thumper.search_or_gather \
-        #    --genome {input.sample_file} \
-        #    --genome-sig {input.sample_sig} \
-        #    --matches-sig {input.matchlist} \
-        #    --lineages-csv {input.db_info} \
-        #    --alphabet {wildcards.alphabet} \
-        #    --ksize {wildcards.ksize} \
-        #    --search-genome --gather --no-search-contigs \
-        #    --output-prefix {params.out_prefix}
-        #"""
 
-rule aggregate_prefetch_gather_files:
-    input: expand(os.path.join(out_dir, 'gather', '{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}-scaled{{scaled}}.gather.csv'), sample=sample_names),
-    output: os.path.join(out_dir, 'classify', f"{basename}" + ".x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.gather.txt")
+rule gather_sig:
+    input:
+        query=os.path.join(out_dir, "sigs", "{sample}.sig"),
+        query_picklist=os.path.join(out_dir, "sigs", "{sample}.sig.csv"),
+        database=expand(os.path.join(database_dir, "{database}.sbt.zip"), database=DATABASES),
+        database_manifest=expand(os.path.join(database_dir, "{database}.manifest.csv.gz"), database=DATABASES)
+    output:
+        gather_csv=os.path.join(out_dir, 'gather', '{sample}.gather.csv'),
+    params:
+        scaled = SOURMASH_COMPUTE_SCALED,
+        threshold_bp = SOURMASH_DATABASE_THRESHOLD_BP,
+        alpha_cmd = "--" + ALPHABET,
+    resources:
+        #mem_mb=int(PREFETCH_MEMORY / 1e3),
+        mem_mb=lambda wildcards, attempt: attempt *150000,
+        runtime=6000,
+    log: os.path.join(logs_dir, "gather", "{sample}.gather.log")
+    benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.gather.benchmark")
+    conda: "conf/env/sourmash-dev.yml"
+    shell:
+        """
+        echo "DB is {input.database}"
+        sourmash gather {input.query} {input.database} -o {output} -k {wildcards.ksize} \
+          --threshold-bp={params.threshold_bp} {params.alpha_cmd} \
+          --picklist {input.query_picklist}:name:{wildcards.sample}:exclude 2> {log} 
+        """
+
+
+rule gather_csvs_to_pathlist:
+    input: expand(os.path.join(out_dir, 'gather', '{sample}.gather.csv'), sample=sample_names),
+    output: os.path.join(out_dir, 'gather', "{basename}.gather-pathlist.txt")
     run:
         with open(str(output), 'w') as outF:
             for inF in input:
                 outF.write(str(inF)+ "\n")
-            #write_header=True
-            #for inF in input:
-            #    with open(str(inF), "r") as infile:
-            #        if write_header:
-            #            outF.write(infile.read())
-            #            write_header=False
-            #        else:
-            #            next(infile)
-            #            outF.write(infile.read())
 
 
-# for a summary across all genomes, same database:
-#def aggregate_taxonomy_files_by_database(w):
-#    sample_list = config["sample_list"]
-#    db_info = config["database_info"][w.db_name]["info_csv"],
-#    json_tax,search_sigs=[],[]
-#    tax_file = "classify/{sample}.x.{{db_name}}.{alphabet}-k{ksize}-scaled{scaled}.contigs-tax.json"
-#    sig_file = "search/{sample}.x.{{db_name}}.{alphabet}-k{ksize}-scaled{scaled}.matches.sig"
-#    for alpha, alphaInfo in alphabet_info.items():
-#        json_tax += expand(os.path.join(out_dir, tax_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
-#        search_sigs += expand(os.path.join(out_dir, sig_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
-#
-#    db_files = {"sample_list": sample_list,
-#                "db_info": db_info,
-#                "all_json": json_tax,
-#                "all_sig": search_sigs}
-#    return db_files
-
-# papermill reporting rules
-rule set_kernel:
-    output:
-        f"{out_dir}/.kernel.set"
-    conda: 'envs/reporting-env.yml'
+rule tax_classify:
+    input:
+        gather_pathlist = rules.gather_csvs_to_pathlist.output,
+        taxonomy_files = expand("{database}.taxonomy.csv", database = DATABASES),
+    output:  os.path.join(out_dir, 'gather', "{basename}.tax.csv")
+    threads: 1
     resources:
-        mem_mb=lambda wildcards, attempt: attempt *1000,
-        runtime=1200,
+        mem_mb=lambda wildcards, attempt: attempt *3000,
+        runtime=600,
+    params:
+        outdir = os.path.join(out_dir, "gather"),
+        threshold = config.get("classify_threshold", 0.1)
+    conda: "conf/env/sourmash-dev.yml"
     shell:
         """
-        python -m ipykernel install --user --name thumper
-        touch {output}
+        sourmash tax genome --from-file {input.gather_pathlist} --taxonomy-csv {taxonomy_files} \
+                            --output-dir {params.outdir} -o {wildcards.basename} \
+                            --containment-threshold {params.threshold} 2> {log}
         """
 
-localrules: make_genome_notebook, make_index, set_kernel, aggregate_gather_json, aggregate_contig_gather_json
 
-rule aggregate_gather_csv:
-    input:
-        #genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.gather.json'), sample=sample_names),
-        genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.rankgather.csv'), sample=sample_names),
-    output:
-        #os.path.join(out_dir, "genome-search", "{basename}.x.{database}.gather.txt")
-        os.path.join(out_dir, "genome-search", "{basename}.x.{database}.rankgather.txt")
-    resources:
-        mem_mb=lambda wildcards, attempt: attempt *1000,
-        runtime=200,
-    run:
-        with open(str(output), "w") as outF:
-            header = ["name", "database", "genome-gather"]
-            outF.write(",".join(header) + "\n")
-            for sample in sample_names:
-                #genome_json = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.gather.json')
-                #outF.write(sample + "," + wildcards.database + ',' + genome_json + "\n")
-                genome_csv = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.rankgather.csv')
-                outF.write(sample + "," + wildcards.database + ',' + genome_csv + "\n")
-
-#rule aggregate_contig_gather_json:
-#    input:
-#        contigs=expand(os.path.join(out_dir, 'contig-search', '{sample}.x.{{database}}.contigs.gather.json'), sample=sample_names),
-#    output:
-#        os.path.join(out_dir, "contig-search", "{basename}.x.{database}.gather.txt")
-#    resources:
-#        mem_mb=lambda wildcards, attempt: attempt *1000,
-#        runtime=200,
+# use this when sig cat --from-file can be done? :)
+#localrules: sigs_to_pathfile
+#rule sigs_to_pathfile:
+#    input:  expand(os.path.join(out_dir, "signatures", "{sample}.sig"), sample=sample_names),
+#    output: os.path.join(out_dir, "signatures", "{basename}.signatures.txt")
 #    run:
 #        with open(str(output), "w") as outF:
-#            header = ["name", "database", "contig-gather"]
-#            outF.write(",".join(header) + "\n")
-#            for sample in sample_names:
-#                contig_json = os.path.join('contig-search', f'{sample}.x.{wildcards.database}.contigs.gather.json')
-#                outF.write(sample + "," + wildcards.database + ',' + contig_json + "\n")
+#            for inF in input:
+#                outF.write(str(inF) + "\n")
 
-#rule taxonomy_report:
+
+localrules: sigs_to_zipfile
+rule sigs_to_zipfile:
+    input:  expand(os.path.join(out_dir, "sigs", "{sample}.sig"), sample=sample_names),
+    output: os.path.join(out_dir, "sigs", "{basename}.queries.zip")
+    log: os.path.join(logs_dir, "sourmash", "{basename}.catzip.log")
+    benchmark: os.path.join(benchmarks_dir, "sourmash", "{basename}.catzip.benchmark")
+    conda: "envs/sourmash-dev.yml"
+    shell:
+        """
+        sourmash sig cat {input} -o {output} 2> {log}
+        """
+
+
+#rule gather_sig_from_zipfile:
 #    input:
-#        genome_info=os.path.join(out_dir, "genome-search", "{basename}.x.{database}.gather.txt"),
-#        #contig_info=os.path.join(out_dir, "contig-search", "{basename}.x.{database}.gather.txt"),
+#        query=os.path.join(out_dir, "sigs", "{basename}.queries.zip"),
+#        database=expand(os.path.join(database_dir, "{database}.sbt.zip", database=DATABASES)
 #    output:
-#        genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report2.csv"),
-#        charcoal_lineages=os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"),
-#        #common_contamination=os.path.join(out_dir, "classify", "{basename}.x.{database}.contamination-summary.json"),
-#        #contig_details_summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.contig-details-summary.csv"),
-#    log: os.path.join(logs_dir, "genome-report", "{basename}.x.{database}.genome-report.log")
-#    benchmark: os.path.join(benchmarks_dir, "genome-report", "{basename}.x.{database}.genome-report.benchmark")
+#        gather_csv=os.path.join(out_dir, "{basename}", 'gather', '{sample}.gather.csv'),
+#    params:
+#        scaled = lambda w: alphabet_info[w.alphabet]["scaled"],
+#        ksize = config['ksize'],
+#        threshold_bp = SOURMASH_DATABASE_THRESHOLD_BP,
+#        alpha_cmd = lambda w: config["alphabet_info"][w.alphabet]["alpha_cmd"],
 #    resources:
-#        mem_mb=lambda wildcards, attempt: attempt *5000,
+#        #mem_mb=int(PREFETCH_MEMORY / 1e3),
+#        mem_mb=lambda wildcards, attempt: attempt *150000,
 #        runtime=6000,
+#    log: os.path.join(logs_dir, "gather", "{sample}.gather.log")
+#    benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.gather.benchmark")
+#    conda: "envs/sourmash-dev.yml"
 #    shell:
 #        """
-#        python -m thumper.compare_taxonomy \
-#                  --jsoninfo-file {input.genome_info} \
-#                  --match-rank "genus" \
-#                  --gather_min_matches 3 \
-#                  --min_f_ident 0.1 \
-#                  --min_f_major 0.2 \
-#                  --lineages-for-charcoal {output.charcoal_lineages} \
-#                  --output-csv {output.genome_report} 2> {log}
-#        """
-        #          --contam-summary-json {output.common_contamination} \
-        #          --contig-details-summary {output.contig_details_summary} 2> {log}
-        #"""
-
-#rule report_genome_lineage:
-#    input:
-#        #genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.gather.json'), database=config['databases']),
-#        #genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.rankgather.csv'), database=config['databases']),
-#        gather_info=os.path.join(out_dir, "genome-search", "{basename}.x.{database}.rankgather.txt")
-#    output:
-#        os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
-#        #expand(os.path.join(report_dir, "{basename}.taxonomy-report.csv"), basename=basename)
-#    resources:
-#        mem_mb=lambda wildcards, attempt: attempt *1000,
-#        runtime=1200,
-#    shell:
-#        """
-#        python -m thumper.genome_report {input} -o {output}
-#        """
-
-
-# use this notebook to aggregate files from 1. search containment, gather, 2. multiple alphas, 3. multiple databases?
-#rule make_genome_notebook:
-#    input:
-#        nb='thumper/notebooks/genome-report.ipynb',
-#        contigs=expand(os.path.join(out_dir, 'contig-search', '{{sample}}.x.{database}.contigs.gather.json'), database=config['databases']),
-#        genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.rankgather.csv'), database=config['databases']),
-#        kernel_set = rules.set_kernel.output,
-#    params:
-#        name = lambda w: f"{w.sample}",
-#        databases= ",".join(config["databases"]),
-#        directory = os.path.abspath(out_dir),
-#    output:
-#        nb=os.path.join(report_dir, '{sample}.fig.ipynb'),
-#        html=os.path.join(report_dir, "{sample}.fig.html")
-#    conda: 'envs/reporting-env.yml'
-#    resources:
-#        mem_mb=lambda wildcards, attempt: attempt *1000,
-#        runtime=1200,
-#    shell:
-#        """
-#        papermill {input.nb} - -k thumper --cwd {report_dir} \
-#              -p directory {params.directory:q} -p render '' \
-#              -p name {params.name:q} \
-#              -p databases {params.databases:q} \
-#              > {output.nb}
-#        python -m nbconvert {output.nb} --to html --stdout --no-input --ExecutePreprocessor.kernel_name=thumper > {output.html}
-#        """
-
-#rule make_index:
-#    input:
-#        notebook='thumper/notebooks/report-index.ipynb',
-#        summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
-#        kernel_set = rules.set_kernel.output
-#    output:
-#        nb=os.path.join(report_dir, "{basename}.x.{database}.index.ipynb"),
-#        html=os.path.join(report_dir, "{basename}.x.{database}.index.html")
-#    params:
-#        directory = os.path.abspath(out_dir),
-#    conda: 'envs/reporting-env.yml'
-#    shell:
-#        """
-#        papermill {input.notebook} - -p name {wildcards.basename:q} -p render '' \
-#            -p database {wildcards.database:q} -p directory {params.directory:q} \
-#            -k thumper --cwd {report_dir} > {output.nb}
-#        python -m nbconvert {output.nb} --to html --stdout --no-input > {output.html}
+#        echo "DB is {input.database}"
+#        sourmash extract {input.zip_query} --name {wildcards.sample} \
+#                 --ksize {wildcards.ksize} | sourmash gather - {input.database} \
+#                 -o {output} -k {wildcards.ksize} --threshold-bp={params.threshold_bp} \
+#                 --picklist {input.query_picklist}:name:{wildcards.sample}:exclude \
+#                 {params.alpha_cmd} 2> {log}
 #        """

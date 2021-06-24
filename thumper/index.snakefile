@@ -1,5 +1,10 @@
 ## indexing rules 
 
+rule index:
+    input:
+        expand(os.path.join(out_dir, "index", "{index}.sbt.zip"), index = tp.build_index_names(config))
+
+
 rule index_sbt:
     input: os.path.join(out_dir, "signatures", "{basename}.signatures.txt")
     output: os.path.join(out_dir, "index", "{basename}.{alphabet}-k{ksize}-scaled{scaled}.sbt.zip"),

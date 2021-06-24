@@ -7,3 +7,7 @@ thumper/version.py
 .eggs
 thumper_bio.egg-info/
 demo/*
+tests/test-data/databases/*
+cluster_config*
+databases
+*/
