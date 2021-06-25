@@ -108,7 +108,7 @@ def check_and_set_alpha_ksize(config, *, strict=False):
     # nucleotide input
     elif input_type in ["nucleotide", "dna", "rna"]:
         if alphabet in ["nucleotide", "dna", "rna"]:
-            config["sketch_type"] = alphabet
+            config["sketch_type"] = 'nucleotide'
             if not ksize:
                 config["ksize"] = alphabet_defaults["nucleotide"]["ksizes"]
             config["scaled"] = alphabet_defaults["nucleotide"]["scaled"]
@@ -169,12 +169,14 @@ def load_databases_csv(databases_file, existing_db_info=None):
 
 def find_valid_databases(databases, db_info, config, *, strict=False):
     databases_to_use=[]
+    db_basenames = []
     alpha = config['alphabet']
     ksize = config['ksize']
     for db in databases:
         #check that this alpha/ksize exists in our database info file
         db_fullname = f"{db}.{alpha}-k{ksize}"
         if db_fullname in db_info.index:
+            db_basenames.append(db)
             databases_to_use.append(db_fullname)
         else:
             if strict:
@@ -185,7 +187,7 @@ def find_valid_databases(databases, db_info, config, *, strict=False):
     if not databases_to_use:
         raise ValueError('No valid databases provided.')
 
-    return databases_to_use
+    return databases_to_use, db_basenames
 
 
 def check_and_set_databases(config, *, strict=False):
@@ -204,12 +206,13 @@ def check_and_set_databases(config, *, strict=False):
     if not isinstance(databases, list):
         databases = [databases]
     try:
-        valid_databases = find_valid_databases(databases, db_info, config)
+        valid_databases, valid_db_basenames= find_valid_databases(databases, db_info, config)
     except ValueError as exc:
         avail_dbs = list(db_info.index)
         print('Available databases are: ',*avail_dbs, sep="\n" )
         raise
     config['valid_databases'] = valid_databases
+    config['valid_db_basenames'] = valid_db_basenames
     return config
 
 

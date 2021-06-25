@@ -21,7 +21,7 @@ rule get_taxonomy:
         os.path.join(database_dir, "{db_basename}.taxonomy.csv")
     params:
          #csv_info= lambda w: database_info.at[w.db_name, 'info_path']
-         csv_info= lambda w: config["database_info"].loc[database_info["db_basename"]== w.db_basename]["taxonomy"][0]
+         csv_info= lambda w: config["database_info"].loc[database_info["db_basename"]== w.db_basename]["taxonomy_path"][0]
     log: os.path.join(db_logs, "get_dbs", "{db_basename}.info.get")
     threads: 1
     resources:
