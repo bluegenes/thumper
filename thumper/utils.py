@@ -126,6 +126,11 @@ def check_and_set_alpha_ksize(config, *, strict=False):
 
     else: #unknown input
         raise ValueError(f'input type {input_type} must be "protein" or "nucleotide"')
+
+    #check ksizes again; make sure is list
+    ksizes = config['ksize']
+    if not isinstance(ksize, list):
+        config['ksize'] = [ksizes]
     return config
 
 
@@ -170,18 +175,19 @@ def find_valid_databases(databases, db_info, config, *, strict=False):
     databases_to_use=[]
     db_basenames = []
     alpha = config['alphabet']
-    ksize = config['ksize']
+    ksizes = config['ksize']
     for db in databases:
-        #check that this alpha/ksize exists in our database info file
-        db_fullname = f"{db}.{alpha}-k{ksize}"
-        if db_fullname in db_info.index:
-            db_basenames.append(db)
-            databases_to_use.append(db_fullname)
-        else:
-            if strict:
-                raise ValueError(f'The {db} database is not provided for alphabet:{alpha}, ksize:{ksize}')
+        for k in ksizes:
+            #check that this alpha/ksize exists in our database info file
+            db_fullname = f"{db}.{alpha}-k{k}"
+            if db_fullname in db_info.index:
+                db_basenames.append(db)
+                databases_to_use.append(db_fullname)
             else:
-                print(f'Strict mode is off: attempting to continue. Removing {db} from search databases list.')
+                if strict:
+                    raise ValueError(f'The {db} database is not provided for alphabet:{alpha}, ksize:{ksize}')
+                else:
+                    print(f'Strict mode is off: attempting to continue. Removing {db} from search databases list.')
 
     if not databases_to_use:
         raise ValueError('No valid databases provided.')
