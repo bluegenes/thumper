@@ -39,20 +39,20 @@ databases = config['valid_databases']
 
 # make a `sourmash sketch` -p param string.
 def make_param_str(sketch_type):
+    ksizes = config['ksize']
+    if not isinstance(ksizes, list):
+        ks = f'k={ksizes}'
+    else:
+        ks = [ f'k={k}' for k in ksizes ]
+        ks = ",".join(ks)
+    scaled = config['scaled']
     if sketch_type in ['nucleotide', 'rna', 'dna']:
-        ksizes = alphabet_info['nucleotide']["ksizes"]
-        scaled = alphabet_info['nucleotide']["scaled"]
         ks = [ f'k={k}' for k in ksizes ]
         ks = ",".join(ks)
         return f"dna -p {ks},scaled={scaled},abund"
     elif sketch_type in ['translate', 'protein']:
         param_str = [sketch_type]
-        for alpha, info in alphabet_info['protein'].items():
-            ksizes = info["ksizes"]
-            ks = [ f'k={k}' for k in ksizes ]
-            ks = ",".join(ks)
-            scaled = info["scaled"]
-            param_str.append(f"-p {ks},scaled={scaled},abund")
+        param_str.append(f"-p {ks},scaled={scaled},abund")
         return ' '.join(param_str)
 
 # snakemake info and workflow #
@@ -84,7 +84,7 @@ onerror:
 # targeting rules
 rule genome_classify:
     input:
-         expand(os.path.join(out_dir, 'classify', f"{basename}.{sketch_type}.{alphabet}-k{{ksize}}.tax.csv"), ksize = ksize)
+         expand(os.path.join(out_dir, 'classify', f"{basename}.{sketch_type}.{alphabet}-k{{ksize}}.classifications.csv"), ksize = ksize)
 
 rule download_databases:
     input:
@@ -185,19 +185,22 @@ rule tax_classify:
         gather_pathlist = rules.gather_csvs_to_pathlist.output,
         tax_files = expand(os.path.join(database_dir, "{database}.taxonomy.csv"), database=config['valid_db_basenames'])
     output: 
-        os.path.join(out_dir, 'classify', "{basename}.{sketch_type}.{alphabet}-k{ksize}.tax.csv")
+        os.path.join(out_dir, 'classify', "{basename}.{sketch_type}.{alphabet}-k{ksize}.classifications.csv")
     threads: 1
     resources:
         mem_mb=lambda wildcards, attempt: attempt *3000,
         runtime=600,
     params:
+        output_base = lambda w: f"{w.basename}.{w.sketch_type}.{w.alphabet}-k{w.ksize}",
         outdir = os.path.join(out_dir, "classify"),
         threshold = config.get("classify_threshold", 0.1)
+    log: os.path.join(logs_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.log")
+    benchmark: os.path.join(benchmarks_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.benchmark")
     conda: "conf/env/sourmash-dev.yml"
     shell:
         """
         sourmash tax genome --from-file {input.gather_pathlist} --taxonomy-csv {input.tax_files} \
-                            --output-dir {params.outdir} -o {wildcards.basename} \
+                            --output-dir {params.outdir} -o {params.output_base} \
                             --containment-threshold {params.threshold} 2> {log}
         """
 

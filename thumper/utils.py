@@ -80,7 +80,6 @@ def read_samples(config, *, strict=False):
         data_dir = sanitize_path(data_dir)
     # check if file exists
     samples['exists'] = samples['filename'].apply(_file_exists, data_dir=data_dir)
-    #import pdb;pdb.set_trace()
     if not pd.Series(samples['exists']).all():
         missing_files = samples[samples['exists'] == False].index
         if strict:
@@ -120,10 +119,10 @@ def check_and_set_alpha_ksize(config, *, strict=False):
             config["scaled"] = alphabet_defaults["nucleotide"]["scaled"]
     #protein input
     elif input_type in ["protein"]:
-        config["sketch_type"] = protein
+        config["sketch_type"] = "protein"
         if not ksize:
-            config["ksize"] = alphabet_defaults["nucleotide"]["ksizes"]
-        config["scaled"] = alphabet_defaults["nucleotide"]["scaled"]
+            config["ksize"] = alphabet_defaults[alphabet]["ksizes"]
+        config["scaled"] = alphabet_defaults[alphabet]["scaled"]
 
     else: #unknown input
         raise ValueError(f'input type {input_type} must be "protein" or "nucleotide"')

@@ -21,3 +21,4 @@ data_dir: tests/test-data/genomes
 # gather parameters
 alphabet: nucleotide
 ksize: 31
+classify_threshold: 0

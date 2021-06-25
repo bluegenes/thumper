@@ -19,18 +19,14 @@ database_dir: tests/test-data/databases
 turn_off_default_databases: True
 
 search_databases:
-  - gtdb-nine
+  - gtdb-rs202-reps
 
-# list of genome filenames to decontaminate
-sample_list: demo/prot-samplelist.csv
+# list of genome filenames to classify
+sample_info: demo/prot-samplelist.csv
 
 # directory in which genome filenames live
 data_dir: tests/test-data/proteomes
 
-alphabets:
-  protein:
-    scaled: 10
-  dayhoff:
-    scaled: 10
-  hp:
-    scaled: 10
+alphabet: protein
+ksize: 11
+#classify_threshold: 0
