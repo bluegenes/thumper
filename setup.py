@@ -27,9 +27,9 @@ setup(
         ]
     },
     include_package_data=True,
-    package_data = { "thumper": ["thumper.snakefile", "*.yaml", "*.ipynb", ".yml"] },
+    package_data = { "thumper": ["Snakefile", "*.yaml", "*.ipynb", ".yml", ".conf"] },
     setup_requires = [ "setuptools>=38.6.0",
                        'setuptools_scm', 'setuptools_scm_git_archive' ],
     use_scm_version = {"write_to": "thumper/version.py"},
-    install_requires = ['snakemake>=5.32.2', 'click>=7']
+    install_requires = ['snakemake>=6.5.0', 'click>=7']
 )

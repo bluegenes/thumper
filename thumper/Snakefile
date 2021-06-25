@@ -154,7 +154,7 @@ rule gather_sig_from_zipfile:
         threshold_bp = config['sourmash_database_threshold_bp'],
         alpha_cmd = "--" + alphabet 
     resources:
-        mem_mb=lambda wildcards, attempt: attempt *int(config.get('gather_memory', 150000)),
+        mem_mb=lambda wildcards, attempt: attempt *int(config.get('gather_memory', 100000)),
         runtime=6000,
     log: os.path.join(logs_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.log")
     benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.benchmark")

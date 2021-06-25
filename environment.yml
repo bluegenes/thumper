@@ -7,6 +7,6 @@ dependencies:
   - mamba
   - pandas>=1.2
   - python>=3.8
-  - snakemake-minimal=6.5.0
+  - snakemake=6.5.0
   - pytest
   - sourmash>=4,<5
