@@ -165,7 +165,7 @@ rule gather_sig_from_zipfile:
         sourmash sig extract {input.query_zip} --name {wildcards.sample} \
                  --ksize {wildcards.ksize} | sourmash gather - {input.database} \
                  -o {output} -k {wildcards.ksize} --threshold-bp={params.threshold_bp} \
-                 --picklist {input.query_picklist}:md5:md5:exclude 2> {log}
+                 --picklist {input.query_picklist}:name:identprefix:exclude 2> {log}
         """
 
 
