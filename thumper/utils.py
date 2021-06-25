@@ -1,6 +1,8 @@
 import os
 import sys
+from collections import defaultdict
 import pandas as pd
+
 from snakemake.io import expand
 from snakemake.workflow import srcdir
 
@@ -174,6 +176,7 @@ def load_databases_csv(databases_file, existing_db_info=None):
 def find_valid_databases(databases, db_info, config, *, strict=False):
     databases_to_use=[]
     db_basenames = []
+    database_ksize_dir = defaultdict(list)
     alpha = config['alphabet']
     ksizes = config['ksize']
     for db in databases:
@@ -183,6 +186,7 @@ def find_valid_databases(databases, db_info, config, *, strict=False):
             if db_fullname in db_info.index:
                 db_basenames.append(db)
                 databases_to_use.append(db_fullname)
+                database_ksize_dir[f"k{k}"].append(db_fullname)
             else:
                 if strict:
                     raise ValueError(f'The {db} database is not provided for alphabet:{alpha}, ksize:{ksize}')
@@ -192,7 +196,7 @@ def find_valid_databases(databases, db_info, config, *, strict=False):
     if not databases_to_use:
         raise ValueError('No valid databases provided.')
 
-    return databases_to_use, db_basenames
+    return databases_to_use, db_basenames, database_ksize_dir
 
 
 def check_and_set_databases(config, *, strict=False):
@@ -211,13 +215,14 @@ def check_and_set_databases(config, *, strict=False):
     if not isinstance(databases, list):
         databases = [databases]
     try:
-        valid_databases, valid_db_basenames= find_valid_databases(databases, db_info, config)
+        valid_databases, valid_db_basenames, database_ksize_dir = find_valid_databases(databases, db_info, config)
     except ValueError as exc:
         avail_dbs = list(db_info.index)
         print('Available databases are: ',*avail_dbs, sep="\n" )
         raise
     config['valid_databases'] = valid_databases
     config['valid_db_basenames'] = valid_db_basenames
+    config['database_ksize_dir'] = database_ksize_dir
     return config
 
 

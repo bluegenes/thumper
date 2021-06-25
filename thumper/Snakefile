@@ -36,6 +36,7 @@ sketch_type = config['sketch_type']
 alphabet = config['alphabet']
 ksize = config['ksize']
 databases = config['valid_databases']
+databaseD = config['database_ksize_dir']
 
 # make a `sourmash sketch` -p param string.
 def make_param_str(sketch_type):
@@ -144,7 +145,7 @@ rule gather_sig_from_zipfile:
         query_zip=rules.sigs_to_zipfile.output.zipF,
         #query_manifest=rules.sigs_to_zipfile.output.manifest,
         query_picklist=rules.sourmash_sketch.output.picklist,
-        database=expand(os.path.join(database_dir, "{database}.sbt.zip"), database=databases),
+        database=lambda w: expand(os.path.join(database_dir, "{database}.sbt.zip"), database=databaseD[f'k{w.ksize}']),
     output:
         gather_csv=os.path.join(out_dir, 'gather', '{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.csv'),
     params:
