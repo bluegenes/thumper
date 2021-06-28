@@ -160,6 +160,7 @@ rule gather_sig_from_zipfile:
     benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.benchmark")
     conda: "conf/env/sourmash-dev.yml"
     shell:
+        # touch output to let workflow continue in cases where 0 results are found
         """
         echo "DB is {input.database}"
 
@@ -167,8 +168,8 @@ rule gather_sig_from_zipfile:
                  --ksize {wildcards.ksize} | sourmash gather - {input.database} \
                  -o {output} -k {wildcards.ksize} --threshold-bp={params.threshold_bp} \
                  --picklist {input.query_picklist}:name:identprefix:exclude 2> {log}
+        touch {output}
         """
-
 
 rule gather_csvs_to_pathlist:
     input: 
@@ -199,10 +200,11 @@ rule tax_classify:
     benchmark: os.path.join(benchmarks_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.benchmark")
     conda: "conf/env/sourmash-dev.yml"
     shell:
+        # use --force to continue past empty gather files
         """
         sourmash tax genome --from-file {input.gather_pathlist} --taxonomy-csv {input.tax_files} \
                             --output-dir {params.outdir} -o {params.output_base} \
-                            --containment-threshold {params.threshold} 2> {log}
+                            --containment-threshold {params.threshold} --force 2> {log}
         """
 
 

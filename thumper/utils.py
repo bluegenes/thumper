@@ -54,7 +54,7 @@ def read_samples(config, *, strict=False):
     except ValueError as exc:
         print('** ERROR: Please provide proteomes/genomes as a txt file ' \
         '(one filename per line) or a csv file("sample,filename"; no headers ' \
-        'using "sample_list:" in the config')
+        'using "sample_info:" in the config')
         sys.exit(-1)
     if '.tsv' in samples_file or '.csv' in samples_file:
         separator = '\t'
