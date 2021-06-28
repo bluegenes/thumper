@@ -53,7 +53,7 @@ def make_param_str(sketch_type):
         return f"dna -p {ks},scaled={scaled},abund"
     elif sketch_type in ['translate', 'protein']:
         param_str = [sketch_type]
-        param_str.append(f"-p {ks},scaled={scaled},abund")
+        param_str.append(f"-p {ks},scaled={scaled},abund,{alphabet}")
         return ' '.join(param_str)
 
 # snakemake info and workflow #
