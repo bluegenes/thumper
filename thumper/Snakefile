@@ -106,8 +106,8 @@ rule sourmash_sketch:
     input:
         lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
     output:
-        sig=temp(os.path.join(out_dir, "sigs/{sketch_type}/{sample}.sig")),
-        picklist=temp(os.path.join(out_dir, "sigs/{sketch_type}/{sample}.sig.csv")),
+        sig=temp(os.path.join(out_dir, f"sigs/{{sketch_type}}/{{sample}}.{alphabet}.sig")),
+        picklist=temp(os.path.join(out_dir, f"sigs/{{sketch_type}}/{{sample}}.{alphabet}.sig.csv")),
     params:
         param_str = lambda w: make_param_str(sketch_type),
     threads: 1
@@ -126,12 +126,12 @@ rule sourmash_sketch:
 
 rule sigs_to_zipfile:
     input:  
-        expand(os.path.join(out_dir, "sigs", "{sketch_type}/{sample}.sig"), sample=sample_names, sketch_type = sketch_type),
+        expand(os.path.join(out_dir, "sigs", f"{{sketch_type}}/{{sample}}.{alphabet}.sig"), sample=sample_names, sketch_type = sketch_type),
     output: 
-        zipF=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.queries.zip"),
-        manifest=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.queries.csv"),
-    log: os.path.join(logs_dir, "sourmash", f"{basename}.{sketch_type}.catzip.log")
-    benchmark: os.path.join(benchmarks_dir, "sourmash", f"{basename}.{sketch_type}.catzip.benchmark")
+        zipF=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.{alphabet}.queries.zip"),
+        manifest=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.{alphabet}.queries.csv"),
+    log: os.path.join(logs_dir, "sourmash", f"{basename}.{sketch_type}.{alphabet}.catzip.log")
+    benchmark: os.path.join(benchmarks_dir, "sourmash", f"{basename}.{sketch_type}.{alphabet}.catzip.benchmark")
     conda: "conf/env/sourmash-dev.yml"
     shell:
         """
@@ -208,7 +208,7 @@ rule tax_classify:
         """
 
 
-# use this when sig cat --from-file can be done? :)
+# use this when sig cat --from-file can be done!
 #localrules: sigs_to_pathfile
 #rule sigs_to_pathfile:
 #    input:  expand(os.path.join(out_dir, "signatures", "{sample}.sig"), sample=sample_names),
@@ -217,32 +217,3 @@ rule tax_classify:
 #        with open(str(output), "w") as outF:
 #            for inF in input:
 #                outF.write(str(inF) + "\n")
-
-#rule gather_sig:
-#    input:
-#        query=os.path.join(out_dir, "sigs", "{sample}.sig"),
-#        query_picklist=os.path.join(out_dir, "sigs", "{sample}.sig.csv"),
-#        database=expand(os.path.join(database_dir, "{database}.sbt.zip"), database=DATABASES),
-#        database_manifest=expand(os.path.join(database_dir, "{database}.manifest.csv.gz"), database=DATABASES)
-#    output:
-#        gather_csv=os.path.join(out_dir, 'gather', '{sample}.gather.csv'),
-#    params:
-#        scaled = SOURMASH_COMPUTE_SCALED,
-#        ksize = SOURMASH_COMPUTE_KSIZE,
-#        threshold_bp = SOURMASH_DATABASE_THRESHOLD_BP,
-#        alpha_cmd = "--" + ALPHABET,
-#    resources:
-#        #mem_mb=int(PREFETCH_MEMORY / 1e3),
-#        mem_mb=lambda wildcards, attempt: attempt *150000,
-#        runtime=6000,
-#    log: os.path.join(logs_dir, "gather", "{sample}.gather.log")
-#    benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.gather.benchmark")
-#    conda: "conf/env/sourmash-dev.yml"
-#    shell:
-#        """
-#        echo "DB is {input.database}"
-#        sourmash gather {input.query} {input.database} -o {output} -k {params.ksize} \
-#          --threshold-bp={params.threshold_bp} {params.alpha_cmd} \
-#          --picklist {input.query_picklist}:name:{wildcards.sample}:exclude 2> {log} 
-#        """
-
