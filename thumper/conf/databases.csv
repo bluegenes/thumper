@@ -14,6 +14,11 @@ gtdb-rs202-reps,dayhoff,19,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein-r
 gtdb-rs202-reps,hp,32,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein-reps.hp-k32-scaled200.zip,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
 gtdb-rs202-reps,hp,35,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein-reps.hp-k35-scaled200.zip,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
 gtdb-rs202-reps,hp,42,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein-reps.hp-k42-scaled200.zip,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
+gtdb-rs202,protein,7,200,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein.k7.sbt.zip,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
+gtdb-rs202,protein,8,200,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein.protein-k8-scaled200.zip,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
+gtdb-rs202,protein,9,200,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein.protein-k9-scaled200.zip,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
+gtdb-rs202,protein,10,200,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein.protein-k10-scaled200.zip,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
+gtdb-rs202,protein,11,200,/group/ctbrowngrp/gtdb/databases/gtdb-rs202.protein.protein-k11-scaled200.zip,/group/ctbrowngrp/gtdb/gtdb-rs202.taxonomy.v2.csv
 gtdb95-reps,nucleotide,21,1000,https://osf.io/hnjka/download,https://osf.io/tcyde/download
 gtdb95-reps,nucleotide,31,1000,https://osf.io/2w5hq/download,https://osf.io/tcyde/download
 gtdb95-reps,nucleotide,51,1000,https://osf.io/rv4ze/download,https://osf.io/tcyde/download
