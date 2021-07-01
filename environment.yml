@@ -9,4 +9,4 @@ dependencies:
   - python>=3.8
   - snakemake=6.5.0
   - pytest
-  - sourmash>=4,<5
+  - git+https://github.com/dib-lab/sourmash@latest
