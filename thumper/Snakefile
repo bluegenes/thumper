@@ -107,7 +107,7 @@ rule sourmash_sketch:
         lambda w: os.path.join(data_dir, sample_info.at[w.sample, 'filename'])
     output:
         sig=temp(os.path.join(out_dir, f"sigs/{{sketch_type}}/{{sample}}.{alphabet}.sig")),
-        picklist=temp(os.path.join(out_dir, f"sigs/{{sketch_type}}/{{sample}}.{alphabet}.sig.csv")),
+        picklist=os.path.join(out_dir, f"sigs/{{sketch_type}}/{{sample}}.{alphabet}.sig.csv"),
     params:
         param_str = lambda w: make_param_str(sketch_type),
     threads: 1
@@ -142,11 +142,12 @@ rule sigs_to_zipfile:
 
 rule gather_sig_from_zipfile:
     input:
-        query_zip=rules.sigs_to_zipfile.output.zipF,
+        query_zip=ancient(os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.{alphabet}.queries.zip")),
         #query_manifest=rules.sigs_to_zipfile.output.manifest,
         query_picklist=rules.sourmash_sketch.output.picklist,
         database=lambda w: expand(os.path.join(database_dir, "{database}.sbt.zip"), database=databaseD[f'k{w.ksize}']),
     output:
+        #prefetch_csv=os.path.join(out_dir, 'gather', '{sample}.{sketch_type}.{alphabet}-k{ksize}.prefetch.csv'),
         gather_csv=os.path.join(out_dir, 'gather', '{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.csv'),
     params:
         scaled = lambda w: alphabet_info[w.alphabet]["scaled"],
@@ -163,13 +164,15 @@ rule gather_sig_from_zipfile:
         # touch output to let workflow continue in cases where 0 results are found
         """
         echo "DB is {input.database}"
+        echo "DB is {input.database}" > {log}
 
         sourmash sig extract {input.query_zip} --name {wildcards.sample} \
                  --ksize {wildcards.ksize} | sourmash gather - {input.database} \
                  -o {output} -k {wildcards.ksize} --threshold-bp={params.threshold_bp} \
-                 --picklist {input.query_picklist}:name:identprefix:exclude 2> {log}
+                 --picklist {input.query_picklist}:name:identprefix:exclude 2>> {log}
         touch {output}
         """
+
 
 rule gather_csvs_to_pathlist:
     input: 
@@ -198,7 +201,6 @@ rule tax_classify:
         threshold = config.get("classify_threshold", 0.1)
     log: os.path.join(logs_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.log")
     benchmark: os.path.join(benchmarks_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
     shell:
         # use --force to continue past empty gather files
         """
