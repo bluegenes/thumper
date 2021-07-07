@@ -7,6 +7,5 @@ dependencies:
   - mamba
   - pandas>=1.2
   - python>=3.8
-  - snakemake=6.5.0
-  - pytest
-  - git+https://github.com/dib-lab/sourmash@latest
+  - snakemake=6.5.2
+  - sourmash>=4.2,<5

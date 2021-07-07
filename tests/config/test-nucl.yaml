@@ -15,23 +15,19 @@ input_type: nucleotide
 # Database info
 database_dir: tests/test-data/databases
 
-turn_off_default_databases: True
-
 search_databases:
   - gtdb-nine
 
 # list of genome filenames to decontaminate
-sample_list: tests/config/nucl-samplelist.csv
+sample_info: tests/config/nucl-samplelist.csv
 
 # directory in which genome filenames live
 data_dir: tests/test-data/genomes
 
-alphabets:
-  nucleotide:
-    scaled: 1000
-  protein:
-    scaled: 10
-  dayhoff:
-    scaled: 10
-  hp:
-    scaled: 10
+# sourmash params
+alphabet: nucleotide
+ksize:
+  - 21
+  - 31
+  - 51
+scaled: 1000

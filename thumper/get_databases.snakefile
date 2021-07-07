@@ -20,7 +20,6 @@ rule get_taxonomy:
     output:
         os.path.join(database_dir, "{db_basename}.taxonomy.csv")
     params:
-         #csv_info= lambda w: database_info.at[w.db_name, 'info_path']
          csv_info= lambda w: config["database_info"].loc[database_info["db_basename"]== w.db_basename]["taxonomy_path"][0]
     log: os.path.join(db_logs, "get_dbs", "{db_basename}.info.get")
     threads: 1
@@ -39,7 +38,6 @@ rule get_sbt:
     output:
         os.path.join(database_dir, "{database}.sbt.zip")
     params:
-        #sbt_info = lambda w: database_info[w.db_name]["alphabets"][w.alphabet]["k" + str(w.ksize)]["sbt"]
         sbt_info= lambda w: config["database_info"].at[w.database,"path"]
     log: os.path.join(db_logs, "get_dbs", "{database}.sbt.get")
     threads: 1

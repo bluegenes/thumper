@@ -8,7 +8,7 @@ force: 0
 basename: protein-demo
 
 # location for all generated files
-output_dir: output.protein-demo
+output_dir: output.demo-protein
 
 # type of input data (protein or nucleotide)
 input_type: protein
@@ -16,10 +16,9 @@ input_type: protein
 # Database info
 database_dir: tests/test-data/databases
 
-turn_off_default_databases: True
-
 search_databases:
-  - gtdb-rs202-reps
+  - gtdb-nine
+  #- gtdb-rs202-reps
 
 # list of genome filenames to classify
 sample_info: demo/prot-samplelist.csv
@@ -28,5 +27,6 @@ sample_info: demo/prot-samplelist.csv
 data_dir: tests/test-data/proteomes
 
 alphabet: protein
-ksize: 11
-#classify_threshold: 0
+ksize: 10
+classify_threshold: 0
+sourmash_database_threshold_bp: 0

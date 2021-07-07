@@ -90,7 +90,7 @@ def cli():
 @click.option('--verbose', is_flag=True)
 @click.argument('snakemake_args', nargs=-1)
 def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose, outdir):
-    "execute thumper workflow (using snakemake underneath)"
+    "execute thumper classification workflow (using snakemake underneath)"
     run_snakemake(configfile, snakefile_name='Snakefile',
                   no_use_conda=no_use_conda, no_use_mamba=no_use_mamba,
                   verbose=verbose,outdir=outdir,

@@ -20,6 +20,9 @@ def sanitize_path(path):
 
 
 def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml', '.yml'], verbose = False):
+    '''
+    Look for input file, trying several paths and suffixes
+    '''
     # for any file specified via command line, check if it exists at the current path, if not, try some other paths before returning  a helpful error
     found_file = None
     filename = sanitize_path(filename) # handle ~!
@@ -43,11 +46,13 @@ def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml
 
 
 def _file_exists(filename, data_dir):
+    '''check if file exists in data directory. Returns T/F.'''
     fname = os.path.join(data_dir, filename)
     return os.path.isfile(fname)
 
 
 def read_samples(config, *, strict=False):
+    ''' read in csv or xlsx sample_info from config '''
     try:
         filename = config.get('sample_info', '')
         samples_file = find_input_file(filename)
@@ -56,6 +61,7 @@ def read_samples(config, *, strict=False):
         '(one filename per line) or a csv file("sample,filename"; no headers ' \
         'using "sample_info:" in the config')
         sys.exit(-1)
+    # read tsv or csv
     if '.tsv' in samples_file or '.csv' in samples_file:
         separator = '\t'
         if '.csv' in samples_file:
@@ -65,6 +71,7 @@ def read_samples(config, *, strict=False):
         except Exception as e:
             sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
             print(e)
+    # read excel
     elif '.xls' in samples_file:
         try:
             samples = pd.read_excel(samples_file, dtype=str, names = ["sample", "filename"])
@@ -72,15 +79,18 @@ def read_samples(config, *, strict=False):
             sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
             print(e)
     else:
+        # if not csv, tsv, xls(x), try reading as a text file of sample files
         sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
         sample_list = [ line for line in sample_list if line ]   # remove empty lines
         samplesD = {"sample":sample_list,"filename":sample_list} # maybe later try removing *fa.gz or the like
         samples = pd.DataFrame(samplesD)
 
+    # get data directory
     data_dir = config.get('data_dir', '')
     if data_dir:
         data_dir = sanitize_path(data_dir)
-    # check if file exists
+
+    # check if each provided sample file exists/isfile
     samples['exists'] = samples['filename'].apply(_file_exists, data_dir=data_dir)
     if not pd.Series(samples['exists']).all():
         missing_files = samples[samples['exists'] == False].index
@@ -90,6 +100,8 @@ def read_samples(config, *, strict=False):
             print(f'Sample files {",".join(missing_files)} do not exist in {data_dir}')
             print('Strict mode is OFF. Attempting to continue.')
             samples = samples[samples['exists'] == True]
+
+    # save pandas dataframe into config variable
     samples.set_index("sample", inplace=True)
     config['samples'] = samples
     return config
@@ -137,11 +149,15 @@ def check_and_set_alpha_ksize(config, *, strict=False):
 
 
 def _make_db_fullname(row):
+    '''pandas apply fn to add alpha an dksize info into database fullname'''
     row["db_fullname"] = row["db_basename"] + "." + row["alphabet"] + "-k" +  str(row["ksize"])
     return row
 
 
 def load_databases_csv(databases_file, existing_db_info=None):
+    '''
+    Load csv of databasei info (name, alphabet, ksize, scaled, dl or link path, etc).
+    '''
     db_file = find_input_file(databases_file)
     db_info=None
     if '.tsv' in db_file or '.csv' in db_file:
@@ -174,6 +190,9 @@ def load_databases_csv(databases_file, existing_db_info=None):
 
 
 def find_valid_databases(databases, db_info, config, *, strict=False):
+    '''
+    check which databases to use based on alpha/ksize workflow params.
+    '''
     databases_to_use=[]
     db_basenames = []
     database_ksize_dir = defaultdict(list)
@@ -200,6 +219,10 @@ def find_valid_databases(databases, db_info, config, *, strict=False):
 
 
 def check_and_set_databases(config, *, strict=False):
+    '''
+    Load database info and make sure we have appropriate
+    databases to use for desired alpha/ksize.
+    '''
     # first, get load all the database info from default and user CSVs
     default_db_file = srcdir(config["default_database_info"])
     db_info = load_databases_csv(default_db_file)
@@ -227,6 +250,9 @@ def check_and_set_databases(config, *, strict=False):
 
 
 def process_user_config(config):
+    '''
+    Integrate information from user and default config(s).
+    '''
     strict_mode = config.get('strict_mode', False)
     try:
         samples = read_samples(config, strict=strict_mode)
@@ -234,8 +260,9 @@ def process_user_config(config):
         config = check_and_set_databases(config, strict=strict_mode)
     except ValueError as exc:
         print(f'ERROR: Could not properly integrate configuration values.')
-        print(f'{str(exc)}')
-        sys.exit(-1)
+        #print(f'{str(exc)}')
+        raise
+        #sys.exit(-1)
 
     return config
 
