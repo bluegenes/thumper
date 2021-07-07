@@ -48,12 +48,10 @@ def _run_snakemake_test(conf, target, extra_args=[]):
 
     return status, new_out.getvalue(), new_err.getvalue()
 
-test_genomes = ['GCA_002691795', 'GCF_003143755']
-test_proteomes = ['GCA_002691795', 'GCF_003143755']
-#test_genomes = ['GCA_002691795.1_genomic.fna.gz', 'GCF_003143755.1_genomic.fna.gz']
-#test_proteomes = ['GB_GCA_002691795.1_protein.100contigs.faa.gz', 'RS_GCF_003143755.1_protein.100contigs.faa.gz']
-nucl_databases = ['gtdb-nine.nucleotide-k21-scaled1000', 'gtdb-nine.nucleotide-k31-scaled1000', 'gtdb-nine.nucleotide-k51-scaled1000']
-prot_databases = ['gtdb-nine.protein-k11-scaled10', 'gtdb-nine.dayhoff-k19-scaled10', 'gtdb-nine.hp-k33-scaled10'] #, 'gtdb-nine.hp-k42']
+samples = ['GCA_002691795', 'GCF_003143755', 'GCA_000384615']
+databases = ['gtdb-nine']
+#nucl_databases = ['gtdb-nine.nucleotide-k21-scaled1000', 'gtdb-nine.nucleotide-k31-scaled1000', 'gtdb-nine.nucleotide-k51-scaled1000']
+#prot_databases = ['gtdb-nine.protein-k11-scaled10', 'gtdb-nine.dayhoff-k19-scaled10', 'gtdb-nine.hp-k33-scaled10'] #, 'gtdb-nine.hp-k42']
 
 @pytest.mark.dependency()
 @pytest.mark.parametrize("genome_file", test_genomes)
