@@ -4,7 +4,7 @@ strict: 1
 # continue past survivable errors in classification
 force: 0
 
-basename: test_nucl
+basename: test-nucl
 
 # location for all generated files
 output_dir: output.test-nucl
@@ -24,10 +24,12 @@ sample_info: tests/config/nucl-samplelist.csv
 # directory in which genome filenames live
 data_dir: tests/test-data/genomes
 
+# add test database info
+user_database_info: tests/test-data/test-databases.csv
+
 # sourmash params
 alphabet: nucleotide
 ksize:
   - 21
   - 31
-  - 51
 scaled: 1000

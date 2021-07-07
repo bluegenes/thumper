@@ -32,10 +32,3 @@ gtdb95-reps,dayhoff,19,100,https://osf.io/3mut8/download,https://osf.io/tcyde/do
 gtdb95-reps,hp,30,100,https://osf.io/p62xw/download,https://osf.io/tcyde/download
 gtdb95-reps,hp,33,100,https://osf.io/46h38/download,https://osf.io/tcyde/download
 gtdb95-reps,hp,35,100,https://osf.io/7gu39/download,https://osf.io/tcyde/download
-gtdb-nine,protein,10,200,tests/test-data/databases/gtdb-nine.protein-k10.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
-gtdb-nine,nucleotide,21,1000,tests/test-data/databases/gtdb-nine.nucleotide-k21.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
-gtdb-nine,nucleotide,31,1000,tests/test-data/databases/gtdb-nine.nucleotide-k31.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
-gtdb-nine,nucleotide,51,1000,tests/test-data/databases/gtdb-nine.nucleotide-k51.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
-gtdb-nine,dayhoff,19,10,tests/test-data/databases/gtdb-nine.dayhoff-k19.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
-gtdb-nine,hp,33,10,tests/test-data/databases/gtdb-nine.hp-k33.scaled10.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv
-gtdb-nine,hp,42,10,tests/test-data/databases/gtdb-nine.hp-k42.scaled10.sbt.zip,tests/test-data/databases/gtdb-nine.lineages.csv

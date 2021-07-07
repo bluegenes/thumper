@@ -127,10 +127,10 @@ def check_and_set_alpha_ksize(config, *, strict=False):
             config["scaled"] = alphabet_defaults["nucleotide"]["scaled"]
         # translate to protein
         elif alphabet in ["protein", "dayhoff", "hp"]:
-            config["sketch_type"] = protein
+            config["sketch_type"] = "translate"
             if not ksize:
-                config["ksize"] = alphabet_defaults["nucleotide"]["ksizes"]
-            config["scaled"] = alphabet_defaults["nucleotide"]["scaled"]
+                config["ksize"] = alphabet_defaults[alphabet]["ksizes"]
+            config["scaled"] = alphabet_defaults[alphabet]["scaled"]
     #protein input
     elif input_type in ["protein"]:
         config["sketch_type"] = "protein"
@@ -170,8 +170,9 @@ def load_databases_csv(databases_file, existing_db_info=None):
             db_info = db_info.apply(_make_db_fullname, axis=1)
             # verify_integrity checks the new index for duplicates.
             db_info.set_index("db_fullname", inplace=True, verify_integrity=True)
-            if existing_db_info:
-                db_info = pd.concat(existing_db_info, db_info, verify_integrity=True)
+            # check if existing db info is not none
+            if not isinstance(existing_db_info, type(None)):
+                db_info = pd.concat([existing_db_info, db_info], verify_integrity=True)
         except Exception as e:
             print(e)
             raise ValueError(f"\n\tError: {db_file} file is not properly formatted. Please fix.\n\n")
@@ -181,8 +182,8 @@ def load_databases_csv(databases_file, existing_db_info=None):
             assert list(db_info.columns) == ["db_basename","alphabet","ksize","scaled","path","info_path"]
             db_info = db_info.apply(_make_db_fullname, axis=1)
             db_info.set_index("db_fullname", inplace=True, verify_integrity=True)
-            if existing_db_info:
-                db_info = pd.concat(existing_db_info, db_info, verify_integrity=True)
+            if not isinstance(existing_db_info, type(None)):
+                db_info = pd.concat([existing_db_info, db_info], verify_integrity=True)
         except Exception as e:
             print(e)
             raise ValueError(f"\n\tError: {db_file} file is not a properly formatted excel file. Please fix.\n\n")

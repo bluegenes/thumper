@@ -10,3 +10,5 @@ demo/*
 tests/test-data/databases/*
 cluster_config*
 databases
+core-pfams
+.*
