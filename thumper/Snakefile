@@ -12,6 +12,9 @@ database_dir = config['database_dir']
 data_dir = config['data_dir'].rstrip('/')
 report_dir = os.path.join(out_dir, "reports")
 basename = config["basename"]
+# pretty things
+ascii_thumper = srcdir("animals/thumper")
+failwhale = srcdir("animals/failwhale")
 
 # check strict and force values
 strict_val = config.get('strict', '1')
@@ -26,8 +29,13 @@ if force:
     force_param = '--force'
 
 ## integrate values from user config ##
-config = process_user_config(config)
-#tp.check_and_set_alphabets(config, strict_mode=strict_mode)
+try:
+    config = process_user_config(config)
+except ValueError as exc:
+    print(f"ERROR: {str(exc)}\n")
+    shell('cat {failwhale}')
+    sys.exit(-1)
+
 alphabet_info = config["alphabet_defaults"]
 
 sample_info = config['samples']
@@ -57,8 +65,6 @@ def make_param_str(sketch_type):
         return ' '.join(param_str)
 
 # snakemake info and workflow #
-ascii_thumper = srcdir("animals/thumper")
-failwhale = srcdir("animals/failwhale")
 
 wildcard_constraints:
     alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
@@ -209,6 +215,10 @@ rule tax_classify:
                             --containment-threshold {params.threshold} --force 2> {log}
         """
 
+
+#rule assess_classification:
+
+#rule viz_classification:
 
 # use this when sig cat --from-file can be done!
 #localrules: sigs_to_pathfile
