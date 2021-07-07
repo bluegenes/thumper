@@ -1,0 +1,7 @@
+db_basename,alphabet,ksize,scaled,path,taxonomy_path
+gtdb-nine,protein,7,200,https://osf.io/gs8rw/download,https://osf.io/yfscu/download
+gtdb-nine,protein,10,200,https://osf.io/yt7dx/download,https://osf.io/yfscu/download
+gtdb-nine,protein,11,200,https://osf.io/y7tqh/download,https://osf.io/yfscu/download
+gtdb-nine,nucleotide,21,1000,https://osf.io/n4hvs/download,https://osf.io/yfscu/download
+gtdb-nine,nucleotide,31,1000,https://osf.io/q2x3v//download,https://osf.io/yfscu/download
+gtdb-nine,nucleotide,51,1000,https://osf.io/d7xfq/download,https://osf.io/yfscu/download
