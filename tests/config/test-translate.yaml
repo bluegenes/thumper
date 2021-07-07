@@ -31,3 +31,6 @@ user_database_info: tests/test-data/test-databases.csv
 alphabet: protein
 ksize:
   - 10
+
+# thresholds
+sourmash_database_threshold_bp: 0
