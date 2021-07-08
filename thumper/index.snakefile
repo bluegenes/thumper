@@ -1,17 +1,12 @@
 ## indexing rules 
 
-localrules: signames_to_file
+rule index:
+    input:
+        expand(os.path.join(out_dir, "index", "{index}.sbt.zip"), index = tp.build_index_names(config))
 
-rule signames_to_file:
-    input:  expand(os.path.join(out_dir, "signatures", "{sample}.sig"), sample=sample_names),
-    output: os.path.join(out_dir, "index", "{basename}.signatures.txt")
-    run:
-        with open(str(output), "w") as outF:
-            for inF in input:
-                outF.write(str(inF) + "\n")
 
 rule index_sbt:
-    input: os.path.join(out_dir, "index", "{basename}.signatures.txt")
+    input: os.path.join(out_dir, "signatures", "{basename}.signatures.txt")
     output: os.path.join(out_dir, "index", "{basename}.{alphabet}-k{ksize}-scaled{scaled}.sbt.zip"),
     threads: 1
     params:

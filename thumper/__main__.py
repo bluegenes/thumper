@@ -1,4 +1,3 @@
-## borrows heavily from charcoal, dammit, sgc cli infra
 "Enable python -m thumper"
 import os
 import sys
@@ -16,18 +15,19 @@ def get_snakefile_path(name):
 
 def get_package_configfile(filename):
     thisdir = os.path.dirname(__file__)
-    configfile = os.path.join(thisdir, '.config', filename)
+    configfile = os.path.join(thisdir, 'conf', filename)
     return configfile
 
 
 def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
-                  snakefile_name='thumper.snakefile',
+                  snakefile_name='Snakefile',
                   outdir=None, verbose=False, extra_args=[]):
     # find the Snakefile relative to package path
     snakefile = get_snakefile_path(snakefile_name)
 
     # basic command
     cmd = ["snakemake", "-s", snakefile]
+    #cmd = ["snakemake", snakefile]
 
     # add --use-conda
     if not no_use_conda:
@@ -51,8 +51,7 @@ def run_snakemake(configfile, no_use_conda=False, no_use_mamba=False,
     cmd += list(extra_args)
 
         # add defaults and system config files, in that order
-    configfiles = [get_package_configfile("config.yaml"),
-                   get_package_configfile("pipelines.yaml")]
+    configfiles = [get_package_configfile("defaults.conf")]
 
     if configfile:
         configfiles+= [configfile]
@@ -91,24 +90,11 @@ def cli():
 @click.option('--verbose', is_flag=True)
 @click.argument('snakemake_args', nargs=-1)
 def run(configfile, snakemake_args, no_use_conda, no_use_mamba, verbose, outdir):
-    "execute thumper workflow (using snakemake underneath)"
-    run_snakemake(configfile, snakefile_name='thumper.snakefile',
+    "execute thumper classification workflow (using snakemake underneath)"
+    run_snakemake(configfile, snakefile_name='Snakefile',
                   no_use_conda=no_use_conda, no_use_mamba=no_use_mamba,
                   verbose=verbose,outdir=outdir,
                   extra_args=snakemake_args)
-
-# get databases
-#@click.command()
-#@click.option('--configfile', type=click.Path(exists=True), default=None)
-#@click.option('--verbose', is_flag=True)
-# does this outdir need to exist?
-#@click.option('--outdir', nargs=1, type=click.Path(exists=True), default=None)
-#def download_databases(configfile, verbose, outdir):
-#    "get the necessary databases"
-#    run_snakemake(configfile, snakefile_name='get_databases.snakefile',
-#                  no_use_conda=True,
-#                  verbose=verbose, outdir=outdir,
-#                  extra_args=['download_databases'])
 
 # 'check' command
 @click.command()
@@ -134,7 +120,7 @@ This is thumper version v{version}
 
 Package install path: {os.path.dirname(__file__)}
 Install-wide config file: {get_package_configfile('config.yaml')}
-snakemake Snakefile: {get_snakefile_path('thumper.snakefile')}
+snakemake Snakefile: {get_snakefile_path('Snakefile')}
 """)
 
 # 'init' command
@@ -205,7 +191,6 @@ cli.add_command(check)
 cli.add_command(showconf)
 cli.add_command(info)
 cli.add_command(init)
-#cli.add_command(download_databases)
 
 def main():
     cli()

@@ -1,4 +1,0 @@
-name,length,match_rank,lineage,f_ident,f_major
-name,6,superkingdom,a,1.0,1.0
-name,6,phylum,a;b,1.0,1.0
-name,6,class,a;b;f,1.0,0.5

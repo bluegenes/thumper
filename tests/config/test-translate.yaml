@@ -1,0 +1,36 @@
+# check and validate config settings & filenames strictly.
+strict: 1
+
+# continue past survivable errors in classification
+force: 0
+
+basename: test-translate
+
+# location for all generated files
+output_dir: output.test-translate
+
+# type of input data (protein or nucleotide)
+input_type: nucleotide
+
+# Database info
+database_dir: tests/test-data/databases
+
+search_databases:
+  - gtdb-nine
+
+# list of genome filenames to decontaminate
+sample_info: tests/config/nucl-samplelist.csv
+
+# directory in which genome filenames live
+data_dir: tests/test-data/genomes
+
+# add test database info
+user_database_info: tests/test-data/test-databases.csv
+
+# sourmash params
+alphabet: protein
+ksize:
+  - 10
+
+# thresholds
+sourmash_database_threshold_bp: 0

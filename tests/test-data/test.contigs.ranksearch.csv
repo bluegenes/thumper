@@ -1,5 +1,0 @@
-name,length,match_rank,lineage,f_contained,bp_contained
-name,6,superkingdom,a,1.0,2
-name,6,phylum,a;b,1.0,2
-name,6,class,a;b;f,0.5,1
-name,6,class,a;b;c,0.5,1

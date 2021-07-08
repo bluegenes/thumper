@@ -4,8 +4,7 @@ strict: 1
 # continue past survivable errors in classification
 force: 0
 
-# basename (currently not being used)
-basename: test_prot
+basename: test-prot
 
 # location for all generated files
 output_dir: output.test-prot
@@ -16,21 +15,21 @@ input_type: protein
 # Database info
 database_dir: tests/test-data/databases
 
-turn_off_default_databases: True
-
 search_databases:
   - gtdb-nine
 
 # list of genome filenames to decontaminate
-sample_list: tests/config/prot-samplelist.csv
+sample_info: tests/config/prot-samplelist.csv
 
 # directory in which genome filenames live
 data_dir: tests/test-data/proteomes
 
-alphabets:
-  protein:
-    scaled: 10
-  dayhoff:
-    scaled: 10
-  hp:
-    scaled: 10
+# add test database info
+user_database_info: tests/test-data/test-databases.csv
+
+alphabet: protein
+ksize:
+  - 10
+
+# thresholds
+sourmash_database_threshold_bp: 0

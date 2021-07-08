@@ -13,7 +13,7 @@ data_dir = config['data_dir'].rstrip('/')
 report_dir = os.path.join(out_dir, "reports")
 basename = config["basename"]
 
-
+# check strict and force values
 strict_val = config.get('strict', '1')
 strict_mode = int(strict_val)
 if not strict_mode:
@@ -25,13 +25,9 @@ force_param = ''
 if force:
     force_param = '--force'
 
-# snakemake workflow
-
-wildcard_constraints:
-    alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
-    ksize="\d+",
-    sample="\w+"
-    #database = "(?!x\.).+"
+## integrate values from user config ##
+tp.check_and_set_alphabets(config, strict_mode=strict_mode)
+alphabet_info = config["alphabet_info"]
 
 if config.get("sample_list"):
     sample_info = tp.read_samples(config["sample_list"], data_dir)
@@ -43,13 +39,22 @@ else:
 
 sample_names = sample_info.index.tolist()
 
+# snakemake info and workflow #
+ascii_thumper = srcdir("animals/thumper")
+failwhale = srcdir("animals/failwhale")
+
+wildcard_constraints:
+    alphabet="protein|dayhoff|hp|nucleotide", #|dna|rna",
+    ksize="\d+",
+    sample="\w+"
+    #database = "(?!x\.).+"
+
 onstart:
     print("------------------------------")
     print("Perform taxonomic classification using protein k-mers")
     print("------------------------------")
 
-ascii_thumper = srcdir("animals/thumper")
-failwhale = srcdir("animals/failwhale")
+
 onsuccess:
     print("\n--- Workflow executed successfully! ---\n")
     shell('cat {ascii_thumper}')
@@ -58,15 +63,36 @@ onerror:
     print("Alas!\n")
     shell('cat {failwhale}')
 
-rule all:
-    input: tp.generate_targets(config, sample_names, out_dir, generate_db_targets=False)
 
-# include the databases, index, common utility snakefiles
-if config["get_databases"]:
-    include: "get_databases.snakefile"
+# targeting rules
+rule download_databases:
+    input:
+        expand(os.path.join(database_dir, "{database}.sbt.zip"), database=tp.check_databases(config))
+
+rule sketch:
+    input:
+        expand(os.path.join(out_dir, "signatures", "{basename}.signatures.txt"), basename=basename)
+
+rule classify_mags:
+    input: 
+        expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config)),
+        expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"), basename=basename, database=tp.check_databases(config))
+        
+rule classify_contigs:
+    input:
+        expand(os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"), basename=basename, database=tp.check_databases(config))
+    
+#rule classify_reads:
+
+rule index:
+    input: 
+        expand(os.path.join(out_dir, "index", "{index}.sbt.zip"), index = tp.build_index_names(config))
+
+include: "get_databases.snakefile"
 include: "index.snakefile"
 include: "common.snakefile"
-alphabet_info = config["alphabet_info"]
+
+## individual rules and steps ##
 
 def build_sketch_params(output_type):
     sketch_cmd = ""
@@ -75,7 +101,7 @@ def build_sketch_params(output_type):
     if input_type == "nucleotide":
         if output_type == "nucleotide":
             ksizes = config["alphabet_info"]["nucleotide"].get("ksizes", config["alphabet_defaults"]["nucleotide"]["ksizes"])
-            scaled = config["alphabet_info"]["nucleotide"].get("scaled", config["alphabet_defaults"]["nucleotide"]["scaled"])
+            scaled = min(config["alphabet_info"]["nucleotide"].get("scaled", config["alphabet_defaults"]["nucleotide"]["scaled"]))
             # always track abund when sketching (?)
             sketch_cmd = "dna -p " + "k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
             return sketch_cmd
@@ -88,10 +114,10 @@ def build_sketch_params(output_type):
         if alpha in config["alphabet_info"].keys():
         ## default build protein, dayhoff, hp sigs at the default ksizes from config
             ksizes = config["alphabet_info"][alpha].get("ksizes", config["alphabet_defaults"][alpha]["ksizes"])
-            scaled = config["alphabet_info"][alpha].get("scaled", config["alphabet_defaults"][alpha]["scaled"])
+            scaled = min(config["alphabet_info"][alpha].get("scaled", config["alphabet_defaults"][alpha]["scaled"]))
         else:
             ksizes = config["alphabet_defaults"][alpha]["ksizes"]
-            scaled = config["alphabet_defaults"][alpha]["scaled"]
+            scaled = min(config["alphabet_defaults"][alpha]["scaled"])
         sketch_cmd += " -p " + alpha + ",k=" + ",k=".join(map(str, ksizes)) + f",scaled={str(scaled)}" + ",abund"
     return sketch_cmd
 
@@ -135,13 +161,21 @@ else:
             runtime=1200,
         log: os.path. join(logs_dir, "sourmash_sketch_prot_input", "{sample}.sketch.log")
         benchmark: os.path.join(benchmarks_dir, "sourmash_sketch_prot_input", "{sample}.sketch.benchmark")
-        #wildcard_constraints:
-        #    alphabet="protein|dayhoff|hp",
         conda: "envs/sourmash-dev.yml"
         shell:
             """
             sourmash sketch {params.sketch_params} -o {output} --name {wildcards.sample} {input} 2> {log}
             """
+
+localrules: signames_to_file
+
+rule signames_to_file:
+    input:  expand(os.path.join(out_dir, "signatures", "{sample}.sig"), sample=sample_names),
+    output: os.path.join(out_dir, "signatures", "{basename}.signatures.txt")
+    run:
+        with open(str(output), "w") as outF:
+            for inF in input:
+                outF.write(str(inF) + "\n")
 
 rule sourmash_search_containment:
     input:
@@ -247,22 +281,38 @@ rule genome_search:
             --output-prefix {params.out_prefix}
         """
 
-# for a summary across all genomes, same database:
-def aggregate_taxonomy_files_by_database(w):
-    sample_list = config["sample_list"]
-    db_info = config["database_info"][w.db_name]["info_csv"],
-    json_tax,search_sigs=[],[]
-    tax_file = "classify/{sample}.x.{{db_name}}.{alphabet}-k{ksize}-scaled{scaled}.contigs-tax.json"
-    sig_file = "search/{sample}.x.{{db_name}}.{alphabet}-k{ksize}-scaled{scaled}.matches.sig"
-    for alpha, alphaInfo in alphabet_info.items():
-        json_tax += expand(os.path.join(out_dir, tax_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
-        search_sigs += expand(os.path.join(out_dir, sig_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
+rule aggregate_genome_lca_gather:
+    input: expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{db_name}}.{{alphabet}}-k{{ksize}}-scaled{{scaled}}.rankgather.csv'), sample=sample_names),
+    output: os.path.join(out_dir, 'genome-search', f"{basename}" + ".x.{db_name}.{alphabet}-k{ksize}-scaled{scaled}.rankgather.csv")
+    run:
+        with open(str(output), 'w') as outF:
+            write_header=True
+            for inF in input:
+                with open(str(inF), "r") as infile:
+                    if write_header:
+                        outF.write(infile.read())
+                        write_header=False
+                    else:
+                        next(infile)
+                        outF.write(infile.read())
 
-    db_files = {"sample_list": sample_list,
-                "db_info": db_info,
-                "all_json": json_tax,
-                "all_sig": search_sigs}
-    return db_files
+
+# for a summary across all genomes, same database:
+#def aggregate_taxonomy_files_by_database(w):
+#    sample_list = config["sample_list"]
+#    db_info = config["database_info"][w.db_name]["info_csv"],
+#    json_tax,search_sigs=[],[]
+#    tax_file = "classify/{sample}.x.{{db_name}}.{alphabet}-k{ksize}-scaled{scaled}.contigs-tax.json"
+#    sig_file = "search/{sample}.x.{{db_name}}.{alphabet}-k{ksize}-scaled{scaled}.matches.sig"
+#    for alpha, alphaInfo in alphabet_info.items():
+#        json_tax += expand(os.path.join(out_dir, tax_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
+#        search_sigs += expand(os.path.join(out_dir, sig_file), sample=sample_names, alphabet=alpha, ksize = alphaInfo["ksizes"])
+#
+#    db_files = {"sample_list": sample_list,
+#                "db_info": db_info,
+#                "all_json": json_tax,
+#                "all_sig": search_sigs}
+#    return db_files
 
 # papermill reporting rules
 rule set_kernel:
@@ -278,34 +328,53 @@ rule set_kernel:
         touch {output}
         """
 
-localrules: make_genome_notebook, make_index, set_kernel, aggregate_gather_resultfiles
+localrules: make_genome_notebook, make_index, set_kernel, aggregate_gather_json, aggregate_contig_gather_json
 
-rule aggregate_gather_resultfiles:
+rule aggregate_gather_csv:
     input:
-        genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.gather.json'), sample=sample_names),
-        contigs=expand(os.path.join(out_dir, 'contig-search', '{sample}.x.{{database}}.contigs.gather.json'), sample=sample_names),
+        #genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.gather.json'), sample=sample_names),
+        genome=expand(os.path.join(out_dir, 'genome-search', '{sample}.x.{{database}}.rankgather.csv'), sample=sample_names),
     output:
-        os.path.join(out_dir, "classify", "{basename}.x.{database}.gather.txt")
+        #os.path.join(out_dir, "genome-search", "{basename}.x.{database}.gather.txt")
+        os.path.join(out_dir, "genome-search", "{basename}.x.{database}.rankgather.txt")
     resources:
         mem_mb=lambda wildcards, attempt: attempt *1000,
         runtime=200,
     run:
         with open(str(output), "w") as outF:
-            header = ["name", "database", "genome-gather", "contig-gather"]
+            header = ["name", "database", "genome-gather"]
             outF.write(",".join(header) + "\n")
             for sample in sample_names:
-                genome_json = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.gather.json')
+                #genome_json = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.gather.json')
+                #outF.write(sample + "," + wildcards.database + ',' + genome_json + "\n")
+                genome_csv = os.path.join('genome-search', f'{sample}.x.{wildcards.database}.rankgather.csv')
+                outF.write(sample + "," + wildcards.database + ',' + genome_csv + "\n")
+
+rule aggregate_contig_gather_json:
+    input:
+        contigs=expand(os.path.join(out_dir, 'contig-search', '{sample}.x.{{database}}.contigs.gather.json'), sample=sample_names),
+    output:
+        os.path.join(out_dir, "contig-search", "{basename}.x.{database}.gather.txt")
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *1000,
+        runtime=200,
+    run:
+        with open(str(output), "w") as outF:
+            header = ["name", "database", "contig-gather"]
+            outF.write(",".join(header) + "\n")
+            for sample in sample_names:
                 contig_json = os.path.join('contig-search', f'{sample}.x.{wildcards.database}.contigs.gather.json')
-                outF.write(sample + "," + wildcards.database + ',' + genome_json + ',' + contig_json + "\n")
+                outF.write(sample + "," + wildcards.database + ',' + contig_json + "\n")
 
 rule taxonomy_report:
     input:
-        gather_info=os.path.join(out_dir, "classify", "{basename}.x.{database}.gather.txt"),
+        genome_info=os.path.join(out_dir, "genome-search", "{basename}.x.{database}.gather.txt"),
+        #contig_info=os.path.join(out_dir, "contig-search", "{basename}.x.{database}.gather.txt"),
     output:
-        genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        genome_report=os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report2.csv"),
         charcoal_lineages=os.path.join(out_dir, "classify", "{basename}.x.{database}.charcoal-lineages.csv"),
-        common_contamination=os.path.join(out_dir, "classify", "{basename}.x.{database}.contamination-summary.json"),
-        contig_details_summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.contig-details-summary.csv"),
+        #common_contamination=os.path.join(out_dir, "classify", "{basename}.x.{database}.contamination-summary.json"),
+        #contig_details_summary=os.path.join(out_dir, "classify", "{basename}.x.{database}.contig-details-summary.csv"),
     log: os.path.join(logs_dir, "genome-report", "{basename}.x.{database}.genome-report.log")
     benchmark: os.path.join(benchmarks_dir, "genome-report", "{basename}.x.{database}.genome-report.benchmark")
     resources:
@@ -314,29 +383,33 @@ rule taxonomy_report:
     shell:
         """
         python -m thumper.compare_taxonomy \
-                  --jsoninfo-file {input.gather_info} \
+                  --jsoninfo-file {input.genome_info} \
                   --match-rank "genus" \
                   --gather_min_matches 3 \
                   --min_f_ident 0.1 \
                   --min_f_major 0.2 \
                   --lineages-for-charcoal {output.charcoal_lineages} \
-                  --output-csv {output.genome_report} \
-                  --contam-summary-json {output.common_contamination} \
-                  --contig-details-summary {output.contig_details_summary} 2> {log}
+                  --output-csv {output.genome_report} 2> {log}
         """
+        #          --contam-summary-json {output.common_contamination} \
+        #          --contig-details-summary {output.contig_details_summary} 2> {log}
+        #"""
 
-#rule report_genome_lineage:
-#    input:
-#        genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.gather.json'), database=config['databases']),
-#    output:
-#        expand(os.path.join(report_dir, "{basename}.taxonomy-report.csv"))
-#    resources:
-#        mem_mb=lambda wildcards, attempt: attempt *1000,
-#        runtime=1200,
-#    shell:
-#        """
-#        python -m thumper.genome_report {input} -o {output}
-#        """
+rule report_genome_lineage:
+    input:
+        #genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.gather.json'), database=config['databases']),
+        #genome=expand(os.path.join(out_dir, 'genome-search', '{{sample}}.x.{database}.rankgather.csv'), database=config['databases']),
+        gather_info=os.path.join(out_dir, "genome-search", "{basename}.x.{database}.rankgather.txt")
+    output:
+        os.path.join(out_dir, "classify", "{basename}.x.{database}.taxonomy-report.csv"),
+        #expand(os.path.join(report_dir, "{basename}.taxonomy-report.csv"), basename=basename)
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *1000,
+        runtime=1200,
+    shell:
+        """
+        python -m thumper.genome_report {input} -o {output}
+        """
 
 
 # use this notebook to aggregate files from 1. search containment, gather, 2. multiple alphas, 3. multiple databases?
