@@ -210,6 +210,7 @@ rule tax_classify:
         threshold = config.get("classify_threshold", 0.1)
     log: os.path.join(logs_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.log")
     benchmark: os.path.join(benchmarks_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.benchmark")
+    conda: "conf/env/sourmash-dev.yml"
     shell:
         # use --force to continue past empty gather files
         """
