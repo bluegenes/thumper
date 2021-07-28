@@ -128,7 +128,7 @@ rule sourmash_sketch:
         runtime=1200,
     log: os.path.join(logs_dir, "sketch", "{sketch_type}/{sample}.{alphabet}.sketch.log")
     benchmark: os.path.join(benchmarks_dir, "sketch", "{sketch_type}.{alphabet}/{sample}.sketch.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    conda: "conf/env/sourmash4.yml"
     shell:
         """
         sourmash sketch {params.param_str} {input} -o {output.sig} --name '{wildcards.sample}' 2> {log}
@@ -136,7 +136,7 @@ rule sourmash_sketch:
         """
 
 localrules: sigs_to_pathfile
-rule sigs_to_pathfile:
+checkpoint sigs_to_pathfile:
     input:
         # expand(os.path.join(out_dir, "sigs", "{sample}.sig"), sample=sample_names),
         expand(os.path.join(out_dir, "sigs", f"{sketch_type}/{{sample}}.{alphabet}.sig"), sample=sample_names),
@@ -156,7 +156,7 @@ rule sigs_to_zipfile:
         manifest=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.{alphabet}.queries.csv"),
     log: os.path.join(logs_dir, "sourmash", f"{basename}.{sketch_type}.{alphabet}.catzip.log")
     benchmark: os.path.join(benchmarks_dir, "sourmash", f"{basename}.{sketch_type}.{alphabet}.catzip.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    conda: "conf/env/sourmash4.yml"
     shell:
         """
         sourmash sig cat --from-file {input.pathfile} -o {output.zipF} 2> {log}
@@ -166,7 +166,7 @@ rule sigs_to_zipfile:
 
 rule gather_sig_from_zipfile:
     input:
-        query_zip=ancient(os.path.join(out_dir, "sigs", f"{basename}.{{sketch_type}}.{{alphabet}}.queries.zip")),
+        query_zip=os.path.join(out_dir, "sigs", f"{basename}.{{sketch_type}}.{{alphabet}}.queries.zip"),
         #query_manifest=rules.sigs_to_zipfile.output.manifest,
         query_picklist=rules.sourmash_sketch.output.picklist,
         database=lambda w: ancient(expand(os.path.join(database_dir, "{database}.sbt.zip"), database=databaseD[f'k{w.ksize}'])),
@@ -182,7 +182,7 @@ rule gather_sig_from_zipfile:
         runtime=6000,
     log: os.path.join(logs_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.log")
     benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    conda: "conf/env/sourmash4.yml"
     shell:
         # touch output to let workflow continue in cases where 0 results are found
         """
@@ -224,7 +224,7 @@ rule tax_classify:
         threshold = config.get("classify_threshold", 0.1)
     log: os.path.join(logs_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.log")
     benchmark: os.path.join(benchmarks_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    conda: "conf/env/sourmash4.yml"
     shell:
         # use --force to continue past empty gather files
         """
