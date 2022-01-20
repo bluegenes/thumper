@@ -1,0 +1,10 @@
+name: thp-report
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python >=3.8
+  - jupyter >=1.0
+  - jupyterlab_code_formatter >=1.4
+  - pandas >=1.2

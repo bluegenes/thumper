@@ -91,12 +91,14 @@ onerror:
 # targeting rules
 rule genome_classify:
     input:
-         expand(os.path.join(out_dir, 'classify', f"{basename}.{sketch_type}.{alphabet}-k{{ksize}}.classifications.csv"), ksize = ksize)
+         expand(os.path.join(out_dir, 'classify', f"{basename}.{sketch_type}.{alphabet}-k{{ksize}}.classifications.csv"), ksize = ksize),
+         expand(os.path.join(report_dir, f"{basename}.{sketch_type}.{alphabet}-k{{ksize}}.classifications.report.html"), ksize = ksize)
+
 
 rule download_databases:
     input:
         expand(os.path.join(database_dir, "{database}.sbt.zip"), database=databases),
-        expand(os.path.join(database_dir, "{database}.taxonomy.csv"), database=config['valid_db_basenames'])
+        expand(os.path.join(database_dir, "{database}.taxonomy.db"), database=config['valid_db_basenames'])
 
 rule sketch:
     input:
@@ -126,33 +128,45 @@ rule sourmash_sketch:
         runtime=1200,
     log: os.path.join(logs_dir, "sketch", "{sketch_type}/{sample}.{alphabet}.sketch.log")
     benchmark: os.path.join(benchmarks_dir, "sketch", "{sketch_type}.{alphabet}/{sample}.sketch.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    conda: "conf/env/sourmash4.yml"
     shell:
         """
         sourmash sketch {params.param_str} {input} -o {output.sig} --name '{wildcards.sample}' 2> {log}
         sourmash sig describe {output.sig} --csv {output.picklist} 2>> {log}
         """
 
+localrules: sigs_to_pathfile
+checkpoint sigs_to_pathfile:
+    input:
+        # expand(os.path.join(out_dir, "sigs", "{sample}.sig"), sample=sample_names),
+        expand(os.path.join(out_dir, "sigs", f"{sketch_type}/{{sample}}.{alphabet}.sig"), sample=sample_names),
+    output: os.path.join(out_dir, "sigs", "{basename}.signatures.txt")
+    run:
+        with open(str(output), "w") as outF:
+            for inF in input:
+                outF.write(str(inF) + "\n")
+
 
 rule sigs_to_zipfile:
     input:  
-        expand(os.path.join(out_dir, "sigs", f"{sketch_type}/{{sample}}.{alphabet}.sig"), sample=sample_names),
+        sigs=expand(os.path.join(out_dir, "sigs", f"{sketch_type}/{{sample}}.{alphabet}.sig"), sample=sample_names),
+        pathfile=os.path.join(out_dir, "sigs", f"{basename}.signatures.txt"),
     output: 
         zipF=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.{alphabet}.queries.zip"),
         manifest=os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.{alphabet}.queries.csv"),
     log: os.path.join(logs_dir, "sourmash", f"{basename}.{sketch_type}.{alphabet}.catzip.log")
     benchmark: os.path.join(benchmarks_dir, "sourmash", f"{basename}.{sketch_type}.{alphabet}.catzip.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    conda: "conf/env/sourmash4.yml"
     shell:
         """
-        sourmash sig cat {input} -o {output.zipF} 2> {log}
+        sourmash sig cat --from-file {input.pathfile} -o {output.zipF} 2> {log}
         sourmash sig describe {output.zipF} --csv {output.manifest} 2>> {log}
         """
 
 
 rule gather_sig_from_zipfile:
     input:
-        query_zip=ancient(os.path.join(out_dir, "sigs", f"{basename}.{{sketch_type}}.{{alphabet}}.queries.zip")),
+        query_zip=os.path.join(out_dir, "sigs", f"{basename}.{{sketch_type}}.{{alphabet}}.queries.zip"),
         #query_manifest=rules.sigs_to_zipfile.output.manifest,
         query_picklist=rules.sourmash_sketch.output.picklist,
         database=lambda w: ancient(expand(os.path.join(database_dir, "{database}.sbt.zip"), database=databaseD[f'k{w.ksize}'])),
@@ -168,7 +182,7 @@ rule gather_sig_from_zipfile:
         runtime=6000,
     log: os.path.join(logs_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.log")
     benchmark: os.path.join(benchmarks_dir, "gather", "{sample}.{sketch_type}.{alphabet}-k{ksize}.gather.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    conda: "conf/env/sourmash-dist.yml"
     shell:
         # touch output to let workflow continue in cases where 0 results are found
         """
@@ -197,7 +211,7 @@ rule gather_csvs_to_pathlist:
 rule tax_classify:
     input:
         gather_pathlist = rules.gather_csvs_to_pathlist.output,
-        tax_files = expand(os.path.join(database_dir, "{database}.taxonomy.csv"), database=config['valid_db_basenames'])
+        tax_db = expand(os.path.join(database_dir, "{database}.taxonomy.db"), database=config['valid_db_basenames']),
     output: 
         os.path.join(out_dir, 'classify', "{basename}.{sketch_type}.{alphabet}-k{ksize}.classifications.csv")
     threads: 1
@@ -210,11 +224,11 @@ rule tax_classify:
         threshold = config.get("classify_threshold", 0.1)
     log: os.path.join(logs_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.log")
     benchmark: os.path.join(benchmarks_dir, "classify", "{basename}.{sketch_type}.{alphabet}-k{ksize}.classify.benchmark")
-    conda: "conf/env/sourmash-dev.yml"
+    conda: "conf/env/sourmash-dist.yml"
     shell:
         # use --force to continue past empty gather files
         """
-        sourmash tax genome --from-file {input.gather_pathlist} --taxonomy-csv {input.tax_files} \
+        sourmash tax genome --from-file {input.gather_pathlist} --taxonomy {input.tax_db} \
                             --output-dir {params.outdir} -o {params.output_base} \
                             --containment-threshold {params.threshold} --force 2> {log}
         """
@@ -222,14 +236,14 @@ rule tax_classify:
 
 #rule assess_classification:
 
-#rule viz_classification:
-
-# use this when sig cat --from-file can be done!
-#localrules: sigs_to_pathfile
-#rule sigs_to_pathfile:
-#    input:  expand(os.path.join(out_dir, "signatures", "{sample}.sig"), sample=sample_names),
-#    output: os.path.join(out_dir, "signatures", "{basename}.signatures.txt")
-#    run:
-#        with open(str(output), "w") as outF:
-#            for inF in input:
-#                outF.write(str(inF) + "\n")
+rule visualize_classifications:
+    input:
+       csv = os.path.join(out_dir, 'classify', "{basename}.{sketch_type}.{alphabet}-k{ksize}.classifications.csv"),
+       query_manifest = os.path.join(out_dir, "sigs", f"{basename}.{sketch_type}.{alphabet}.queries.csv"),
+    output:
+        os.path.join(report_dir, "{basename}.{sketch_type}.{alphabet}-k{ksize}.classifications.report.html"),
+    log:
+        notebook=os.path.join(report_dir, "{basename}.{sketch_type}.{alphabet}-k{ksize}.classifications.report.ipynb"),
+    conda: 'conf/env/reporting-env.yml'
+    threads: 1
+    notebook: 'notebooks/report.py.ipynb'
