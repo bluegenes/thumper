@@ -8,5 +8,5 @@ dependencies:
   - rust
   - pip
   - pip:
-    - git+https://github.com/dib-lab/sourmash@latest
+    - git+https://github.com/dib-lab/sourmash@add-dist-est
     - dendropy==4.4.0
