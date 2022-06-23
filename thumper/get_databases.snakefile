@@ -34,6 +34,26 @@ rule get_taxonomy:
             full_output = os.path.abspath(str(output))
             shell("ln -s {full_input} {full_output} 2> {log}")
 
+
+rule tax_prepare:
+    input:
+        os.path.join(database_dir, "{db_basename}.taxonomy.csv")
+    output:
+        os.path.join(database_dir, "{db_basename}.taxonomy.db"),
+    threads: 1
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *3000,
+        runtime=600,
+    params:
+    log: os.path.join(db_logs, "taxonomy", "{db_basename}.tax-prepare.log")
+    benchmark: os.path.join(db_logs, "taxonomy", "{db_basename}.tax-prepare.benchmark")
+    conda: "conf/env/sourmash-dev.yml"
+    shell:
+        """
+        sourmash tax prepare --taxonomy {input} -o {output} 2> {log}
+        """
+
+
 rule get_sbt:
     output:
         os.path.join(database_dir, "{database}.sbt.zip")

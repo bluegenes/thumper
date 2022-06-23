@@ -17,6 +17,7 @@ CLASSIFIERS = [
     "Operating System :: MacOS :: MacOS X",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
@@ -41,7 +42,7 @@ setup(
                        'pytest-runner',
                        ],
     use_scm_version = {"write_to": "thumper/version.py"},
-    install_requires = ['snakemake>=6.5.2', 'click>=7,<8', 'pandas>1,<2'],
+    install_requires = ['snakemake>=7.8.2', 'click>=7', 'pandas>1,<2'],
     long_description=long_description,
     long_description_content_type="text/markdown",
 )
