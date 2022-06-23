@@ -3,10 +3,9 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - python>=3.8
+  - python>=3.9
   - pytest
   - rust
   - pip
   - pip:
-    - git+https://github.com/dib-lab/sourmash@add-dist-est
-    - dendropy==4.4.0
+    - git+https://github.com/dib-lab/sourmash@latest

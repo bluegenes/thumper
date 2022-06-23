@@ -47,8 +47,30 @@ def find_input_file(filename, name="input", add_paths=[], add_suffixes = ['.yaml
 
 def _file_exists(filename, data_dir):
     '''check if file exists in data directory. Returns T/F.'''
+    if os.path.isabs(filename):
+        return os.path.isfile(filename)
     fname = os.path.join(data_dir, filename)
     return os.path.isfile(fname)
+
+
+def check_for_missing_files(config, data_dir, samples):
+    filetype = "genome_filename"
+    if config["alphabet"] in ["protein", "dayhoff", "hp"]:
+        filetype = "protein_filename"
+        if filetype not in samples.columns:
+            raise ValueError(f'Cannot find {filetype} column in sample_info.')
+    exist_col = f'{filetype}_exists'
+    samples[exist_col] = samples[filetype].apply(_file_exists, data_dir=data_dir)
+    if not pd.Series(samples[exist_col]).all():
+        missing_files = samples[samples[exist_col] == False].index
+        if strict:
+            raise ValueError(f'Cannot find {filetype} files {",".join(missing_files)} in {data_dir}')
+        else:
+            print(f'Cannot find {filetype} files {",".join(missing_files)} in {data_dir}')
+            print('Strict mode is OFF. Attempting to continue.')
+
+    samples = samples[samples[exist_col] == True]
+    return samples
 
 
 def read_samples(config, *, strict=False):
@@ -57,8 +79,8 @@ def read_samples(config, *, strict=False):
         filename = config.get('sample_info', '')
         samples_file = find_input_file(filename)
     except ValueError as exc:
-        print('** ERROR: Please provide proteomes/genomes as a txt file ' \
-        '(one filename per line) or a csv file("sample,filename"; no headers ' \
+        print('** ERROR: Please provide proteomes/genomes as a csv or xls file ' \
+        'with columns "name,genome_filename,protein_filename" ' \
         'using "sample_info:" in the config')
         sys.exit(-1)
     # read tsv or csv
@@ -67,42 +89,39 @@ def read_samples(config, *, strict=False):
         if '.csv' in samples_file:
             separator = ','
         try:
-            samples = pd.read_csv(samples_file, dtype=str, sep=separator, names = ["sample", "filename"])
+            samples = pd.read_csv(samples_file, dtype=str, sep=separator)
         except Exception as e:
             sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
             print(e)
     # read excel
     elif '.xls' in samples_file:
         try:
-            samples = pd.read_excel(samples_file, dtype=str, names = ["sample", "filename"])
+            samples = pd.read_excel(samples_file, dtype=str)
         except Exception as e:
             sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
             print(e)
-    else:
-        # if not csv, tsv, xls(x), try reading as a text file of sample files
-        sample_list = [ line.strip() for line in open(samples_file, 'rt') ]
-        sample_list = [ line for line in sample_list if line ]   # remove empty lines
-        samplesD = {"sample":sample_list,"filename":sample_list} # maybe later try removing *fa.gz or the like
-        samples = pd.DataFrame(samplesD)
+    if "name" not in samples.columns:
+        sys.stderr.write(f"\n\tError: {samples_file} file is not properly formatted. Please fix.\n\n")
+        sys.exit(-1)
 
     # get data directory
     data_dir = config.get('data_dir', '')
     if data_dir:
         data_dir = sanitize_path(data_dir)
 
+    samples = check_for_missing_files(config, data_dir, samples)
+    #check for missing files
+
     # check if each provided sample file exists/isfile
-    samples['exists'] = samples['filename'].apply(_file_exists, data_dir=data_dir)
-    if not pd.Series(samples['exists']).all():
-        missing_files = samples[samples['exists'] == False].index
-        if strict:
-            raise ValueError(f'Sample files {",".join(missing_files)} do not exist in {data_dir}')
-        else:
-            print(f'Sample files {",".join(missing_files)} do not exist in {data_dir}')
-            print('Strict mode is OFF. Attempting to continue.')
-            samples = samples[samples['exists'] == True]
+#    if "protein_filename" in samples.columns:
+#        samples['pf_exists'] = samples["protein_filename"].apply(_file_exists, data_dir=data_dir)
+
+ #   if "genome_filename" in samples.columns:
+ #       samples['gf_exists'] = samples["genome_filename"].apply(_file_exists, data_dir=data_dir)
+
 
     # save pandas dataframe into config variable
-    samples.set_index("sample", inplace=True)
+    samples.set_index("name", inplace=True)
     config['samples'] = samples
     return config
 
